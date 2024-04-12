@@ -6,8 +6,11 @@ library(ggplot2)
 library(dplyr)
 
 ## actual size 
-srast = terra::rast("sk_lf_3005.tif")
-#srast = terra::rast("skeena_lfacet_3005_test.tif")
+srast = terra::rast(file.path("inputs", "sk_lf_3005.tif"))
+srastrc = terra::rast(file.path("outputs", "sk_lf_rockclass.tif"))
+srastrcd = terra::rast(file.path("outputs", "sk_lf_rockclassdet.tif"))
+
+
 
 
 # read in the rare csv file 
