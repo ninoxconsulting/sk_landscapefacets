@@ -7,7 +7,7 @@ library(sf)
 library(ggplot2)
 library(dplyr)
 
-srast = terra::rast("sk_lf_3005.tif")
+srast = terra::rast(file.path("inputs","sk_lf_3005.tif"))
 
 bbox(srast)
 
@@ -17,9 +17,11 @@ bbox(srast)
 
 
 # generate focal statistics which show the number of unique facet types. 
-f <- focal(r, w=3, fun=function(x, ...) n_distinct(x, ...), na.rm=TRUE) 
+#f <- focal(r, w=3, fun=function(x, ...) n_distinct(x, ...), na.rm=TRUE) 
 
-f3 = f 
+#f3 = f 
+library(tictoc)
 
-f9 <- focal(srast, w = 9, fun = function(x, ...) n_distinct(x, ...), na.rm=TRUE) 
-
+tic()
+f3 <- focal(srast, w = 3, fun = function(x, ...) n_distinct(x, ...), na.rm=TRUE) 
+toc()
