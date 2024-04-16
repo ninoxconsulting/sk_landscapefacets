@@ -127,36 +127,20 @@ base_raster <- rast(file.path("outputs", "sk_lf_3005.tif"))
 ref_path <- file.path("inputs", "Stolar_et_al_2024_CiCP_Zenodo_upload_Version_1.1")
 ref <- list.files(ref_path , pattern = "*.tif")
 
+ref1 <- rast(file.path(ref_path, "2080s_macro_micro_connectivity.tif"))
+ref3 <- rast(file.path(ref_path, "2080s_macrorefugia.tif"))
+ref4 <- rast(file.path(ref_path, "Conservation_priorities_2080s.tif"))
+ref5 <- rast(file.path(ref_path, "microrefugia.tif"))
+ref6 <- rast(file.path(ref_path, "Restoration_priorities_2080s.tif"))
 
-ref1 <- rast(file.path(ref_path, "microrefugia.tif"))
-ref2 <- rast(file.path(ref_path, "2080s_macrorefugia.tif"))
+reff <- ref6
 
+cc <- resample(reff, base_raster)
+mcc <- mask(cc, base_raster)
+writeRaster(mcc, file.path("inputs", "Restoration_priorities_2080s.tif"))
 
-
-a <- list(ref1)
-b <- lapply(a, \(i) {
-  x <- extend(rast(base_raster), i)
-  resample(i, crop(x, i, "out"))
-})
-
-
-
-
-bb <- b[[1]]
-
-#plot(bb)
-#b <- sprc(c(b, base_raster))
-#m <- merge(b)
-
-#mbb <- mask(bb, base_raster)
-
-e <- extend(bb, base_raster)
-mbb <- mask(e, base_raster)
-
-
-cc <- resample(ref1, base_raster)
-
-rast(c(cc, base_raster))
+plot(mcc)
+#rast(c(mcc, base_raster))
 
 
 
