@@ -12,7 +12,7 @@ library(sf)
 
 
 
-## read in protcted layers 
+## read in protected layers 
 
 
 
