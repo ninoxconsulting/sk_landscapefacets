@@ -1,10 +1,14 @@
 # 04. Mapping 
 
 library(bcdata)
+library(dplyr)
+library(terra)
+library(sf)
 
-basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+basedata = "inputs"
 
-in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
+in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
 in_aoi <- st_as_sf(in_aoi)
 
 
@@ -43,18 +47,6 @@ w <- get_water(in_aoi)
 
 
 
-# review the proteced areas: 
-
-library(bcdata)
-library(dplyr)
-library(terra)
-library(sf)
-
-#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
-basedata = "inputs"
-
-in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
-in_aoi <- st_as_sf(in_aoi)
 
 # extract protected areas 
 #https://catalogue.data.gov.bc.ca/dataset/1130248f-f1a3-4956-8b2e-38d29d3e4af7
@@ -71,7 +63,6 @@ st_write(pro, file.path("inputs", "protected_lands.gpkg"), append = FALSE)
 
 
 
-# this might be a duplicate? 
 # conservation lands: 
 #https://catalogue.data.gov.bc.ca/dataset/68327529-c0d5-4fcb-b84e-f8d98a7f8612
 
@@ -124,4 +115,48 @@ st_write(ec , file.path("inputs", "sk_ecoreg.gpkg"), append = FALSE)
 
 # cumulative effects 
 https://catalogue.data.gov.bc.ca/dataset/ce-disturbance-2021
+
+
+
+
+
+# refugia processing: 
+
+base_raster <- rast(file.path("outputs", "sk_lf_3005.tif"))
+
+ref_path <- file.path("inputs", "Stolar_et_al_2024_CiCP_Zenodo_upload_Version_1.1")
+ref <- list.files(ref_path , pattern = "*.tif")
+
+
+ref1 <- rast(file.path(ref_path, "microrefugia.tif"))
+ref2 <- rast(file.path(ref_path, "2080s_macrorefugia.tif"))
+
+
+
+a <- list(ref1)
+b <- lapply(a, \(i) {
+  x <- extend(rast(base_raster), i)
+  resample(i, crop(x, i, "out"))
+})
+
+
+
+
+bb <- b[[1]]
+
+#plot(bb)
+#b <- sprc(c(b, base_raster))
+#m <- merge(b)
+
+#mbb <- mask(bb, base_raster)
+
+e <- extend(bb, base_raster)
+mbb <- mask(e, base_raster)
+
+
+cc <- resample(ref1, base_raster)
+
+rast(c(cc, base_raster))
+
+
 
