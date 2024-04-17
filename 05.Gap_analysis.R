@@ -30,4 +30,39 @@ library(sf)
 
 
 
+# 
 
+sk_rc <- rast(file.path("outputs", "sk_lf_rockclass.tif"))
+sk_rcd <- rast(file.path("outputs", "sk_lf_rockclassdet.tif"))
+
+skrcdf <- as.data.frame(sk_rc)
+skrcdff <- skrcdf %>% 
+  group_by(lyr.1) |> 
+  count()|> 
+  mutate(type = "rockclass") %>%
+  ungroup()%>% 
+  select(-lyr.1)
+
+hist(skrcdff$n)
+
+skrcddf <- as.data.frame(sk_rcd)
+skrcddff <- skrcddf %>% 
+  group_by(lyr.1) |> 
+  count() |> 
+  mutate(type = "detailed") %>%
+  ungroup()%>%
+  select(-lyr.1)
+
+aa <- bind_rows(skrcdff,skrcddff )
+
+xx <- skrcddf
+
+hist(skrcddff$n)
+
+library(ggplot2)
+
+
+
+hist(as.numeric(skrcdf$lyr.1))
+
+hist(as.numeric(skrcddf$lyr.1))
