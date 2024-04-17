@@ -5,10 +5,10 @@ library(dplyr)
 library(terra)
 library(sf)
 
-#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
 basedata = "inputs"
 
-in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
+in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
 in_aoi <- st_as_sf(in_aoi)
 
 
@@ -88,7 +88,7 @@ st_write(cons, file.path("inputs", "cons_lands.gpkg"), append = FALSE)
 sed <- bcdc_query_geodata("b3f58ed8-376f-4962-9657-36297a5f41cf") |>
   collect()
 sed <- sf::st_intersection(sed,  in_aoi) %>% 
-  select(QUATERNARY_ID, NRO_region)
+  select(QUATERNARY_ID)
 
 st_write(sed , file.path("inputs", "quat_sed.gpkg"), append = FALSE)
 
