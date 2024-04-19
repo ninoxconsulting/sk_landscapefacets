@@ -170,7 +170,13 @@ sk_rockclassdet_cat <- w + rockdet_no
 writeRaster(sk_rockclassdet_cat, file.path("outputs", "sk_lf_rockclassdet.tif"), overwrite = TRUE)
 
 
+srast <- rast(file.path("outputs", "sk_lf_rockclassdet.tif"))
 
+
+
+
+
+## generate the rare table.....
 
 
 
@@ -178,8 +184,6 @@ srast <- sk_rockclassdet_cat
 
 
 # Read in the skeena facets 
-
-#unique(srast)
 
 # number of codes within Aoi 
 uval = length(unique(values(srast)))
@@ -192,25 +196,10 @@ ggplot2::ggplot(routdf, aes(lyr.1)) +
   ggplot2::geom_histogram(bins = uval) 
   #geom_freqpoly()
 
-# summary of values 
-# 
-# ids = routdf %>% 
-#   group_by(skeena_lfacet_3005)%>%
-#   summarise(count = n())%>%
-#   mutate(total = sum(count))%>%
-#   rowwise() %>%
-#   mutate(prop = (count/total)*100)
 
-
-
-#sumraster = function(inrast){
+colnames(routdf) = "layer1"
   
-  inrast <- sk_rockclassdet_cat
-  routdf <- as.data.frame(inrast)
-  
-  colnames(routdf) = "layer1"
-  
-  ids = routdf %>% 
+ids = routdf %>% 
     group_by(layer1)%>%
     summarise(count = n())%>%
     mutate(total = sum(count))%>%
@@ -219,28 +208,22 @@ ggplot2::ggplot(routdf, aes(lyr.1)) +
     arrange(count)
 
     
-  #mySum = t(apply(ids$prop, 1, cumsum))
-  ids <-within(ids, acc_sum <- cumsum(pc))
+#mySum = t(apply(ids$prop, 1, cumsum))
+ids <-within(ids, acc_sum <- cumsum(pc))
   
-  ids <- ids %>% 
+ids <- ids %>% 
     mutate(rarity_class = case_when(
       acc_sum <= 1 ~ 5, 
       acc_sum > 1 & acc_sum <=2 ~ 4,
-      acc_sum > 2 & acc_sum <4 ~ 3,
-      acc_sum > 4 & acc_sum <8 ~ 2,
-      acc_sum > 8 & acc_sum <16 ~ 1,
-      .default = as.numeric(999)
+      acc_sum > 2 & acc_sum <=4 ~ 3,
+      acc_sum > 4 & acc_sum <=8 ~ 2,
+      acc_sum > 8 & acc_sum <=16 ~ 1,
+      .default = as.numeric(0)
     ))
              
              
-#return(ids)
-  
-#}
-
 
 # generate Summary tables 
-#ls_facet_sum_rcd <- sumraster(sk_rockclassdet_cat)
-#ls_facet_sum_rc <- sumraster(sk_rockclass_cat)
 
 write_csv(  ids , file.path("outputs", "landscape_facet_summary_rcd.csv"))
 #write_csv(ls_facet_sum_rc, file.path("outputs", "landscape_facet_summary_rc.csv"))
