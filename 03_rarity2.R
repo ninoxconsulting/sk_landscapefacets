@@ -153,3 +153,8 @@ rc1 <- classify(rr, rclmat, include.lowest=TRUE)
 #terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class.tif"))
 #terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rc.tif"))
 terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rcd.tif"))
+
+
+
+
+
