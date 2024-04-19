@@ -149,6 +149,9 @@ terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rcd.tif"), overwrit
 
 
 
+
+
+
 ## Calculoate concentration 
 
 ## reclass the valyers to a conccentration 
@@ -176,6 +179,4 @@ rc <- classify(con_rare, rclmat, include.lowest=TRUE)
 writeRaster(rc, file.path("outputs", "sk_rarity_conc.tif"))
 
 
-
->>>>>>> 557703f50382fd543ac126b2e46bda28c3f2fda4
 

@@ -1,7 +1,5 @@
 #1. Gap analysis 
 
-# review the proteced areas: 
-
 library(bcdata)
 library(dplyr)
 library(terra)
@@ -19,7 +17,26 @@ aoi_sf <- st_as_sf(aoi)
 # read in concentration layers: diverity and rarity
 
 div <- rast(file.path("outputs", "sk_diveristy_conc.tif"))
-rar <- rast(file.path())
+rar <- rast(file.path("outputs", "sk_rarity_conc.tif"))
+
+div <- mask(div, aoi)
+rar <- mask(rar, aoi)
+
+
+# reclass only the highest values , convert to 1 and 2. 
+
+m <- c(0, 3, 0, # lowest diversity 
+       4, 4, 1,
+       5, 5, 2) # highest diversity 
+
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+
+# reclass diversity 
+div_high <- classify(div, rclmat, include.lowest=TRUE)
+rar_high <- classify(rar, rclmat, include.lowest = TRUE)
+
+sr <- c(div_high, rar_high)
+writeRaster(sr, file.path("outputs", "sk_high_conc_dr_stack.tif"), overwrite = TRUE)
 
 
 
@@ -27,20 +44,7 @@ rar <- rast(file.path())
 
 
 
-## read in protected layers 
-
-
-pro <- st_read(file.path("inputs", "protected_lands.gpkg"))
-con <- st_read(file.path("inputs", "cons_lands.gpkg"))%>%
-  filter(CONSERVATION_LAND_TYPE %in% c("Administered Lands","Wildlife Management Areas")) %>%
-  rename("PROTECTED_LANDS_NAME" = SITE_NAME,
-          "PROTECTED_LANDS_DESIGNATION" = CONSERVATION_LAND_TYPE) %>% 
-  select(-TENURE_DESCRIPTION, -TENURE_TYPE)
-
-
-pros <- bind_rows(pro, con)
-
-## read in ecoregions 
+# summary by Ecoregion: 
 
 ec <- st_read(file.path("inputs", "sk_ecoreg.gpkg")) %>%
   select(ECOREGION_NAME)%>% 
@@ -56,35 +60,63 @@ ecsum <- ec %>%
 
 ecv <- vect(ec)
 
+# 
+# # calculate the number of pixels per group, per ecoregion 
+# e <- extract(div, ecv, un="table", na.rm=TRUE, exact=FALSE)
+# edf <- data.frame(NAME_2=ecv$ECOREGION_NAME[e[,1]], e[,-1])
+# 
+# edff <- edf %>% 
+#   group_by(NAME_2, e....1.) |> 
+#   count()
+
+# rasterize the zones
+ecr <- rasterize(ecv, srast, field="ECOREGION_NAME")
+ex <- expanse(div, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
+
+write.csv(ex, file.path("outputs", "div_per_ecoregion.csv"))
 
 
-# calculate the number of pixels per group, per ecoregion 
-e <- extract(div_con, ecv, un="table", na.rm=TRUE, exact=FALSE)
-edf <- data.frame(NAME_2=ecv$ECOREGION_NAME[e[,1]], e[,-1])
+ex <- readr::read_csv(file.path("outputs", "div_per_ecoregion.csv"))%>%
+  select(-...1)
 
-edff <- edf %>% 
-  group_by(NAME_2, e....1.) |> 
-  count()
+# calculate the % cover of each group by class 
+library(janitor)
+pc_div_sum <- ex %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 1) |> 
+  bind_cols(tot_area = ecsum$totsum)
 
+write.csv(pc_div_sum,file.path("outputs", "div_pcper_ecoregion.csv"))
+  
+
+
+
+## Repeat for the rarity codes 
 
 
 # rasterize the zones
 ecr <- rasterize(ecv, srast, field="ECOREGION_NAME")
-ex <- expanse(div_con, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
+ex <- expanse(rar, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
 
-# using zonal 
-#x <- cellSize(r, unit="km")
-#zonal(x, c(r, zone), fun="sum", wide=TRUE)
+write.csv(ex, file.path("outputs", "rare_per_ecoregion.csv"))
 
-# 
-# library(terra)
-# #terra 1.7.21
-# v <- vect(system.file("ex/lux.shp", package="terra"))
-# r <- rast(system.file("ex/elev.tif", package="terra"))
-# r <- round((r-50)/100)
-# levels(r) <- data.frame(id=1:5, name=c("forest", "water", "urban", "crops", "grass"))
-# e <- extract(r, v, fun="table", na.rm=TRUE, exact=FALSE)
-# 
+
+ex <- readr::read_csv(file.path("outputs", "rare_per_ecoregion.csv"))%>%
+  select(-...1)
+
+# calculate the % cover of each group by class 
+library(janitor)
+pc_rare_sum <- ex %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 1) |> 
+  bind_cols(tot_area = ecsum$totsum)
+
+write.csv(pc_rare_sum,file.path("outputs", "rare_pcper_ecoregion.csv"))
+
+
+         
+
+
 
 
 
@@ -97,45 +129,59 @@ ex <- expanse(div_con, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
 
 # calculate % protected for all of Skeena
 
+## read in protected layers 
 
-# calculate % protected by type? per ecoregion? 
+pro <- st_read(file.path("inputs", "protected_lands.gpkg"))
+con <- st_read(file.path("inputs", "cons_lands.gpkg"))%>%
+  filter(CONSERVATION_LAND_TYPE %in% c("Administered Lands","Wildlife Management Areas")) %>%
+  rename("PROTECTED_LANDS_NAME" = SITE_NAME,
+         "PROTECTED_LANDS_DESIGNATION" = CONSERVATION_LAND_TYPE) %>% 
+  select(-TENURE_DESCRIPTION, -TENURE_TYPE)
 
 
+pros <- bind_rows(pro, con)
 
+pros <- pros %>% 
+  mutate(protected = "protected")
 
-# 
+ 
 
-sk_rc <- rast(file.path("outputs", "sk_lf_rockclass.tif"))
-sk_rcd <- rast(file.path("outputs", "sk_lf_rockclassdet.tif"))
+## what proportion of the skeena region is currently protected? 
 
-skrcdf <- as.data.frame(sk_rc)
-skrcdff <- skrcdf %>% 
-  group_by(lyr.1) |> 
-  count()|> 
-  mutate(type = "rockclass") %>%
-  ungroup()%>% 
-  select(-lyr.1)
+# rasterize the zones
+pror <- rasterize(pros, srast, field="protected")
 
-hist(skrcdff$n)
+#diversity
+div_ex <- expanse(div, unit="m", byValue=TRUE, zones=pror, wide=TRUE)[,-1]
+write.csv(div_ex, file.path("outputs", "div_per_protection.csv"))
 
-skrcddf <- as.data.frame(sk_rcd)
-skrcddff <- skrcddf %>% 
-  group_by(lyr.1) |> 
-  count() |> 
-  mutate(type = "detailed") %>%
-  ungroup()%>%
-  select(-lyr.1)
-
-aa <- bind_rows(skrcdff,skrcddff )
-
-xx <- skrcddf
-
-hist(skrcddff$n)
-
-library(ggplot2)
+# rarity
+rare_ex <- expanse(rar, unit="m", byValue=TRUE, zones=pror, wide=TRUE)[,-1]
 
 
 
-hist(as.numeric(skrcdf$lyr.1))
+## what proporion of diversity classes are protected? 
 
-hist(as.numeric(skrcddf$lyr.1))
+
+write.csv(rare_ex, file.path("outputs", "rare_per_ecoregion.csv"))
+
+
+ex <- readr::read_csv(file.path("outputs", "rare_per_ecoregion.csv"))%>%
+  select(-...1)
+
+# calculate the % cover of each group by class 
+library(janitor)
+pc_rare_sum <- ex %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 1) |> 
+  bind_cols(tot_area = ecsum$totsum)
+
+write.csv(pc_rare_sum,file.path("outputs", "rare_pcper_ecoregion.csv"))
+
+
+
+
+## what proporion of rarity classes are protected? 
+
+
+
