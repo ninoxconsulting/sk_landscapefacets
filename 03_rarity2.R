@@ -166,6 +166,8 @@ unique(values(con_rare))
 ## from-to-becomes
 # classify the values into three groups 
 # all values >= 0 and <= 0.25 become 1, etc.
+
+# might need to update these....
 m <- c(0, 1, 1,
        1, 2, 2,
        2, 3, 3,
