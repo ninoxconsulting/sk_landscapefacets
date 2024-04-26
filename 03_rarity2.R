@@ -121,13 +121,12 @@ reclass
 
 ## from-to-becomes
 # classify the values into three groups 
-# all values >= 0 and <= 0.25 become 1, etc.
+
 m <- c(1, 1, 1,
        2, 2, 2,
        3, 3, 3,
        4, 4, 4,
-       5, 5, 5,
-       6,1000000, 0)
+       5, 5, 5)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 rc1 <- classify(rr, rclmat, include.lowest=TRUE)
 
