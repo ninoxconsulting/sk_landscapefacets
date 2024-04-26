@@ -12,7 +12,7 @@ library(readxl)
 
 
 # Read in the skeena facets 
-skeena = rast(file.path("inputs", "sk_lf_3005.tif")) # use this one as clipped to skeeena region
+#skeena = rast(file.path("inputs", "sk_lf_3005.tif")) # use this one as clipped to skeeena region
 
 
 #basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
@@ -20,12 +20,9 @@ skeena = rast(file.path("inputs", "sk_lf_3005.tif")) # use this one as clipped t
 #aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
 #aoi_sf <- st_as_sf(aoi)
 
-basedata = "inputs"
-
-aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
-aoi_sf <- st_as_sf(aoi)
-
-
+#basedata = "inputs"
+#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
+#aoi_sf <- st_as_sf(aoi)
 
 
 #PROJCS["NA_Lambert_Azimuthal_Equal_Area",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433],METADATA["World",-180.0,-90.0,180.0,90.0,0.0,0.0174532925199433,0.0,1262]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-100.0],PARAMETER["Latitude_Of_Origin",45.0],UNIT["Meter",1.0]]
@@ -37,7 +34,16 @@ aoi_sf <- st_as_sf(aoi)
 
 srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 
+# convert to vector 
 
+m <- c(1, 10000000, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc1 <- classify(srast , rclmat, include.lowest=TRUE)
+
+svec <- as.polygons(rc1)
+
+sfvec <- st_as_sf(svec)
+st_write(sfvec, file.path("inputs", "template_poly.gpkg"))
 
 # update the bedrock layer based on geology file 
 
