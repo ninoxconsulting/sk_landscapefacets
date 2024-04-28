@@ -14,14 +14,19 @@ library(sf)
 #aoi_sf <- st_as_sf(aoi)
 
 temp <- rast(file.path("inputs", "sk_rast_template.tif"))
+#aoi <- vect(file.path("inputs", "template_poly.gpkg"))
 
 
-## read in diversity layer ? or rarity layer ? 
-srast = terra::rast(file.path("outputs","facet_rcd_diversity_101c.tif"))
-names(srast)= "diversity"
+## clip the neighbourhood analysis output 
+# srast = terra::rast(file.path("outputs","sk_lf_rdc_diversity_101c.tif"))
+# names(srast)= "diversity"
+# 
+# # mask the raster by aoi and clip and then export
+# srast <- mask(srast, temp)
+# writeRaster(srast, file.path("outputs","sk_lf_rdc_diversity_101c_clip.tif"))
 
-# mask the raster by aoi 
-srast <- mask(srast, temp)
+srast = rast(file.path("outputs","sk_lf_rdc_diversity_101c_clip.tif"))
+
 
 hist(srast$diversity)
 
@@ -34,12 +39,10 @@ svals <- vals[vals>0]
 hist(svals)
 
 # # estimate quantiles 
-# quantile(svals, probs = seq(0, 1, 0.05), na.rm = FALSE)
+ quantile(svals, probs = seq(0, 1, 0.05), na.rm = TRUE)
 # 
-# 0%   5%  10%  15%  20%  25%  30%  35%  40%  45%  50%  55%  60%  65% 
-#   1    7    8    9   10   10   11   12   12   13   13   14   15   15 
-# 70%  75%  80%  85%  90%  95% 100% 
-# 16   17   18   20   22   25   68 
+# 0%   5%  10%  15%  20%  25%  30%  35%  40%  45%  50%  55%  60%  65%  70%  75%  80%  85%  90%  95% 100% 
+#  8   23   28   32   36   39   42   45   48   50   53   57   60   64   68   73   78   84   93  104  192 
 
 
 
