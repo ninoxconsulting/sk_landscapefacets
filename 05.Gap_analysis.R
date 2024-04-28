@@ -1,6 +1,6 @@
 #1. Gap analysis 
 
-library(bcdata)
+#library(bcdata)
 library(dplyr)
 library(terra)
 library(sf)
@@ -12,7 +12,6 @@ library(sf)
 #aoi <- vect(file.path("inputs", "SkeenaRegionBndry.shp"))
 # aoi_sf <- st_as_sf(aoi)
 aoi <- vect(file.path("inputs", "template_poly.gpkg"))
-
 temp <- rast(file.path("inputs", "sk_rast_template.tif"))
 
 
@@ -72,7 +71,7 @@ ecv <- vect(ec)
 #   count()
 
 # rasterize the zones
-ecr <- rasterize(ecv, srast, field="ECOREGION_NAME")
+ecr <- rasterize(ecv,temp, field="ECOREGION_NAME")
 ex <- expanse(div, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
 
 write.csv(ex, file.path("outputs", "div_per_ecoregion.csv"))
