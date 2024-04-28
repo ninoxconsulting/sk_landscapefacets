@@ -153,15 +153,28 @@ terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rcd.tif"), overwrit
 
 ## Calculoate concentration 
 
-## reclass the valyers to a conccentration 
+# clip to boundary 
 
-con_rare <- rast(file.path("outputs", "facet_rcd_rarity_101c.tif"))
+# con_rare <- rast(file.path("outputs", "sk_lf_rdc_rarity_101c.tif"))
+# names(con_rare)= "rarity"
+# 
+# temp <- rast(file.path("inputs", "sk_rast_template.tif"))
+# 
+# # mask the raster by aoi and clip and then export
+# con_rarec <- mask(con_rare, temp)
+# writeRaster(con_rarec, file.path("outputs","sk_lf_rdc_rarity_101c_clip.tif"))
 
-hist(con_rare$facet_rcd_rarity_101c , breaks = 40)
+
+# read in clipped dataset
+con_rarec <- rast(file.path("outputs","sk_lf_rdc_rarity_101c_clip.tif"))
+
+#reclass the valyers to a conccentration 
+
+hist(con_rarec$rarity  , breaks = 40)
 
 ## WAITING ON INPUT FROM PAULA 
 
-unique(values(con_rare))
+unique(values(con_rarec))
 
 ## from-to-becomes
 # classify the values into three groups 
@@ -174,7 +187,7 @@ m <- c(0, 1, 1,
        3, 4, 4,
        4, 6, 5)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc <- classify(con_rare, rclmat, include.lowest=TRUE)
+rc <- classify(con_rarec , rclmat, include.lowest=TRUE)
 
 writeRaster(rc, file.path("outputs", "sk_rarity_conc.tif"))
 
