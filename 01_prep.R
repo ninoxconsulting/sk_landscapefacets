@@ -15,23 +15,24 @@ library(readxl)
 
 # Read in the skeena facets 
 
-skeena = rast(file.path("inputs", "skeena_lfacet_3005.tif"))
+#skeena = rast(file.path("inputs", "skeena_lfacet_3005.tif"))
+skeena = rast(file.path("inputs", "sk_adaptwest_templateV2.tif"))
 
 #skeena = rast("skeena_raw_lfacet.tif")
 
 
-#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
 #basedata_soil  = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\bc"
 
 # keep as vect to use terra
-#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
-#aoi_sf <- st_as_sf(aoi)
+aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
+aoi_sf <- st_as_sf(aoi)
 
 #basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
-basedata = "inputs"
+#basedata = "inputs"
 
-aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
-aoi_sf <- st_as_sf(aoi)
+#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
+#aoi_sf <- st_as_sf(aoi)
 
 
 
@@ -56,10 +57,10 @@ rocks <- bcdc_query_geodata("ef8476ed-b02d-4f5c-b778-0d44c9126144") |>
 skrocks <- rename_with(rocks, tolower) %>% 
   st_intersection(aoi_sf)%>% 
   select(rock_type_description)
-  
 
 st_write(skrocks, file.path("inputs", "skeena_clip_soils.gpkg"))
 
+skrocks <- st_read(file.path("inputs", "skeena_clip_soils.gpkg"))
 # merge the soild with sediment layer 
 
 sed <- st_read(file.path("inputs", "quat_sed.gpkg")) %>%
