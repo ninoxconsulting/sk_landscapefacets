@@ -11,18 +11,26 @@ library(readxl)
 ## note all data in google drive in "inputs folder"
 
 
-# Read in the skeena facets 
+#skeena = rast(file.path("inputs", "skeena_lfacet_3005.tif"))
+skeena = rast(file.path("inputs", "sk_adaptwest_templateV2.tif"))
+
 #skeena = rast(file.path("inputs", "sk_lf_3005.tif")) # use this one as clipped to skeeena region
 
 
-#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
 #basedata_soil  = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\bc"
-#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
-#aoi_sf <- st_as_sf(aoi)
 
+
+# keep as vect to use terra
+aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
+aoi_sf <- st_as_sf(aoi)
+
+#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
 #basedata = "inputs"
+
 #aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
 #aoi_sf <- st_as_sf(aoi)
+
 
 
 #PROJCS["NA_Lambert_Azimuthal_Equal_Area",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433],METADATA["World",-180.0,-90.0,180.0,90.0,0.0,0.0174532925199433,0.0,1262]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-100.0],PARAMETER["Latitude_Of_Origin",45.0],UNIT["Meter",1.0]]
@@ -68,6 +76,8 @@ st_write(skrocks, file.path("inputs", "skeena_clip_soils.gpkg"), append = FALSE)
 skrocks <- st_read(file.path("inputs", "skeena_clip_soils.gpkg"))
 
 
+
+skrocks <- st_read(file.path("inputs", "skeena_clip_soils.gpkg"))
 # merge the soild with sediment layer 
 
 # download quaternary soils sediment, union to single polygon / multipolygonb and use in QGIS 
