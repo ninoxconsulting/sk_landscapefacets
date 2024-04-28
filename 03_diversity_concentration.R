@@ -9,23 +9,21 @@ library(sf)
 
 # read in study area 
 
-basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
+#aoi_sf <- st_as_sf(aoi)
 
-aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
-aoi_sf <- st_as_sf(aoi)
-
+temp <- rast(file.path("inputs", "sk_rast_template.tif"))
 
 
 ## read in diversity layer ? or rarity layer ? 
-
 srast = terra::rast(file.path("outputs","facet_rcd_diversity_101c.tif"))
 names(srast)= "diversity"
 
 # mask the raster by aoi 
-srast <- mask(srast, aoi)
+srast <- mask(srast, temp)
 
 hist(srast$diversity)
-
 
 # reclasify rasters 
 #range(srast$diversity)

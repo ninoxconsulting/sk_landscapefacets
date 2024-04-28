@@ -6,12 +6,14 @@ library(terra)
 library(sf)
 
 # read in study area 
+# 
+# basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+# 
+#aoi <- vect(file.path("inputs", "SkeenaRegionBndry.shp"))
+# aoi_sf <- st_as_sf(aoi)
+aoi <- vect(file.path("inputs", "template_poly.gpkg"))
 
-basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
-
-aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
-aoi_sf <- st_as_sf(aoi)
-
+temp <- rast(file.path("inputs", "sk_rast_template.tif"))
 
 
 # read in concentration layers: diverity and rarity
@@ -46,7 +48,7 @@ writeRaster(sr, file.path("outputs", "sk_high_conc_dr_stack.tif"), overwrite = T
 
 # summary by Ecoregion: 
 
-ec <- st_read(file.path("inputs", "sk_ecoreg.gpkg")) %>%
+ec <- st_read(file.path("inputs", "sk_ecoreg_clip.gpkg")) %>%
   select(ECOREGION_NAME)%>% 
   mutate(area_m2 = st_area(.))
 
@@ -131,7 +133,7 @@ write.csv(pc_rare_sum,file.path("outputs", "rare_pcper_ecoregion.csv"))
 
 ## read in protected layers 
 
-pro <- st_read(file.path("inputs", "protected_lands.gpkg"))
+pro <- st_read(file.path("inputs", "protected_lands.gpkg")) 
 con <- st_read(file.path("inputs", "cons_lands.gpkg"))%>%
   filter(CONSERVATION_LAND_TYPE %in% c("Administered Lands","Wildlife Management Areas")) %>%
   rename("PROTECTED_LANDS_NAME" = SITE_NAME,
