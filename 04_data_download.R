@@ -5,10 +5,12 @@ library(dplyr)
 library(terra)
 library(sf)
 
-basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
 basedata = "inputs"
 
-in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
+#in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
+in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
+template_poly <- st_read(file.path(basedata, "template_poly.gpkg"))
 in_aoi <- st_as_sf(in_aoi)
 
 
@@ -21,6 +23,7 @@ get_water <- function(in_aoi) {
   
   for (i in 1:length(water_records)) {
     
+    i = 1
     waterbodies <- bcdata::bcdc_query_geodata(water_records[i]) %>%
       bcdata::filter(INTERSECTS(in_aoi)) %>%
       bcdata::collect()
@@ -44,6 +47,29 @@ get_water <- function(in_aoi) {
 w <- get_water(in_aoi)
 
 #6ff1809a-f7cd-4641-abc5-9740f60a6d52
+
+
+
+# lakes
+#https://catalogue.data.gov.bc.ca/dataset/b3f58ed8-376f-4962-9657-36297a5f41cf
+# binary 
+lakes <- bcdc_query_geodata("cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6") |>
+  select(WATERBODY_TYPE, AREA_HA) %>% 
+  collect()
+
+lakes <- sf::st_intersection(lakes ,template_poly) %>% 
+  select(WATERBODY_TYPE, AREA_HA) %>% 
+  filter(AREA_HA > 1) 
+
+
+st_write(lakes , file.path("inputs", "lakes.gpkg"), append = FALSE)
+
+
+
+
+
+
+
 
 
 
@@ -141,6 +167,45 @@ writeRaster(mcc, file.path("inputs", "Restoration_priorities_2080s.tif"))
 
 plot(mcc)
 #rast(c(mcc, base_raster))
+
+
+
+
+## DEM 
+
+dem <- rast(file.path("inputs", "dem_sk_raw.tif"))
+template <-rast(file.path("outputs", "sk_lf_rdc_rarity_101c_clip.tif"))
+
+# resample 
+demf <- resample(dem, template)
+
+writeRaster(demf, file.path("inputs", "raw_sk_dem.tif"), overwrite = TRUE)
+
+hist(demf)
+
+
+# classify the values into groups based on the values 
+# all values >= 0 and <= 0.25 become 1, etc.
+m <- c(-1, 200, 1, # lowest diversity 
+       200, 500, 2,
+       500, 750, 3,
+       750, 1000 , 4,
+       1000, 1250, 5,
+       1250, 1500, 6, 
+       1500, 2000, 7,
+       2000, 2500, 8,
+       2500, 3000 , 9,
+       3000, 5000, 10) # highest diversity 
+
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+dem_class<- classify(demf, rclmat, include.lowest=TRUE)
+
+writeRaster(dem_class, file.path("inputs", "sk_dem_class.tif"), overwrite = TRUE)
+
+
+
+
+
 
 
 
