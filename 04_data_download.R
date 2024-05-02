@@ -8,9 +8,11 @@ library(sf)
 #basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
 basedata = "inputs"
 
+
 #in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
 in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
 template_poly <- st_read(file.path(basedata, "template_poly.gpkg"))
+
 in_aoi <- st_as_sf(in_aoi)
 
 
@@ -18,14 +20,14 @@ in_aoi <- st_as_sf(in_aoi)
 get_water <- function(in_aoi) {
   
   message("\rDownloading lake, river, and wetland layers")
-  water_records <- c("cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6", # lakes
-                     "f7dac054-efbf-402f-ab62-6fc4b32a619e") # rivers
+  water_records <- c("cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6")#, # lakes
+                    # "f7dac054-efbf-402f-ab62-6fc4b32a619e") # rivers
   
   for (i in 1:length(water_records)) {
     
     i = 1
     waterbodies <- bcdata::bcdc_query_geodata(water_records[i]) %>%
-      bcdata::filter(INTERSECTS(in_aoi)) %>%
+      #bcdata::filter(INTERSECTS(in_aoi)) %>%
       bcdata::collect()
     
     if(nrow(waterbodies) > 0) {
@@ -47,6 +49,69 @@ get_water <- function(in_aoi) {
 w <- get_water(in_aoi)
 
 #6ff1809a-f7cd-4641-abc5-9740f60a6d52
+
+
+# lakes
+lakes <- bcdc_query_geodata("cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6") |>
+  # filter(INTERSECTS(aoi_sf)) |> 
+  select( WATERBODY_TYPE, AREA_HA) |>
+  collect()
+
+lakes <- sf::st_intersection(lakes, in_aoi) |> 
+  select( WATERBODY_TYPE, AREA_HA) 
+
+st_write(lakes, file.path("inputs", "lakes.gpkg"), append = FALSE)
+
+
+
+# rivers 
+
+#ri <- bcdc_query_geodata("f7dac054-efbf-402f-ab62-6fc4b32a619e") |>
+#  # filter(INTERSECTS(aoi_sf)) |> 
+#  select( WATERBODY_TYPE, AREA_HA) |>
+#  collect()
+
+#ri <- sf::st_intersection(ri, in_aoi) |> 
+#    select( WATERBODY_TYPE, AREA_HA) 
+
+#st_write(ri, file.path("inputs", "rivers.gpkg"), append = FALSE)
+
+
+# 
+# # wetlands 
+# #https://catalogue.data.gov.bc.ca/dataset/93b413d8-1840-4770-9629-641d74bd1cc6
+# wetlands <- bcdc_query_geodata("93b413d8-1840-4770-9629-641d74bd1cc6") |>
+#   # filter(INTERSECTS(aoi_sf)) |> 
+#   select( WATERBODY_TYPE, AREA_HA) |>
+#   collect()
+# 
+# wetlands <- sf::st_intersection(wetlands, in_aoi) #|> 
+#       #select(WATERBODY_TYPE, AREA_HA)
+# 
+# # select area > xxxx 
+# 
+# st_write(wetlands, file.path("inputs", "wetlands.gpkg"), append = FALSE)
+
+
+
+## glaciers 
+#https://catalogue.data.gov.bc.ca/dataset/8f2aee65-9f4c-4f72-b54c-0937dbf3e6f7
+
+glac <- bcdc_query_geodata("8f2aee65-9f4c-4f72-b54c-0937dbf3e6f7") |>
+  # filter(INTERSECTS(aoi_sf)) |> 
+  #  select(PROTECTED_LANDS_NAME, PROTECTED_LANDS_CODE, PROTECTED_LANDS_DESIGNATION) |>
+  collect()
+
+glac <- sf::st_intersection(glac, in_aoi)
+  select(WATERBODY_TYPE, AREA_HA)
+
+st_write(glac, file.path("inputs", "glaciers.gpkg"), append = FALSE)
+
+
+
+
+
+
 
 
 
@@ -140,7 +205,7 @@ st_write(ec , file.path("inputs", "sk_ecoreg.gpkg"), append = FALSE)
 
 
 # cumulative effects 
-https://catalogue.data.gov.bc.ca/dataset/ce-disturbance-2021
+#https://catalogue.data.gov.bc.ca/dataset/ce-disturbance-2021
 
 
 
@@ -201,6 +266,8 @@ rclmat <- matrix(m, ncol=3, byrow=TRUE)
 dem_class<- classify(demf, rclmat, include.lowest=TRUE)
 
 writeRaster(dem_class, file.path("inputs", "sk_dem_class.tif"), overwrite = TRUE)
+
+
 
 
 
