@@ -10,6 +10,7 @@ library(readxl)
 ## note all data in google drive in "inputs folder"
 
 #skeena = rast(file.path("inputs", "skeena_lfacet_3005.tif"))
+
 #skeena = rast(file.path("inputs", "sk_adaptwest_templateV2.tif"))
 
 
@@ -71,75 +72,120 @@ out = c(mlf, soils)
 
 
 basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+
+#skeena = rast(file.path("inputs", "sk_rast_template.tif"))
+
+#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+
 #basedata_soil  = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\bc"
 
 
 # keep as vect to use terra
-aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
-aoi_sf <- st_as_sf(aoi)
-
-#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
-#basedata = "inputs"
-
-#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
+#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
 #aoi_sf <- st_as_sf(aoi)
 
+#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
+basedata = "inputs"
+
+aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
+aoi_sf <- st_as_sf(aoi)
+
+
+###################################################################
+## Create base rasters - only need to be run once
+
+
+
+# # convert to vector 
+# 
+# m <- c(1, 10000000, 1)
+# rclmat <- matrix(m, ncol=3, byrow=TRUE)
+# rc1 <- classify(srast , rclmat, include.lowest=TRUE)
+# 
+# svec <- as.polygons(rc1)
+# 
+# sfvec <- st_as_sf(svec)
+# st_write(sfvec, file.path("inputs", "template_poly.gpkg"))
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+##################################################################
 # update the bedrock layer based on geology file 
 
 # # download soils data type 
 #bcdc_search("rock")
-
-rocks <- bcdc_query_geodata("ef8476ed-b02d-4f5c-b778-0d44c9126144") |>
-  #filter(INTERSECTS(aoi_sf)) |>
-  #select(ROCK_TYPE_DESCRIPTION, ROCK_TYPE_CODE, ROCK_CLASS, ORIGINAL_DESCRIPTION) |>
-  collect()
-
-rocks <- rocks %>% 
-  select(ROCK_TYPE_DESCRIPTION, ROCK_TYPE_CODE, ROCK_CLASS, ORIGINAL_DESCRIPTION) 
-
-
-skrocks <- rename_with(rocks, tolower) %>% 
-  st_intersection(aoi_sf)%>% 
-  select(rock_type_description, original_description)
-
-st_write(skrocks, file.path("inputs", "skeena_clip_soils.gpkg"), append = FALSE)
-
-skrocks <- st_read(file.path("inputs", "skeena_clip_soils.gpkg"))
-
-
+# 
+# rocks <- bcdc_query_geodata("ef8476ed-b02d-4f5c-b778-0d44c9126144") |>
+#   #filter(INTERSECTS(aoi_sf)) |>
+#   #select(ROCK_TYPE_DESCRIPTION, ROCK_TYPE_CODE, ROCK_CLASS, ORIGINAL_DESCRIPTION) |>
+#   collect()
+# 
+# rocks <- rocks %>% 
+#   select(ROCK_TYPE_DESCRIPTION, ROCK_TYPE_CODE, ROCK_CLASS, ORIGINAL_DESCRIPTION) 
+# 
+# 
+# skrocks <- rename_with(rocks, tolower) %>% 
+#   st_intersection(aoi_sf)%>% 
+#   select(rock_type_description, original_description)
+# 
+# st_write(skrocks, file.path("inputs", "skeena_clip_soils.gpkg"), append = FALSE)
 
 skrocks <- st_read(file.path("inputs", "skeena_clip_soils.gpkg"))
-# merge the soild with sediment layer 
+
+
+
+# merge the soils with sediment layer, gloacier and water layer
 
 # download quaternary soils sediment, union to single polygon / multipolygonb and use in QGIS 
+# 
+# sed <- st_read(file.path("inputs", "quat_sed.gpkg")) %>%
+#   mutate(rock_type_description = "quaternary sediment") %>% 
+#   select(rock_type_description)
+# 
+# st_write(sed, file.path("inputs", "quad_sed_simple.gpkg"))
 
-sed <- st_read(file.path("inputs", "quat_sed.gpkg")) %>%
-  mutate(rock_type_description = "quaternary sediment") %>% 
+
+
+
+
+
+# keep only lakes (not include rivers)
+
+lakes <- st_read(file.path("inputs", "lakes.gpkg")) %>%
+  mutate(rock_type_description = "waterbodies") %>%
   select(rock_type_description)
 
-st_write(sed, file.path("inputs", "quad_sed_simple.gpkg"))
+st_write(lakes , file.path("inputs", "lakes_simple.gpkg"), append = FALSE)
+
+
+# 
+# rivers <- st_read(file.pa("inputs", "rivers.gpkg")) %>%
+#       mutate(rock_type_description = "waterbodies") %>%
+#       select(rock_type_description))
+
+gla <- st_read(file.path("inputs", "glaciers.gpkg")) %>%
+      st_intersection(., template_poly) %>% 
+      mutate(rock_type_description = "glaciers") %>%
+      select(rock_type_description)  
+
+st_write(gla, file.path("inputs", "glacier_simple.gpkg"), append = FALSE)
+
 
 
 
 # in QGIS use symmetrical difference to remove sediment areas within the bedrock layer & UNION   WITH BEDROCK 
+# br <- st_read(file.path("inputs", "sk_bedrock_sediment_raw.gpkg")) %>%
+#   st_intersection(., template_poly)
+# 
+# st_write(br, file.path("inputs", "sk_bedrock_sediment_rawc.gpkg"))
+
+
+
+# repeat the process with glaciers and lakes > 1ha
+
+
+
 
 br <- st_read(file.path("inputs", "sk_bedrock_sediment_raw.gpkg")) 
 br <- br %>% 
@@ -150,11 +196,12 @@ br <- br %>%
 
 
 # read in Paulas key and make a unique id values
-bedrock_key <- read_excel(file.path("inputs","Skeena_Geology for land facets April 2_2024.xlsx"), 
+bedrock_key <- read_excel(file.path("inputs","Skeena_Geology for land facets_May1_2024.xlsx"), 
                           sheet = "rock types", skip =5, .name_repair = "universal") %>% 
   rename("rock_type" = Rock_type_description.,
          "rock_class" = Rock.class.,
-         "rock_class_det" = Groups.for.land.facet.analysis)%>%
+         #"rock_class_det" = Groups.for.land.facet.analysis)%>%
+          "rock_class_det" = new_groups)%>%
   select(rock_type, rock_class, rock_class_det) %>% 
   mutate(rock_class_det = tolower(rock_class_det))
 
@@ -242,9 +289,6 @@ bb <- bk_key %>%
 
 
 
-
-
-
 skrocks_out <- left_join(br, bb , by = "rock_type_description") %>% 
   select(-rock_class )#, -rock_class_no, -original_description)
 # select(-id, -bedrock_unit_id, -stratigraphic_age_code, -objectid, -rock_type_code )
@@ -271,13 +315,26 @@ writeRaster(rockdet_no, file.path("inputs", "sk_bedrock_class_det.tif"), overwri
 ### Add the new codes to the landscape faceet key and update the rasters to create the new objects. 
 
 
+dem <- rast(file.path("inputs", "sk_dem_class.tif"))
+
 srast = rast(file.path("inputs", "sk_lf_3005.tif"))
 
 # number of codes within Aoi 
 uval = length(unique(values(srast)))
+uval = length(unique(values(dem)))
+
+
+
+
+
+
+
 
 # remove the last two digits
 w <- app(srast, fun=function(x){ round(as.numeric(x) / 100, 0) } )
+
+sort(unique(values(w)))
+
 
 # create a blank for space for new code
 w <- app(w, fun=function(x){ as.numeric(x) * 100 } )
