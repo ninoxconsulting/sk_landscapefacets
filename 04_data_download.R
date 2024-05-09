@@ -145,7 +145,7 @@ st_write(cons, file.path("inputs", "cons_lands.gpkg"), append = FALSE)
 
 
 
-# quarternary sedimte?
+# quarternary sedimte? # do not use - not reliable 
 #https://catalogue.data.gov.bc.ca/dataset/b3f58ed8-376f-4962-9657-36297a5f41cf
 # binary 
 sed <- bcdc_query_geodata("b3f58ed8-376f-4962-9657-36297a5f41cf") |>
@@ -213,5 +213,49 @@ plot(mcc)
 
 
 
+#####################
+## EAUBC datasets
+## freshwater barcodes? 
 
+basedata = "inputs"
+
+in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
+in_aoi <- st_as_sf(in_aoi)
+
+# EAUBC_rivers = https://catalogue.data.gov.bc.ca/dataset/eaubc-rivers
+#https://catalogue.data.gov.bc.ca/dataset/96707e83-bd9a-4230-b5a3-836731fe46aa
+
+rriv <- bcdc_query_geodata("96707e83-bd9a-4230-b5a3-836731fe46aa") |>
+  #select( #####) |>
+  collect()
+
+
+rrriv <- sf::st_intersection(rriv,  in_aoi) #%>% 
+  select(QUATERNARY_ID)
+
+st_write(rrriv , file.path("inputs", "eaubc_rivers.gpkg"), append = FALSE)
+
+# lakes 
+##https://catalogue.data.gov.bc.ca/dataset/eaubc-lakes
+
+rlak <- bcdc_query_geodata("be394666-5850-4951-8c68-724ae7f72017") |>
+  #select( #####) |>
+    collect()
+    
+rrrlak <- sf::st_intersection(rlak,  in_aoi) 
+    
+st_write(rrrlak , file.path("inputs", "eaubc_lakes.gpkg"), append = FALSE)
+    
+
+
+# EAUBC freshwater ecoregions 
+# https://catalogue.data.gov.bc.ca/dataset/eaubc-freshwater-ecoregion
+#https://catalogue.data.gov.bc.ca/dataset/f8c3dc01-0fdc-41ce-a156-cc9cc0a80092
+
+rreg <- bcdc_query_geodata("f8c3dc01-0fdc-41ce-a156-cc9cc0a80092") |>
+  collect()
+
+rrrreg <- sf::st_intersection(rreg,  in_aoi) 
+
+st_write(rrrreg, file.path("inputs", "eaubc_reg.gpkg"), append = FALSE)
 

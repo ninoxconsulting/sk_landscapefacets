@@ -5,16 +5,69 @@ library(ggplot2)
 library(dplyr)
 library(bcdata)
 library(readr)
-#library(janitor)
 library(readxl)
 
 ## note all data in google drive in "inputs folder"
 
-
 #skeena = rast(file.path("inputs", "skeena_lfacet_3005.tif"))
-skeena = rast(file.path("inputs", "sk_adaptwest_templateV2.tif"))
+#skeena = rast(file.path("inputs", "sk_adaptwest_templateV2.tif"))
 
-#skeena = rast(file.path("inputs", "sk_lf_3005.tif")) # use this one as clipped to skeeena region
+
+
+# read in and clean up and generate template
+skeena = rast(file.path("inputs", "MLF_Kehm_2012.tif"))
+sk3005 = project(skeena, "epsg:3005")
+writeRaster(sk3005, file.path("inputs", "MLF_Kehm_3005.tif"), overwrite = TRUE)
+
+
+# classify the values into three groups 
+m <- c(1, 54, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc1 <- classify(sk3005, rclmat, include.lowest=TRUE)
+
+# write out a raster template 
+writeRaster(rc1, file.path("inputs", "sk_rast_template.tif"), overwrite = TRUE)
+
+# convert to a vector and output 
+rcpoly <- as.polygons(rc1)
+rcpolsf <- st_as_sf(rcpoly)
+st_write(rcpolsf, file.path("inputs", "sk_poly_template.gpkg"), append = FALSE) 
+
+
+
+## Generate Barcode of data 
+## this will be macrolandforms + soils + elevation
+## 
+
+## 1) macrolandforms
+mlf <- rast(file.path("inputs", "MLF_Kehm_3005.tif"))
+# read in csv key 
+
+mlfkey <- read_csv(file.path("inputs", "Macrolandforms_Kehm_key.csv"))%>% 
+  select(VALUE, TYPE)
+
+
+# 2) Parent soils 
+soils <- rast(file.path("inputs", "Parent_Material_Skeena_2024.tif"))
+soils = project(soils, "epsg:3005")
+soils = crop(soils, mlf)
+
+# read in csv key 
+
+sokey <- read_csv(file.path("inputs", "parentmaterial_Kehm_key.csv")) %>% 
+  select(VALUE, Description)
+
+
+out = c(mlf, soils)
+
+
+# 3) elevation measures 
+
+
+
+
+
+
 
 
 basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
@@ -33,25 +86,21 @@ aoi_sf <- st_as_sf(aoi)
 
 
 
-#PROJCS["NA_Lambert_Azimuthal_Equal_Area",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433],METADATA["World",-180.0,-90.0,180.0,90.0,0.0,0.0174532925199433,0.0,1262]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-100.0],PARAMETER["Latitude_Of_Origin",45.0],UNIT["Meter",1.0]]
 
-# mask the raster by aoi 
-#srast <- mask(skeena, aoi)
-#srast <- crop(skeena, aoi)
-#writeRaster(srast, file.path("inputs", "sk_rast_template.tif"))
 
-srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 
-# convert to vector 
 
-m <- c(1, 10000000, 1)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc1 <- classify(srast , rclmat, include.lowest=TRUE)
 
-svec <- as.polygons(rc1)
 
-sfvec <- st_as_sf(svec)
-st_write(sfvec, file.path("inputs", "template_poly.gpkg"))
+
+
+
+
+
+
+
+
+
 
 # update the bedrock layer based on geology file 
 
