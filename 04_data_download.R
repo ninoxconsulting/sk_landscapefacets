@@ -307,6 +307,89 @@ rrrlak <- sf::st_intersection(rlak,  in_aoi)
     
 st_write(rrrlak , file.path("inputs", "eaubc_lakes.gpkg"), append = FALSE)
     
+lac <- st_read(file.path("inputs", "eaubc_lakes.gpkg")) %>% 
+  select("WSA_SHORELINE_COMPLEXITY",  "WSA_SURFACE_AREA_HECTARE",      
+      "WSA_NUMBER_OF_INLETS", "WSA_NUMBER_OF_OUTLETS", 
+      "UPSTREAM_DRAINAGE_AREA", "LAKE_ECOSYSTEM_CLASS" , "MODELLED_MEAN_DEPTH",
+     v)
+# test the groups 
+#1) "WSA_SHORELINE_COMPLEXITY"
+
+lac<- lac %>%
+  mutate(shoreline_complex = case_when(
+    WSA_SHORELINE_COMPLEXITY <= 1.5 ~ "round", 
+    WSA_SHORELINE_COMPLEXITY > 1.5 &  WSA_SHORELINE_COMPLEXITY <=3 ~ "irregular", 
+    WSA_SHORELINE_COMPLEXITY > 3 ~ "very irreg"
+  ))
+
+comp <- lac |> st_drop_geometry() |> group_by(shoreline_complex) |> count()
+
+#2) WSA_SURFACE_AREA_HECTARE
+lac<- lac %>%
+  mutate(surface_area = case_when(
+    WSA_SURFACE_AREA_HECTARE <= 5 ~ "small", 
+    WSA_SURFACE_AREA_HECTARE > 5 &  WSA_SURFACE_AREA_HECTARE <=100 ~ "medium", 
+    WSA_SURFACE_AREA_HECTARE > 100 &  WSA_SURFACE_AREA_HECTARE <=1000 ~ "large", 
+    WSA_SURFACE_AREA_HECTARE > 1000 ~ "very large"
+  ))
+
+
+comp <- lac |> st_drop_geometry() |> group_by(surface_area) |> count()
+
+#3)  "WSA_ELEVATION_IN_METER", 
+
+
+lac<- lac %>%
+  mutate(wsa_elevation = case_when(
+    WSA_ELEVATION_IN_METER <= 200 ~ "low", 
+    WSA_ELEVATION_IN_METER> 200 &  WSA_ELEVATION_IN_METER <=600 ~ "medium", 
+    WSA_ELEVATION_IN_METER > 600 &  WSA_ELEVATION_IN_METER <=1000 ~ "large", 
+    WSA_ELEVATION_IN_METER > 1000 ~ "very large"
+  ))
+
+comp <- lac |> st_drop_geometry() |> group_by(wsa_elevation) |> count()
+
+#4)  "no inlets", 
+hist()
+
+lac<- lac %>%
+  mutate(outlets  = case_when(
+    WSA_ELEVATION_IN_METER <= 200 ~ "low", 
+    WSA_ELEVATION_IN_METER> 200 &  WSA_ELEVATION_IN_METER <=600 ~ "medium", 
+    WSA_ELEVATION_IN_METER > 600 &  WSA_ELEVATION_IN_METER <=1000 ~ "large", 
+    WSA_ELEVATION_IN_METER > 1000 ~ "very large"
+  ))
+
+# 5) no outlets. 
+
+lac <- lac %>%
+  mutate(wsa_elevation = case_when(
+    WSA_ELEVATION_IN_METER <= 200 ~ "low", 
+    WSA_ELEVATION_IN_METER> 200 &  WSA_ELEVATION_IN_METER <=600 ~ "medium", 
+    WSA_ELEVATION_IN_METER > 600 &  WSA_ELEVATION_IN_METER <=1000 ~ "large", 
+    WSA_ELEVATION_IN_METER > 1000 ~ "very large"
+  ))
+
+#5) upstream drainage area 
+
+hist(lac$UPSTREAM_DRAINAGE_AREA) 
+
+
+#6) Lake Ecosystem class
+comp <- lac |> st_drop_geometry() |> group_by(LAKE_ECOSYSTEM_CLASS) |> count()
+
+# 7) MOdelled mean depth 
+
+hist(lac$MODELLED_MEAN_DEPTH) 
+
+lac <- lac %>%
+  mutate(mean_depth = case_when(
+    MODELLED_MEAN_DEPTH <= 5 ~ "shallow", 
+    MODELLED_MEAN_DEPTH > 5 &  MODELLED_MEAN_DEPTH  <= 10 ~ "medium", 
+    MODELLED_MEAN_DEPTH > 10   ~ "deep"))
+
+comp <- lac |> st_drop_geometry() |> group_by(mean_depth) |> count()
+
 
 
 # EAUBC freshwater ecoregions 
@@ -320,3 +403,6 @@ rrrreg <- sf::st_intersection(rreg,  in_aoi)
 
 st_write(rrrreg, file.path("inputs", "eaubc_reg.gpkg"), append = FALSE)
 
+
+############################################################
+### 
