@@ -25,12 +25,12 @@ lakes <- bcdc_query_geodata("cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6") |>
   select( WATERBODY_TYPE, AREA_HA) |>
   collect()
 
-lakes <- sf::st_intersection(lakes, in_aoi) |> 
+lakes1 <- sf::st_intersection(lakes, in_aoi) |> 
   select( WATERBODY_TYPE, AREA_HA) %>% 
   filter(AREA_HA > 1) 
 
 
-st_write(lakes, file.path("inputs", "lakes.gpkg"), append = FALSE)
+st_write(lakes1, file.path("inputs", "lakes.gpkg"), append = FALSE)
 
 
 # rivers 
@@ -68,11 +68,10 @@ st_write(lakes, file.path("inputs", "lakes.gpkg"), append = FALSE)
 
 glac <- bcdc_query_geodata("8f2aee65-9f4c-4f72-b54c-0937dbf3e6f7") |>
   # filter(INTERSECTS(aoi_sf)) |> 
-  #  select(PROTECTED_LANDS_NAME, PROTECTED_LANDS_CODE, PROTECTED_LANDS_DESIGNATION) |>
+  select(WATERBODY_TYPE, AREA_HA) |>
   collect()
 
 glac <- sf::st_intersection(glac, in_aoi)
-  select(WATERBODY_TYPE, AREA_HA)
 
 st_write(glac, file.path("inputs", "glaciers.gpkg"), append = FALSE)
 
@@ -83,11 +82,10 @@ st_write(glac, file.path("inputs", "glaciers.gpkg"), append = FALSE)
 
 pro <- bcdc_query_geodata("1130248f-f1a3-4956-8b2e-38d29d3e4af7") |>
   # filter(INTERSECTS(aoi_sf)) |> 
-  #  select(PROTECTED_LANDS_NAME, PROTECTED_LANDS_CODE, PROTECTED_LANDS_DESIGNATION) |>
+  select(PROTECTED_LANDS_NAME, PROTECTED_LANDS_CODE, PROTECTED_LANDS_DESIGNATION) |>
   collect()
 
-pro <- sf::st_intersection(pro, in_aoi)|> 
-  select(PROTECTED_LANDS_NAME, PROTECTED_LANDS_CODE, PROTECTED_LANDS_DESIGNATION)
+pro <- sf::st_intersection(pro, in_aoi)
 
 st_write(pro, file.path("inputs", "protected_lands.gpkg"), append = FALSE)
 
@@ -151,8 +149,6 @@ st_write(ec , file.path("inputs", "sk_ecoreg.gpkg"), append = FALSE)
 
 # refugia processing: 
 
-base_raster <- rast(file.path("outputs", "sk_lf_3005.tif"))
-
 ref_path <- file.path("inputs", "Stolar_et_al_2024_CiCP_Zenodo_upload_Version_1.1")
 ref <- list.files(ref_path , pattern = "*.tif")
 
@@ -162,12 +158,11 @@ ref4 <- rast(file.path(ref_path, "Conservation_priorities_2080s.tif"))
 ref5 <- rast(file.path(ref_path, "microrefugia.tif"))
 ref6 <- rast(file.path(ref_path, "Restoration_priorities_2080s.tif"))
 
-reff <- ref6
+reff <- ref5
 
-cc <- resample(reff, base_raster)
-mcc <- mask(cc, base_raster)
-writeRaster(mcc, file.path("inputs", "Restoration_priorities_2080s.tif"))
-
+cc <- resample(reff, srast)
+mcc <- mask(cc, srast)
+writeRaster(mcc, file.path("inputs", "microrefugia.tif"), overwrite = TRUE)
 plot(mcc)
 #rast(c(mcc, base_raster))
 
@@ -177,12 +172,6 @@ plot(mcc)
 
 #####################
 ## EAUBC datasets
-## freshwater barcodes? 
-
-basedata = "inputs"
-
-in_aoi <- vect(file.path(basedata, "SkeenaRegionBndry.gpkg"))
-in_aoi <- st_as_sf(in_aoi)
 
 # EAUBC_rivers = https://catalogue.data.gov.bc.ca/dataset/eaubc-rivers
 #https://catalogue.data.gov.bc.ca/dataset/96707e83-bd9a-4230-b5a3-836731fe46aa
@@ -190,7 +179,6 @@ in_aoi <- st_as_sf(in_aoi)
 rriv <- bcdc_query_geodata("96707e83-bd9a-4230-b5a3-836731fe46aa") |>
   #select( #####) |>
   collect()
-
 
 rrriv <- sf::st_intersection(rriv,  in_aoi) #%>% 
   select(QUATERNARY_ID)
@@ -205,7 +193,6 @@ rlak <- bcdc_query_geodata("be394666-5850-4951-8c68-724ae7f72017") |>
     collect()
     
 rrrlak <- sf::st_intersection(rlak,  in_aoi) 
-    
 st_write(rrrlak , file.path("inputs", "eaubc_lakes.gpkg"), append = FALSE)
     
 
