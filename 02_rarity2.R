@@ -1,37 +1,71 @@
-#03. Rarity
+#02. Gneerate rarity codes for barcode 
 
 library(terra)
 library(sf)
 library(ggplot2)
 library(dplyr)
 
-## actual size 
-#srast = terra::rast(file.path("inputs", "sk_lf_3005.tif"))
+srast = terra::rast(file.path("outputs", "sk_lf_barcode.tif"))
 
-#srast = srastrc = terra::rast(file.path("outputs", "sk_lf_rockclass.tif"))
-srast = terra::rast(file.path("outputs", "sk_lf_rockclassdet.tif"))
+# Read in the skeena facets 
+
+# number of codes within Aoi 
+uval = length(unique(values(srast)))
+
+# Summarise values 
+routdf <- as.data.frame(srast)
+
+# polt histogram
+ggplot2::ggplot(routdf, aes(lyr.1)) +
+  ggplot2::geom_histogram(bins = uval) 
+
+colnames(routdf) = "layer1"
+
+ids = routdf %>% 
+  group_by(layer1)%>%
+  summarise(count = n())%>%
+  mutate(total = sum(count))%>%
+  rowwise() %>%
+  mutate(pc = (count/total)*100)%>%
+  arrange(count)
+
+ids <-within(ids, acc_sum <- cumsum(pc))
+
+rare <- ids %>% 
+  mutate(rare_id = case_when(
+    acc_sum <= 1 ~ 5, 
+    acc_sum > 1 & acc_sum <=2 ~ 4,
+    acc_sum > 2 & acc_sum <=4 ~ 3,
+    acc_sum > 4 & acc_sum <=8 ~ 2,
+    acc_sum > 8 & acc_sum <=16 ~ 1.5,
+    .default = as.numeric(1)
+  ))
+
+
+# generate Summary tables 
+write_csv(rare , file.path("outputs", "lf_barcode_summary.csv"))
+
+
+
+# if above is already run....
 
 # read in the rare csv file 
-rare <- read.csv(file.path("outputs","landscape_facet_summary_rcd.csv")) %>%
-  mutate(rare_id = rarity_class)
+rare <- read.csv(file.path("outputs", "lf_barcode_summary.csv")) 
+rr = terra::rast(file.path("outputs", "sk_lf_barcode.tif"))
 
 #cutoff is count of 46127
 
 hist(rare$count)
-hist(rare$rarity_class)
+hist(rare$rare_id)
 
- 
-# rock class
-
+ # assign rarity class
 class1 <-rare  %>% filter(rare_id == 1) %>% pull(layer1)
 class2 <-rare  %>% filter(rare_id == 2) %>% pull(layer1)
 class3 <-rare  %>% filter(rare_id == 3) %>% pull(layer1)
 class4 <-rare  %>% filter(rare_id == 4) %>% pull(layer1)
 class5 <-rare  %>% filter(rare_id == 5) %>% pull(layer1)
 
-rr <- srast
-
-uvr <- as.vector(unique(values(srast)))
+uvr <- as.vector(unique(values(rr)))
 
 # check if needs class 1: 
 
@@ -130,20 +164,11 @@ m <- c(1, 1, 1,
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 rc1 <- classify(rr, rclmat, include.lowest=TRUE)
 
-
-# 
-# # to do 
-# # might need a reclass after if less than 4 = NA
-# rclmat <- matrix(m, ncol=3, byrow=TRUE)
-# rc1 <- classify(rr, rclmat, include.lowest=TRUE)
-# 
-
-#terra::writeRaster(rc1, "sk_rarity_class.tif")
-
-#terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class.tif"))
-#terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rc.tif"))
-
 terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rcd.tif"), overwrite = TRUE)
+
+
+
+## in QGIS run neighbourhood analysis 
 
 
 
