@@ -54,9 +54,11 @@ dem_file <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/bc_dem_2
 template <-rast(file.path("inputs", "sk_rast_template.tif"))
 
 dem_sk <- crop(dem_file, template)
-demf <- resample(dem_sk, template)
+dem_sk100  <- aggregate(dem_sk , 4)
+demf <- mask(dem_sk100, template)
+dem <- resample(demf, template)
 
-writeRaster(demf, file.path("inputs", "sk_dem_aoi.tif"), overwrite = TRUE)
+writeRaster(dem, file.path("inputs", "sk_dem_aoi.tif"), overwrite = TRUE)
 
 hist(demf)
 
@@ -79,7 +81,7 @@ dem_class<- classify(demf, rclmat, include.lowest=TRUE)
 
 writeRaster(dem_class, file.path("inputs", "sk_dem_class.tif"), overwrite = TRUE)
 
-hist(dem_class)
+#hist(dem_class)
 
 
 # create a key 
@@ -110,8 +112,7 @@ soils_pol <- soils_pol %>%
   dplyr::filter(Parent_Material_Skeena_2024 %in% c(6,7,10)) %>% 
   dplyr::mutate(rock_type_description = "quaternary sediment")
 
-
-plot(soils_pol)
+#plot(soils_pol)
 st_write(soils_pol, file.path("inputs", "soil_parent_sediment.gpkg"), append = FALSE) 
 
 
