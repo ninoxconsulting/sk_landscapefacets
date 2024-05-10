@@ -390,6 +390,8 @@ lac <- lac %>%
 
 comp <- lac |> st_drop_geometry() |> group_by(mean_depth) |> count()
 
+
+
 # EAUBC freshwater ecoregions 
 # https://catalogue.data.gov.bc.ca/dataset/eaubc-freshwater-ecoregion
 #https://catalogue.data.gov.bc.ca/dataset/f8c3dc01-0fdc-41ce-a156-cc9cc0a80092
@@ -401,3 +403,6 @@ rrrreg <- sf::st_intersection(rreg,  in_aoi)
 
 st_write(rrrreg, file.path("inputs", "eaubc_reg.gpkg"), append = FALSE)
 
+
+############################################################
+### 
