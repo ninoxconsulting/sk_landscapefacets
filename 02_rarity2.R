@@ -33,11 +33,11 @@ ids <-within(ids, acc_sum <- cumsum(pc))
 
 rare <- ids %>% 
   mutate(rare_id = case_when(
-    acc_sum <= 1 ~ 5, 
-    acc_sum > 1 & acc_sum <=2 ~ 4,
-    acc_sum > 2 & acc_sum <=4 ~ 3,
-    acc_sum > 4 & acc_sum <=8 ~ 2,
-    acc_sum > 8 & acc_sum <=16 ~ 1.5,
+    acc_sum <= 1 ~ 6, 
+    acc_sum > 1 & acc_sum <=2 ~ 5,
+    acc_sum > 2 & acc_sum <=4 ~ 4,
+    acc_sum > 4 & acc_sum <=8 ~ 3,
+    acc_sum > 8 & acc_sum <=16 ~ 2,
     .default = as.numeric(1)
   ))
 
@@ -60,10 +60,11 @@ hist(rare$rare_id)
 
  # assign rarity class
 class1 <-rare  %>% filter(rare_id == 1) %>% pull(layer1)
-class2 <-rare  %>% filter(rare_id == 2) %>% pull(layer1)
+class2 <- rare %>% filter(rare_id == 2)%>% pull(layer1)
 class3 <-rare  %>% filter(rare_id == 3) %>% pull(layer1)
 class4 <-rare  %>% filter(rare_id == 4) %>% pull(layer1)
 class5 <-rare  %>% filter(rare_id == 5) %>% pull(layer1)
+class6 <-rare  %>% filter(rare_id == 6) %>% pull(layer1)
 
 uvr <- as.vector(unique(values(rr)))
 
@@ -81,6 +82,22 @@ if(any(unique(uvr %in% class1)) == TRUE){
   
 }else {
   print("no class1 reclass needed")
+}
+
+# check if needs class 6 
+
+if(any(unique(uvr %in% class15)) == TRUE){
+  print("reclass values")
+  
+  for(i in class6){
+    #  i = class1[1]
+    print(i)
+    rr <- subst(rr, i, 6)
+    
+  }
+  
+}else {
+  print("no class 6 reclass needed")
 }
 
 
@@ -135,12 +152,18 @@ if(any(unique(uvr %in% class4)) == TRUE){
 
 
 # check if needs class 5
+#class5 <- aa
+#aa <- class5 
+#class5 <- aa[21:50]
+
+#setdiff(reclass, class5)
+
 
 if(any(unique(uvr %in% class5)) == TRUE){
   print("reclass values")
   
   for(i in class5){
-    #  i = class1[1]
+     # i = class1[1]
     print(i)
     rr <- subst(rr, i, 5)
   }
@@ -148,21 +171,26 @@ if(any(unique(uvr %in% class5)) == TRUE){
   print("no class5 reclass needed")
 }
 
-# up to here
+
 reclass <- as.vector(unique(values(rr)))
 
-reclass
+sort(reclass)
 
 ## from-to-becomes
-# classify the values into three groups 
+# classify the values into groups 
 
 m <- c(1, 1, 1,
+       1.5, 1.5, 1.5,
        2, 2, 2,
        3, 3, 3,
        4, 4, 4,
-       5, 5, 5)
+       5, 200000, 5)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 rc1 <- classify(rr, rclmat, include.lowest=TRUE)
+
+
+
+unique(values(rc1))
 
 terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rcd.tif"), overwrite = TRUE)
 
