@@ -7,12 +7,8 @@ library(bcdata)
 library(readr)
 library(readxl)
 library(purrr)
+
 ## note all data in google drive in "inputs folder"
-
-#skeena = rast(file.path("inputs", "skeena_lfacet_3005.tif"))
-
-#skeena = rast(file.path("inputs", "sk_adaptwest_templateV2.tif"))
-
 
 # read in and clean up and generate template
 skeena = rast(file.path("inputs", "MLF_Kehm_2012.tif"))
@@ -45,7 +41,6 @@ mlf <- rast(file.path("inputs", "MLF_Kehm_3005.tif"))
 
 mlfkey <- read_csv(file.path("inputs", "Macrolandforms_Kehm_key.csv"))%>% 
   select(VALUE, TYPE)
-
 
 
 
@@ -140,17 +135,20 @@ st_write(soils_pol, file.path("inputs", "soil_parent_sediment.gpkg"), append = F
 # st_write(skrocks, file.path("inputs", "skeena_clip_soils.gpkg"), append = FALSE)
 
 skrocks <- st_read(file.path("inputs", "skeena_clip_soils.gpkg"))
+poly_template <-  st_read(file.path("inputs", "sk_poly_template.gpkg"))  
 
 # in QGIS use symmetrical difference to remove sediment areas within the bedrock layer & UNION   WITH BEDROCK 
-# br <- st_read(file.path("inputs", "sk_bedrock_sediment_raw.gpkg")) %>%
-#   st_intersection(., template_poly)
-# 
-# st_write(br, file.path("inputs", "sk_bedrock_sediment_rawc.gpkg"))
+#  br <- st_read(file.path("inputs", "sk_bedrock_sediment_merge.gpkg")) %>%
+#    st_intersection(., poly_template) %>% 
+#   select(-Parent_Material_Skeena_2024, -MLF_Kehm_2012) 
+#  
+# st_write(br, file.path("inputs", "sk_bedrock_sediment_rawc.gpkg"), append = FALSE)
 
-
-
-br <- st_read(file.path("inputs", "sk_bedrock_sediment_raw.gpkg")) 
-#br <- st_read(file.path("inputs", "skeena_clip_soils.gpkg")) 
+br <- st_read(file.path("inputs", "sk_bedrock_sediment_rawc.gpkg"), layer = 'br') %>% 
+  select(-Parent_Material_Skeena_2024) %>% 
+  filter(is.na(rock_type_description_2)) %>% 
+  select(-rock_type_description_2, -layer)
+  
 br <- br %>% 
   mutate(rock_type_description  = case_when(
     is.na(rock_type_description) ~ "quaternary sediment", 
@@ -252,7 +250,7 @@ skrocks_out <- left_join(br, bb , by = "rock_type_description") %>%
 # select(-id, -bedrock_unit_id, -stratigraphic_age_code, -objectid, -rock_type_code )
 
 skrocks_key <- skrocks_out %>%
-  select(rock_class_det,rock_class_det_no) %>%
+  select(rock_class_det, rock_class_det_no) %>%
   st_drop_geometry() %>% 
   distinct()
 
