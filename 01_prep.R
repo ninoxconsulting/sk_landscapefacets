@@ -60,7 +60,7 @@ hist(demf)
 
 # classify the values into groups based on the values 
 # all values >= 0 and <= 0.25 become 1, etc.
-m <- c(-1, 200, 1, # lowest diversity 
+m <- c(-10, 200, 1, # lowest diversity 
        200, 500, 2,
        500, 750, 3,
        750, 1000 , 4,
@@ -152,8 +152,7 @@ br <- st_read(file.path("inputs", "sk_bedrock_sediment_rawc.gpkg"), layer = 'br'
 br <- br %>% 
   mutate(rock_type_description  = case_when(
     is.na(rock_type_description) ~ "quaternary sediment", 
-    TRUE ~ as.character(rock_type_description))) %>% 
-  select(c(-rock_type_description_2, -layer))
+    TRUE ~ as.character(rock_type_description))) 
 
 
 
@@ -279,7 +278,7 @@ writeRaster(rockdet_no, file.path("inputs", "sk_bedrock_class_det.tif"), overwri
 mlf <- rast(file.path("inputs", "MLF_Kehm_3005.tif"))
 mlfkey <- read_csv(file.path("inputs", "Macrolandforms_Kehm_key.csv"))%>% 
   select(VALUE, TYPE)
-# n = 10
+# n = 25
 
 # 2) elevation measures 
 demf <- rast(file.path("inputs", "sk_dem_class.tif"))

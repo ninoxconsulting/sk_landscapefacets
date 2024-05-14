@@ -2,33 +2,21 @@
 
 # review the proteced areas: 
 
-library(bcdata)
-library(dplyr)
 library(terra)
 library(sf)
+library(ggplot2)
+library(dplyr)
+library(readr)
+
+srast = rast(file.path("outputs", "sk_lf_rdc_diversity_101c.tif"))
+names(srast)= "diversity"
+hist(srast$diversity)
 
 # read in study area 
 
-#basedata = "C:\\Users\\genev\\OneDrive\\Documents\\02.Contracts\\00_data\\base_vector\\regions"
-#aoi <- vect(file.path(basedata, "SkeenaRegionBndry.shp"))
-#aoi_sf <- st_as_sf(aoi)
-
 temp <- rast(file.path("inputs", "sk_rast_template.tif"))
-#aoi <- vect(file.path("inputs", "template_poly.gpkg"))
+aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 
-
-## clip the neighbourhood analysis output 
-# srast = terra::rast(file.path("outputs","sk_lf_rdc_diversity_101c.tif"))
-# names(srast)= "diversity"
-# 
-# # mask the raster by aoi and clip and then export
-# srast <- mask(srast, temp)
-# writeRaster(srast, file.path("outputs","sk_lf_rdc_diversity_101c_clip.tif"))
-
-srast = rast(file.path("outputs","sk_lf_rdc_diversity_101c_clip.tif"))
-
-
-hist(srast$diversity)
 
 # reclasify rasters 
 #range(srast$diversity)

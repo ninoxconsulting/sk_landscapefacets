@@ -4,6 +4,8 @@ library(dplyr)
 library(sf)
 
 
+## LAKES IS IN TABULAR FORM. 
+
 
 in_aoi <- read_sf(file.path("inputs", "sk_poly_template.gpkg"))
 
@@ -125,7 +127,7 @@ ldf_ss <- ldf_sum |>
 
 names(ldf_ss) <- make.names(names(ldf_ss))
 summ <- ldf_ss %>%
-  group_by_(.dots=names(ldf_ss)) %>%
+  group_by(.dots=names(ldf_ss)) %>%
   summarise(count= n())
 
 

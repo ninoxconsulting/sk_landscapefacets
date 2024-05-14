@@ -4,6 +4,7 @@ library(terra)
 library(sf)
 library(ggplot2)
 library(dplyr)
+library(readr)
 
 srast = terra::rast(file.path("outputs", "sk_lf_barcode.tif"))
 
@@ -86,7 +87,7 @@ if(any(unique(uvr %in% class1)) == TRUE){
 
 # check if needs class 6 
 
-if(any(unique(uvr %in% class15)) == TRUE){
+if(any(unique(uvr %in% class6)) == TRUE){
   print("reclass values")
   
   for(i in class6){
@@ -180,11 +181,11 @@ sort(reclass)
 # classify the values into groups 
 
 m <- c(1, 1, 1,
-       1.5, 1.5, 1.5,
+       6, 6, 6,
        2, 2, 2,
        3, 3, 3,
        4, 4, 4,
-       5, 200000, 5)
+       5, 5, 5)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 rc1 <- classify(rr, rclmat, include.lowest=TRUE)
 
@@ -219,12 +220,15 @@ terra::writeRaster(rc1,file.path("outputs", "sk_rarity_class_rcd.tif"), overwrit
 
 
 # read in clipped dataset
-con_rarec <- rast(file.path("outputs","sk_lf_rdc_rarity_101c_clip.tif"))
-
+con_rarec <- rast(file.path("outputs","sk_lf_rdc_rarity_101c.tif"))
+names(con_rarec)= "rarity"
 #reclass the valyers to a conccentration 
 
-hist(con_rarec$rarity  , breaks = 40)
+hist(con_rarec$rarity, breaks = 40)
 
+aa <- sort(values(con_rarec))
+
+quantile(aa, probs = seq(0, 1, 0.05), na.rm = TRUE)
 ## WAITING ON INPUT FROM PAULA 
 
 unique(values(con_rarec))
@@ -242,7 +246,7 @@ m <- c(0, 1, 1,
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 rc <- classify(con_rarec , rclmat, include.lowest=TRUE)
 
-writeRaster(rc, file.path("outputs", "sk_rarity_conc.tif"))
+writeRaster(rc, file.path("outputs", "sk_rarity_conc.tif"), overwrite = TRUE)
 
 
 
