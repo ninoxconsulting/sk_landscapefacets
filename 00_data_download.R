@@ -49,17 +49,27 @@ in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 # 
 # # wetlands 
 # #https://catalogue.data.gov.bc.ca/dataset/93b413d8-1840-4770-9629-641d74bd1cc6
-# wetlands <- bcdc_query_geodata("93b413d8-1840-4770-9629-641d74bd1cc6") |>
-#   # filter(INTERSECTS(aoi_sf)) |> 
-#   select( WATERBODY_TYPE, AREA_HA) |>
-#   collect()
-# 
+wetlands <- bcdc_query_geodata("93b413d8-1840-4770-9629-641d74bd1cc6") |>
+  # filter(INTERSECTS(aoi_sf)) |>
+  select( WATERBODY_TYPE, AREA_HA) |>
+  collect()
+
 # wetlands <- sf::st_intersection(wetlands, in_aoi) #|> 
 #       #select(WATERBODY_TYPE, AREA_HA)
 # 
 # # select area > xxxx 
 # 
 # st_write(wetlands, file.path("inputs", "wetlands.gpkg"), append = FALSE)
+
+
+# determine percent density per pixel (100m x 100m) 
+wl <- st_read(file.path("inputs", "wetlands.gpkg"))
+
+wll <- vect(file.path("inputs", "wetlands.gpkg"))
+
+tt <- rasterize(wll, srast, cover = TRUE)
+
+
 
 
 
@@ -163,6 +173,7 @@ bt_sk <- mask(bt, template)
 
 writeRaster(bt_sk , file.path("inputs", "TAP_bigtrees_raw.tif"), overwrite = TRUE)
 
+
 # ancient forests
 bt <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map4_Ancient_forest_2021_07_22.tif"))
 #bt <- project(bt, template)
@@ -249,6 +260,96 @@ st_write(rrrreg, file.path("inputs", "eaubc_reg.gpkg"), append = FALSE)
 
 
 
+## wetland % density 
+
+# EAUBC_rivers = https://catalogue.data.gov.bc.ca/dataset/eaubc-rivers
+#https://catalogue.data.gov.bc.ca/dataset/96707e83-bd9a-4230-b5a3-836731fe46aa
+# 
+# ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
+# 
+# Weaver used the density values of % cover of 1km grid cell 
+# 
+# very high > 50 
+# high 15 - 50%
+# moderate = <15% 
+# 
+# 
+# 
+# PCT_WETLAND NUMBER_OF_WETLANDS
+# 
+# FEATURE_AREA_SQM
+
+
+
+## generate other features for the landscape resistence
+dem <-rast(file.path("inputs", "sk_dem_aoi.tif"))
+slope <- terrain(dem, v="slope", neighbors=8, unit="degrees")  
+writeRaster(slope, file.path("inputs", "sk_slope_degree.tif"), overwrite = TRUE)
+
+
+
+# extract cutblocks and compare to 2021 CE layer 
+
+## 3) Get harvest history and FTEN --------------------------------
+  ## URL for warehouse download
+  url = "https://catalogue.data.gov.bc.ca/dataset/b1b647a6-f271-42e0-9cd0-89ec24bce9f7"
+  
+  ## Name relevant columns to extract
+  rel_cols = c("HARVEST_YEAR")
+  
+  ## Name output geopackage
+  out_name = "cutblocks.gpkg"
+  
+  # Uses date filter which filters cutblock ages less than 20 years, or 7305 days
+  
+  # Uses date filter which filters cutblock ages less than 20 years, or 7305 days
+  bcdata::bcdc_query_geodata(record = url, crs = sf::st_crs(in_aoi)$epsg) %>% ## Query dataset
+    bcdata::filter(INTERSECTS(in_aoi)) %>%
+    bcdata::select(HARVEST_YEAR)%>%
+    bcdata::collect() %>% ## Download specified dataset
+    dplyr::select(all_of(rel_cols))# %>% ## Select relevant cols if defined
+    #{if(nrow(.) > 0) st_intersection(., in_aoi) else .} %>% ## Crop to AOI extent
+    #st_write(file.path(out_path, out_name), append = FALSE) ## Write to output file path
+  
+  # # 4) ften  - Download latest harvest layer
+  # 
+  # ## URL for warehouse download
+  # url = "https://catalogue.data.gov.bc.ca/dataset/cff7b8f7-6897-444f-8c53-4bb93c7e9f8b"
+  # 
+  # ## Name relevant columns to extract
+  # rel_cols = c("HARVEST_AUTH_STATUS_CODE",
+  #              "ISSUE_DATE",
+  #              "CURRENT_EXPIRY_DATE_CALC",
+  #              "LIFE_CYCLE_STATUS_CODE",
+  #              "FILE_STATUS_CODE",
+  #              "FEATURE_AREA")
+  # 
+  # ## Name output geopackage
+  # out_name = "ften.gpkg"
+  # 
+  # bcdata::bcdc_query_geodata(record = url, crs = sf::st_crs(in_aoi)$epsg) %>% ## Query dataset
+  #   bcdata::filter(INTERSECTS(in_aoi) & ISSUE_DATE > as.Date("2000-01-01")) %>% ## Pull all polygons which intersect with the provided AOI + special filter
+  #   bcdata::collect() %>% ## Download specified dataset
+  #   ifelse(length(rel_cols) > 0, dplyr::select(., all_of(rel_cols)), .) %>% ## Select relevant cols
+  #   {if(nrow(.) > 0) st_intersection(., in_aoi) else .} %>% ## Crop to AOI extent
+  #   st_write(file.path(out_path, out_name), append = FALSE) ## Write to output file path
+  # 
+  # 
+
+
+  
+  # private lands 
+# https://catalogue.data.gov.bc.ca/dataset/29a6171a-fab6-4644-b0f7-5d4e466f6837  
+  
+private <- st_read(file.path('/home/user/Documents/00_data/base_vector/bc/TANTALIS/pmbc_parcel_fabric_poly.gpkg'))
+  
+priv <- st_intersection(private, in_aoi)
+priv <- priv %>% 
+  select(PARCEL_CLASS, OWNER_TYPE)
+
+
+st_write(priv, file.path("inputs", "sk_privateland_raw.gpkg"))
+
 
 
 ## fine scale intact 
@@ -265,6 +366,17 @@ cri <- cri %>%
   st_intersection(in_aoi)
 
 st_write(cri, file.path("inputs", "fed_listed_sp_raw.gpkg"))
+
+
+
+# wetland density layer 
+
+wl <- st_read("inputs")
+
+
+
+
+
 
 
 
