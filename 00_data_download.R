@@ -68,7 +68,9 @@ wl <- st_read(file.path("inputs", "wetlands.gpkg"))
 wll <- vect(file.path("inputs", "wetlands.gpkg"))
 
 tt <- rasterize(wll, srast, cover = TRUE)
-
+tt[is.na(tt)] <- 0 
+tt <- mask(tt, srast)
+writeRaster(tt, file.path("inputs", "sk_wetland_density.tif"), overwrite = TRUE)
 
 
 
