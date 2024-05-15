@@ -9,7 +9,7 @@ library(sf)
 
 srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 
-in_aoi<- st_read(file.path("inputs", "sk_poly_template.gpkg"))
+in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 
 #in_aoi <- st_as_sf(in_aoi)
 
@@ -19,19 +19,19 @@ in_aoi<- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 
 # 1. lakes
 #https://catalogue.data.gov.bc.ca/dataset/b3f58ed8-376f-4962-9657-36297a5f41cf
-
-lakes <- bcdc_query_geodata("cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6") |>
-  # filter(INTERSECTS(aoi_sf)) |> 
-  select( WATERBODY_TYPE, AREA_HA) |>
-  collect()
-
-lakes1 <- sf::st_intersection(lakes, in_aoi) |> 
-  select( WATERBODY_TYPE, AREA_HA) %>% 
-  filter(AREA_HA > 1) 
-
-
-st_write(lakes1, file.path("inputs", "lakes.gpkg"), append = FALSE)
-
+# 
+# lakes <- bcdc_query_geodata("cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6") |>
+#   # filter(INTERSECTS(aoi_sf)) |> 
+#   select( WATERBODY_TYPE, AREA_HA) |>
+#   collect()
+# 
+# lakes1 <- sf::st_intersection(lakes, in_aoi) |> 
+#   select( WATERBODY_TYPE, AREA_HA) %>% 
+#   filter(AREA_HA > 1) 
+# 
+# 
+# st_write(lakes1, file.path("inputs", "lakes.gpkg"), append = FALSE)
+# 
 
 # rivers 
 
@@ -49,17 +49,29 @@ st_write(lakes1, file.path("inputs", "lakes.gpkg"), append = FALSE)
 # 
 # # wetlands 
 # #https://catalogue.data.gov.bc.ca/dataset/93b413d8-1840-4770-9629-641d74bd1cc6
-# wetlands <- bcdc_query_geodata("93b413d8-1840-4770-9629-641d74bd1cc6") |>
-#   # filter(INTERSECTS(aoi_sf)) |> 
-#   select( WATERBODY_TYPE, AREA_HA) |>
-#   collect()
-# 
+wetlands <- bcdc_query_geodata("93b413d8-1840-4770-9629-641d74bd1cc6") |>
+  # filter(INTERSECTS(aoi_sf)) |>
+  select( WATERBODY_TYPE, AREA_HA) |>
+  collect()
+
 # wetlands <- sf::st_intersection(wetlands, in_aoi) #|> 
 #       #select(WATERBODY_TYPE, AREA_HA)
 # 
 # # select area > xxxx 
 # 
 # st_write(wetlands, file.path("inputs", "wetlands.gpkg"), append = FALSE)
+
+
+# determine percent density per pixel (100m x 100m) 
+wl <- st_read(file.path("inputs", "wetlands.gpkg"))
+
+wll <- vect(file.path("inputs", "wetlands.gpkg"))
+
+tt <- rasterize(wll, srast, cover = TRUE)
+tt[is.na(tt)] <- 0 
+tt <- mask(tt, srast)
+writeRaster(tt, file.path("inputs", "sk_wetland_density.tif"), overwrite = TRUE)
+
 
 
 
@@ -127,12 +139,52 @@ st_write(cons, file.path("inputs", "cons_lands.gpkg"), append = FALSE)
 ec <- bcdc_query_geodata("d00389e0-66da-4895-bd56-39a0dd64aa78") |>
   collect()
 
-st_write(ec , file.path("inputs", "bc_ecoreg.gpkg"), append = FALSE)
+#st_write(ec , file.path("inputs", "bc_ecoreg.gpkg"), append = FALSE)
+ec <- st_read(file.path("inputs", "bc_ecoreg.gpkg"))
+
 
 ec <- sf::st_intersection(ec, in_aoi)%>% 
-  select(ECOREGION_CODE,  ECOREGION_NAME)
+  select(ECOREGION_CODE,  ECOREGION_NAME)%>%
+  st_intersection(in_aoi)
 
 st_write(ec , file.path("inputs", "sk_ecoreg.gpkg"), append = FALSE)
+
+
+
+# TAP Old growth 
+## intact watersheds - From TAP old growth 
+#https://catalogue.data.gov.bc.ca/dataset/b684bdbf-8824-4bc6-8d22-329d9b97c043
+
+list.files(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/'))
+
+iw <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map6_IntactWS_2021_08_08.tif"))
+template <-rast(file.path("inputs", "sk_rast_template.tif"))
+iw <- resample(iw, template)
+iw_sk <- mask(iw, template)
+
+# MIGHT WANT TO REORDER TO SELECT WHERE vALUE >7 ETC 
+writeRaster(iw_sk, file.path("inputs", "TAP_intact_watershed.tif"), overwrite = TRUE)
+
+
+# BIG TREES 
+bt<- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map2_BigTreeOG_2021_10_24.tif"))
+#bt <- project(bt, template)
+#template <-rast(file.path("inputs", "sk_rast_template.tif"))
+bt <- resample(bt, template)
+bt_sk <- mask(bt, template)
+
+writeRaster(bt_sk , file.path("inputs", "TAP_bigtrees_raw.tif"), overwrite = TRUE)
+
+
+# ancient forests
+bt <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map4_Ancient_forest_2021_07_22.tif"))
+#bt <- project(bt, template)
+#template <-rast(file.path("inputs", "sk_rast_template.tif"))
+bt <- resample(bt, template)
+bt_sk <- mask(bt, template)
+
+writeRaster(bt_sk , file.path("inputs", "TAP_ancient_forest_raw.tif"), overwrite = TRUE)
+
 
 
 
@@ -208,3 +260,144 @@ rrrreg <- sf::st_intersection(rreg,  in_aoi)
 
 st_write(rrrreg, file.path("inputs", "eaubc_reg.gpkg"), append = FALSE)
 
+
+
+## wetland % density 
+
+# EAUBC_rivers = https://catalogue.data.gov.bc.ca/dataset/eaubc-rivers
+#https://catalogue.data.gov.bc.ca/dataset/96707e83-bd9a-4230-b5a3-836731fe46aa
+# 
+# ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
+# 
+# Weaver used the density values of % cover of 1km grid cell 
+# 
+# very high > 50 
+# high 15 - 50%
+# moderate = <15% 
+# 
+# 
+# 
+# PCT_WETLAND NUMBER_OF_WETLANDS
+# 
+# FEATURE_AREA_SQM
+
+
+
+## generate other features for the landscape resistence
+dem <-rast(file.path("inputs", "sk_dem_aoi.tif"))
+slope <- terrain(dem, v="slope", neighbors=8, unit="degrees")  
+writeRaster(slope, file.path("inputs", "sk_slope_degree.tif"), overwrite = TRUE)
+
+
+
+# extract cutblocks and compare to 2021 CE layer 
+
+## 3) Get harvest history and FTEN --------------------------------
+  ## URL for warehouse download
+  url = "https://catalogue.data.gov.bc.ca/dataset/b1b647a6-f271-42e0-9cd0-89ec24bce9f7"
+  
+  ## Name relevant columns to extract
+  rel_cols = c("HARVEST_YEAR")
+  
+  ## Name output geopackage
+  out_name = "cutblocks.gpkg"
+  
+  # Uses date filter which filters cutblock ages less than 20 years, or 7305 days
+  
+  # Uses date filter which filters cutblock ages less than 20 years, or 7305 days
+  bcdata::bcdc_query_geodata(record = url, crs = sf::st_crs(in_aoi)$epsg) %>% ## Query dataset
+    bcdata::filter(INTERSECTS(in_aoi)) %>%
+    bcdata::select(HARVEST_YEAR)%>%
+    bcdata::collect() %>% ## Download specified dataset
+    dplyr::select(all_of(rel_cols))# %>% ## Select relevant cols if defined
+    #{if(nrow(.) > 0) st_intersection(., in_aoi) else .} %>% ## Crop to AOI extent
+    #st_write(file.path(out_path, out_name), append = FALSE) ## Write to output file path
+  
+  # # 4) ften  - Download latest harvest layer
+  # 
+  # ## URL for warehouse download
+  # url = "https://catalogue.data.gov.bc.ca/dataset/cff7b8f7-6897-444f-8c53-4bb93c7e9f8b"
+  # 
+  # ## Name relevant columns to extract
+  # rel_cols = c("HARVEST_AUTH_STATUS_CODE",
+  #              "ISSUE_DATE",
+  #              "CURRENT_EXPIRY_DATE_CALC",
+  #              "LIFE_CYCLE_STATUS_CODE",
+  #              "FILE_STATUS_CODE",
+  #              "FEATURE_AREA")
+  # 
+  # ## Name output geopackage
+  # out_name = "ften.gpkg"
+  # 
+  # bcdata::bcdc_query_geodata(record = url, crs = sf::st_crs(in_aoi)$epsg) %>% ## Query dataset
+  #   bcdata::filter(INTERSECTS(in_aoi) & ISSUE_DATE > as.Date("2000-01-01")) %>% ## Pull all polygons which intersect with the provided AOI + special filter
+  #   bcdata::collect() %>% ## Download specified dataset
+  #   ifelse(length(rel_cols) > 0, dplyr::select(., all_of(rel_cols)), .) %>% ## Select relevant cols
+  #   {if(nrow(.) > 0) st_intersection(., in_aoi) else .} %>% ## Crop to AOI extent
+  #   st_write(file.path(out_path, out_name), append = FALSE) ## Write to output file path
+  # 
+  # 
+
+
+  
+  # private lands 
+# https://catalogue.data.gov.bc.ca/dataset/29a6171a-fab6-4644-b0f7-5d4e466f6837  
+  
+private <- st_read(file.path('/home/user/Documents/00_data/base_vector/bc/TANTALIS/pmbc_parcel_fabric_poly.gpkg'))
+  
+priv <- st_intersection(private, in_aoi)
+priv <- priv %>% 
+  select(PARCEL_CLASS, OWNER_TYPE)
+
+
+st_write(priv, file.path("inputs", "sk_privateland_raw.gpkg"))
+
+
+
+## fine scale intact 
+
+# critcal habitat - federal 
+#https://catalogue.data.gov.bc.ca/dataset/critical-habitat-for-federally-listed-species-at-risk-posted-
+
+cri <- bcdc_query_geodata("076b8c98-a3f1-429b-9dae-03faed0c6aef") |>
+  select(SCIENTIFIC_NAME, COMMON_NAME_ENGLISH, CRITICAL_HABITAT_STATUS, LAND_TENURE)
+  collect()
+  
+cri <- cri %>%  
+  select(SCIENTIFIC_NAME, COMMON_NAME_ENGLISH, CRITICAL_HABITAT_STATUS, LAND_TENURE)%>%
+  st_intersection(in_aoi)
+
+st_write(cri, file.path("inputs", "fed_listed_sp_raw.gpkg"))
+
+
+
+# wetland density layer 
+
+wl <- st_read("inputs")
+
+
+
+
+
+
+
+
+
+
+
+#  Species and Ecosystems at Risk - Publicly Available
+#https://catalogue.data.gov.bc.ca/dataset/species-and-ecosystems-at-risk-publicly-available-occurrences-cdc
+
+eco <- bcdc_query_geodata("0e035e55-f257-458f-9a96-80c01c69d389") |>
+  select(SCI_NAME, ENG_NAME, EL_TYPE, PROV_RANK, BC_LIST, RANK, RANK_DESC) %>%
+  collect()
+
+eco <- eco %>%
+  select(SCI_NAME, ENG_NAME, EL_TYPE, PROV_RANK, BC_LIST, RANK, RANK_DESC) %>%
+  st_intersection(in_aoi)%>% 
+  filter(BC_LIST %in% c("Red", "Blue"))
+    
+st_write(eco, file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
+
+
+## might want to further filter the reliability of the area via rqnk description/code/ Need to check with Paula.

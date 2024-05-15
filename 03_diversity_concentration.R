@@ -39,17 +39,17 @@ hist(svals)
 ## from-to-becomes
 # classify the values into groups 
 # all values >= 0 and <= 0.25 become 1, etc.
-m <- c(0, 20, 1, # lowest diversity 
-       20, 40, 2,
-       40, 80, 3,
-       80, 150 , 4,
-       150, 300, 5) # highest diversity 
+m <- c(0, 50, 1, # lowest diversity 
+       50, 100, 2,
+       100, 150, 3,
+       150, 250 , 4,
+       250, 700, 5) # highest diversity 
 
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 div_con <- classify(srast, rclmat, include.lowest=TRUE)
 
 
-writeRaster(div_con, file.path("outputs", "sk_diveristy_conc.tif"), overwrite = TRUE)
+writeRaster(div_con, file.path("outputs", "sk_diversity_conc.tif"), overwrite = TRUE)
 
 
 

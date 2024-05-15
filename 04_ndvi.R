@@ -27,4 +27,3 @@ ndvi <- rast(file.path("inputs", "ndvi_sk_mean_101c.tif"))
 ndvi <- mask(ndvi, template)
 
 writeRaster(ndvi, file.path("outputs", "ndvi_final.tif"))
-            
