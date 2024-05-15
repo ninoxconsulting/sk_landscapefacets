@@ -142,16 +142,11 @@ write_csv(summ, file.path("inputs", "fw_lakes.csv"))
 
 
 
-
-
-
-
 # countNA()# EAUBC freshwater ecoregions 
 # https://catalogue.data.gov.bc.ca/dataset/eaubc-freshwater-ecoregion
 #https://catalogue.data.gov.bc.ca/dataset/f8c3dc01-0fdc-41ce-a156-cc9cc0a80092
 
-rreg <- bcdc_query_geodata("f8c3dc01-0fdc-41ce-a156-cc9cc0a80092") |>
-  collect()
+wet <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
 
 rrrreg <- sf::st_intersection(rreg,  in_aoi) 
 
