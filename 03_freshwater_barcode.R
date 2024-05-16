@@ -111,6 +111,10 @@ write_csv(summ, file.path("inputs", "fw_lakes_summary.csv"))
 # EAUBC freshwater rivers
 ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
 
+# filtyer slivers
+ri <- ri %>% 
+  filter(FEATURE_AREA_SQM > 100000)
+
 
 ## FIX BEDROCK CODE - COMBINE INTO 1 column (predomient) 
 
