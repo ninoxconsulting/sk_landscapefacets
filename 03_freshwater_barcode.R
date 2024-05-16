@@ -110,13 +110,9 @@ write_csv(summ, file.path("inputs", "fw_lakes_summary.csv"))
 
 # EAUBC freshwater rivers
 ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
-# 
-# ri <- ri %>% 
-#   select("RIVER_ID", RIVER_ECOSYSTEM_CLASS, 
-#          MEAN_WATERSHED_ELEVATION, 
-#          MAX_STREAM_ORDER,
-#          MELTONS_RATIO, 
-#          STREAM_GRADIENT_MODEL)
+
+
+## FIX BEDROCK CODE - COMBINE INTO 1 column (predomient) 
 
 ribr <- ri %>%
   st_drop_geometry( ) %>% 
@@ -135,40 +131,165 @@ ribr <- ri %>%
     bedrock_type == "PCT_WS_UNT_BEDROCK_VOLCANIC" ~1
   ))
 
+# select the maximum percent bedrock type
 ribr_max <- ribr %>%
   group_by(RIVER_ID) %>% 
   slice_max(percent_type)
 
+
+# select the river ids where more than one max value (i.e. equal percent or -9999 no data )
 multi_id <- ribr_max %>%
   group_by(RIVER_ID) %>% 
-  filter(percent_type != -999) %>%
+  #filter(percent_type != -999) %>%
   mutate(count = n()) %>%
   filter(count > 1)
 
+# get list of all imulti idas
+multi_id_list = unique(multi_id$RIVER_ID)
+all_id_list = unique(ribr$RIVER_ID)
 
+single_max_ri <- setdiff(all_id_list, multi_id_list)
+
+
+# get subset of multilist where no data (-999 and convert to 0)
 ribr_nodata <- ribr_max %>% 
   filter(percent_type == -999) %>% 
   select(RIVER_ID) %>% 
   distinct()%>% 
-  mutate(percent_type = 0) 
+  mutate(bedrock_code = 0) 
            
-ribr_multi <- ribr_max %>% 
+# get unique ids
+nodat_list = unique(ribr_nodata$RIVER_ID)
+
+
+# get list of units were equal between two values
+ribr_multi <- multi_id %>% 
   filter(percent_type != -999) %>% 
-  select(RIVER_ID) %>% 
-  distinct()     
+  slice_head(n = 1)%>% 
+  select(RIVER_ID, bedrock_code)
+
+
+# reassemble values 
+single_max <- ribr_max %>% 
+  filter(RIVER_ID %in% single_max_ri) %>% 
+  select(RIVER_ID, bedrock_code)
+
+
+out <- bind_rows(ribr_nodata, ribr_multi )
+bedrockout <- bind_rows(single_max, out)
+# join back to spatial data
+ri <- left_join(ri, bedrockout)
            
            
-           
-  
+
+ri <- ri %>%
+  select("RIVER_ID", RIVER_ECOSYSTEM_CLASS,
+         MEAN_WATERSHED_ELEVATION,
+         MAX_STREAM_ORDER,
+         MELTONS_RATIO,
+         STREAM_GRADIENT_MODEL, bedrock_code)
 
 
-# 296 with no data 
+rdf <- ri |> 
+  st_drop_geometry() 
+
+#1) RIVER_ECOSYSTEM_CLASS
+rdf<- rdf %>%
+  mutate(ecosystem_class = case_when(
+    RIVER_ECOSYSTEM_CLASS == "C" ~ 1, 
+    RIVER_ECOSYSTEM_CLASS == "H" ~ 2,
+    RIVER_ECOSYSTEM_CLASS == "M" ~ 3,
+    RIVER_ECOSYSTEM_CLASS == "T" ~ 4,
+    RIVER_ECOSYSTEM_CLASS == "- 999" ~ 9
+  ))
+
+#2) Stream Order 
+rdf <- rdf %>%
+  mutate(streamorder_max = case_when(
+    MAX_STREAM_ORDER == 1 ~ 1,
+    MAX_STREAM_ORDER %in% c(2,3) ~ 2,
+    MAX_STREAM_ORDER %in% c(4,5,6) ~ 3,
+    MAX_STREAM_ORDER %in% c(7,8) ~ 4,
+    MAX_STREAM_ORDER == - 999 ~ 9
+  ))
+
+#3)  " MEAN ELEVATION_IN_METER", 
+rdf <- rdf %>%
+  mutate(elevation = case_when(
+    MEAN_WATERSHED_ELEVATION <= 100 ~ 1, 
+    MEAN_WATERSHED_ELEVATION> 100 &  MEAN_WATERSHED_ELEVATION <=600 ~ 2, 
+    MEAN_WATERSHED_ELEVATION > 600 &  MEAN_WATERSHED_ELEVATION <=1000 ~ 3, 
+    MEAN_WATERSHED_ELEVATION> 1000 ~ 4
+  ))
+
+#3) "RUGGEDNESS
+rdf <- rdf %>%
+  mutate(meltons = case_when(
+    MELTONS_RATIO <= 0.01 ~ 1, 
+    MELTONS_RATIO > 0.01 &  MELTONS_RATIO<=0.02 ~ 2, 
+    MELTONS_RATIO > 0.02 &  MELTONS_RATIO <=0.05 ~ 3, 
+    MELTONS_RATIO > 0.05 ~ 4
+  ))
 
 
 
-mixed <- if(percent_type < 50){
-  
-}
+## combine datasets 
+
+rdf_sum <- rdf |> 
+  select(RIVER_ID, "ecosystem_class" , "streamorder_max", "elevation" , 
+         "meltons",  "bedrock_code") %>% 
+  mutate(river_code = bedrock_code + (10 * meltons)+ (100* elevation)+
+           (1000* streamorder_max) + (10000 * ecosystem_class)) 
+
+
+ri_sf <- ri %>% 
+  left_join(rdf_sum)
+
+st_write(ri_sf, file.path("inputs", "sk_river_barcode_poly.gpkg"), append = FALSE)
+
+rdf_ss <-rdf_sum  |> 
+  select(-RIVER_ID)
+
+summ <- rdf_ss %>%
+  group_by(river_code) %>%
+  summarise(count= n())
+
+
+write_csv(summ, file.path("inputs", "fw_river_summary.csv"))
+
+
+#quantile(summ$count, seq(0,1, 0.1))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
