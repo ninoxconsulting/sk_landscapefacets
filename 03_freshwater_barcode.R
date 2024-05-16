@@ -2,13 +2,14 @@
 
 library(dplyr)
 library(sf)
+library(tidyr)
 
 
-## LAKES IS IN TABULAR FORM. 
 
 in_aoi <- read_sf(file.path("inputs", "sk_poly_template.gpkg"))
 
-# lakes 
+## LAKES  - barcode 
+
 ##https://catalogue.data.gov.bc.ca/dataset/eaubc-lakes
 
 lac_sf <- read_sf(file.path("inputs", "eaubc_lakes.gpkg")) %>% 
@@ -75,72 +76,6 @@ ldf <- ldf %>%
            ))
 
 
-
-
-# # #4)  "no inlets", 
-# # hist()
-# # 
-# # lac<- lac %>%
-# #   mutate(outlets  = case_when(
-# #     WSA_ELEVATION_IN_METER <= 200 ~ "low", 
-# #     WSA_ELEVATION_IN_METER> 200 &  WSA_ELEVATION_IN_METER <=600 ~ "medium", 
-# #     WSA_ELEVATION_IN_METER > 600 &  WSA_ELEVATION_IN_METER <=1000 ~ "large", 
-# #     WSA_ELEVATION_IN_METER > 1000 ~ "very large"
-# #   ))
-# # 
-# # # 5) no outlets. 
-# # 
-# # lac <- lac %>%
-# #   mutate(wsa_elevation = case_when(
-# #     WSA_ELEVATION_IN_METER <= 200 ~ "low", 
-# #     WSA_ELEVATION_IN_METER> 200 &  WSA_ELEVATION_IN_METER <=600 ~ "medium", 
-# #     WSA_ELEVATION_IN_METER > 600 &  WSA_ELEVATION_IN_METER <=1000 ~ "large", 
-# #     WSA_ELEVATION_IN_METER > 1000 ~ "very large"
-# #   ))
-# 
-# #5) upstream drainage area 
-# 
-# #hist(ldf$UPSTREAM_DRAINAGE_AREA) 
-# 
-# ldf <- ldf %>%
-#   mutate(upstream_drainage_code = case_when(
-#     UPSTREAM_DRAINAGE_AREA <= 1 ~ "very small", 
-#     UPSTREAM_DRAINAGE_AREA > 1 &  UPSTREAM_DRAINAGE_AREA  <= 5 ~ "small",
-#     UPSTREAM_DRAINAGE_AREA > 5 &  UPSTREAM_DRAINAGE_AREA  <= 25 ~ "medium", 
-#     UPSTREAM_DRAINAGE_AREA > 25 &  UPSTREAM_DRAINAGE_AREA  <= 75 ~ "large", 
-#     UPSTREAM_DRAINAGE_AREA > 75   ~ "very large"))
-# 
-# comp <- ldf |> st_drop_geometry() |> group_by(upstream_drainage_code) |> count()
-# #comp
-# 
-# 
-# #6) Lake Ecosystem class
-# 
-# ldf <- ldf %>%
-#   mutate(ecosystem_class = case_when(
-#     LAKE_ECOSYSTEM_CLASS == "- 999" ~ "NA", 
-#     .default = as.character(LAKE_ECOSYSTEM_CLASS)
-#     ))
-#   
-# #comp <- ldf |> st_drop_geometry() |> group_by(LAKE_ECOSYSTEM_CLASS) |> count()
-# 
-# ## 7) MOdelled mean depth 
-# 
-# #hist(lac$MODELLED_MEAN_DEPTH) 
-# 
-# ldf <- ldf %>%
-#   mutate(mean_depth = case_when(
-#     MODELLED_MEAN_DEPTH <= 5 ~ "shallow", 
-#     MODELLED_MEAN_DEPTH > 5 &  MODELLED_MEAN_DEPTH  <= 10 ~ "medium", 
-#     MODELLED_MEAN_DEPTH > 10   ~ "deep"))
-# 
-# #comp <- ldf |> st_drop_geometry() |> group_by(mean_depth) |> count()
-# 
-
-
-
-
-
 ## combine datasets 
 
 ldf_sum <- ldf |> 
@@ -173,14 +108,113 @@ write_csv(summ, file.path("inputs", "fw_lakes_summary.csv"))
 
 
 
+# EAUBC freshwater rivers
+ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
+# 
+# ri <- ri %>% 
+#   select("RIVER_ID", RIVER_ECOSYSTEM_CLASS, 
+#          MEAN_WATERSHED_ELEVATION, 
+#          MAX_STREAM_ORDER,
+#          MELTONS_RATIO, 
+#          STREAM_GRADIENT_MODEL)
 
-Paul# countNA()# EAUBC freshwater ecoregions 
-# https://catalogue.data.gov.bc.ca/dataset/eaubc-freshwater-ecoregion
-#https://catalogue.data.gov.bc.ca/dataset/f8c3dc01-0fdc-41ce-a156-cc9cc0a80092
+ribr <- ri %>%
+  st_drop_geometry( ) %>% 
+  select("RIVER_ID", "PCT_WS_UNT_BEDROCK_ALLUVIUM", "PCT_WS_UNT_BEDROCK_CARB_SEDS",
+         "PCT_WS_UNT_BEDROCK_CHEM_SEDS",  "PCT_WS_UNT_BEDROCK_HARD_SEDS",   
+         "PCT_WS_UNT_BEDROCK_INT_META", "PCT_WS_UNT_BEDROCK_SOFT_SEDS", 
+         "PCT_WS_UNT_BEDROCK_VOLCANIC") %>% 
+  pivot_longer(!"RIVER_ID", names_to = "bedrock_type", values_to = "percent_type") %>% 
+  mutate(bedrock_code = case_when(
+    bedrock_type == "PCT_WS_UNT_BEDROCK_ALLUVIUM" ~ 3,
+    bedrock_type == "PCT_WS_UNT_BEDROCK_CARB_SEDS" ~ 4,
+    bedrock_type == "PCT_WS_UNT_BEDROCK_CHEM_SEDS" ~ 5,
+    bedrock_type == "PCT_WS_UNT_BEDROCK_HARD_SEDS" ~ 6,
+    bedrock_type == "PCT_WS_UNT_BEDROCK_INT_META" ~ 2,
+    bedrock_type == "PCT_WS_UNT_BEDROCK_SOFT_SEDS" ~7 ,
+    bedrock_type == "PCT_WS_UNT_BEDROCK_VOLCANIC" ~1
+  ))
 
-wet <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
+ribr_max <- ribr %>%
+  group_by(RIVER_ID) %>% 
+  slice_max(percent_type)
+
+multi_id <- ribr_max %>%
+  group_by(RIVER_ID) %>% 
+  filter(percent_type != -999) %>%
+  mutate(count = n()) %>%
+  filter(count > 1)
+
+
+ribr_nodata <- ribr_max %>% 
+  filter(percent_type == -999) %>% 
+  select(RIVER_ID) %>% 
+  distinct()%>% 
+  mutate(percent_type = 0) 
+           
+ribr_multi <- ribr_max %>% 
+  filter(percent_type != -999) %>% 
+  select(RIVER_ID) %>% 
+  distinct()     
+           
+           
+           
+  
+
+
+# 296 with no data 
+
+
+
+mixed <- if(percent_type < 50){
+  
+}
+
+
+
+
 
 rrrreg <- sf::st_intersection(rreg,  in_aoi) 
 
 st_write(rrrreg, file.path("inputs", "eaubc_reg.gpkg"), append = FALSE)
 
+[1] "ACCUMULATIVE_PRECIP_YIELD"      "ANNUAL_MEAN_PRECIP_PER_WS_UNIT" "ANNUAL_MEAN_TEMP_PER_WS_UNIT"  
+[4] "APR_MEAN_PRECIP_PER_WS_UNIT"    "APR_MEAN_TEMP_PER_WS_UNIT"      "AUG_MEAN_PRECIP_PER_WS_UNIT"   
+[7] "AUG_MEAN_TEMP_PER_WS_UNIT"      "DAYS_ABOVE_0C"                  "DEC_MEAN_PRECIP_PER_WS_UNIT"   
+[10] "DEC_MEAN_TEMP_PER_WS_UNIT"      "FEATURE_AREA_SQM"               "FEATURE_CODE"                  
+[13] "FEATURE_LENGTH_M"               "FEB_MEAN_PRECIP_PER_WS_UNIT"    "FEB_MEAN_TEMP_PER_WS_UNIT"     
+[16] "FLOW_REGIME_MODEL"              "FRESHWATER_ECO_DRAINAGE_UNIT"   "FRESHWATER_ECOREGION"          
+[19] "geom"                           "id"                             "JAN_MEAN_PRECIP_PER_WS_UNIT"   
+[22] "JAN_MEAN_TEMP_PER_WS_UNIT"      "JUL_MEAN_PRECIP_PER_WS_UNIT"    "JUL_MEAN_TEMP_PER_WS_UNIT"     
+[25] "JULY_MAX_TEMP_PER_WS"           "JUN_MEAN_PRECIP_PER_WS_UNIT"    "JUN_MEAN_TEMP_PER_WS_UNIT"     
+[28] "K_FACTOR"                       "MAGNITUDE_RATIO"                "MAINSTEM_GRAD_CLASS_002_008"   
+[31] "MAINSTEM_GRAD_CLASS_008_012"    "MAINSTEM_GRAD_CLASS_012_016"    "MAINSTEM_GRAD_CLASS_016_020"   
+[34] "MAINSTEM_GRAD_CLASS_GRT_020"    "MAINSTEM_GRAD_CLASS_LESS_002"   "MAR_MEAN_PRECIP_PER_WS_UNIT"   
+[37] "MAR_MEAN_TEMP_PER_WS_UNIT"      "MAX_STREAM_MAG_PRIMARY_WS_UNIT" "MAX_STREAM_MAG_WS_UNIT"        
+[40] "MAX_STREAM_ORDER"               "MAXIMUM_WATERSHED_ELEVATION"    "MAY_MEAN_PRECIP_PER_WS_UNIT"   
+[43] "MAY_MEAN_TEMP_PER_WS_UNIT"      "MEAN_VALLEY_FLAT_WIDTH"         "MEAN_WATERSHED_ELEVATION"      
+[46] "MELTONS_RATIO"                  "MINIMUM_WATERSHED_ELEVATION"    "MLF_Kehm_2012"                 
+[49] "NOV_MEAN_PRECIP_PER_WS_UNIT"    "NOV_MEAN_TEMP_PER_WS_UNIT"      "NUMBER_OF_LAKES"               
+[52] "NUMBER_OF_WETLANDS"             "NUTRIENT_MODEL"                 "OBJECTID"                      
+[55] "OCEAN_TERMINUS"                 "OCT_MEAN_PRECIP_PER_WS_UNIT"    "OCT_MEAN_TEMP_PER_WS_UNIT"     
+[58] "PCT_GLACIAL_INFLUENCE"          "PCT_LAKE_AREA"                  "PCT_TUNDRA_INFLUENCE"          
+[61] "PCT_WETLAND"                    "PCT_WS_UNT_BEDROCK_ALLUVIUM"    "PCT_WS_UNT_BEDROCK_CARB_SEDS"  
+[64] "PCT_WS_UNT_BEDROCK_CHEM_SEDS"   "PCT_WS_UNT_BEDROCK_HARD_SEDS"   "PCT_WS_UNT_BEDROCK_INT_META"   
+[67] "PCT_WS_UNT_BEDROCK_SOFT_SEDS"   "PCT_WS_UNT_BEDROCK_VOLCANIC"    "PCT_WSA_UNIT_BAFA"             
+[70] "PCT_WSA_UNIT_BG"                "PCT_WSA_UNIT_BWBS"              "PCT_WSA_UNIT_CDF"              
+[73] "PCT_WSA_UNIT_CMA"               "PCT_WSA_UNIT_CWH"               "PCT_WSA_UNIT_ESSF"             
+[76] "PCT_WSA_UNIT_ICH"               "PCT_WSA_UNIT_IDF"               "PCT_WSA_UNIT_IMA"              
+[79] "PCT_WSA_UNIT_MH"                "PCT_WSA_UNIT_MS"                "PCT_WSA_UNIT_PP"               
+[82] "PCT_WSA_UNIT_SBPS"              "PCT_WSA_UNIT_SBS"               "PCT_WSA_UNIT_SWB"              
+[85] "PRIMARY_DRAINAGE_WS_UNIT_ID"    "REVISED_41_HYDROLOGIC_ZONES"    "RIVER_ECOSYSTEM_CLASS"         
+[88] "RIVER_ECOSYSTEM_SUB_TYPE"       "RIVER_ECOSYSTEM_TYPE"           "RIVER_ID"                      
+[91] "RIVER_SUBTYPE_LABEL"            "SE_ANNO_CAD_DATA"               "SEP_MEAN_PRECIP_PER_WS_UNIT"   
+[94] "SEP_MEAN_TEMP_PER_WS_UNIT"      "STND_DEV_WATERSHED_ELEVATION"   "STREAM_GRADIENT_MODEL"         
+[97] "TEMPERATURE_MODEL"              "TRIBUTARY_GRAD_CLASS_002_008"   "TRIBUTARY_GRAD_CLASS_008_012"  
+[100] "TRIBUTARY_GRAD_CLASS_012_016"   "TRIBUTARY_GRAD_CLASS_016_020"   "TRIBUTARY_GRAD_CLASS_GRT_020"  
+[103] "TRIBUTARY_GRAD_CLASS_LESS_002"  "UPSTREAM_DRAINAGE_AREA"         "WS_CODE_ORDER"                 
+[106] "WSA_AREA"                       "WSA_DOWNSTREAM_WATERSHED_CODE"  "WSA_DOWNSTREAM_WATERSHED_ID"   
+[109] "WSA_GAZETTEER_NAME"             "WSA_LOCAL_STREAM_NAME1"         "WSA_OLD_WATERSHED_CODE"        
+[112] "WSA_PERIMETER"                  "WSA_REVERSE_STREAM_ORDER"       "WSA_STREAM_MAGNITUDE"          
+[115] "WSA_STREAM_ORDER_50K"           "WSA_WATERSHED_CODE"             "WSA_WATERSHED_ID"              
+[118] "WSA_XREF_WATERSHED_CODE"       
