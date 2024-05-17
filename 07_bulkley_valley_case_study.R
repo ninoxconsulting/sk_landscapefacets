@@ -62,7 +62,7 @@ fragTh <- threshold(patchyMPG, nThresh = 50)
 
 
 
-centrality <- map(10:50, possibly(function(x) {
+centrality <- map(1:50, possibly(function(x) {
 
   
     print(x)
@@ -80,7 +80,8 @@ centrality <- map(10:50, possibly(function(x) {
     fragThDegree <- try(alpha_centrality(fragTh$th[[x]]))
     ## Add degree to the node table
     fragThNodes <- data.frame(vertex_attr(fragTh$th[[x]]), centrality = fragThDegree) %>%
-      mutate(threshold = x)
+      mutate(threshold = x) %>%
+      mutate(centrality = (centrality - min(centrality))/(max(centrality) - min(centrality)))
     
     fragThNodes$x <- fragThNodes$centroidX
     fragThNodes$y <- fragThNodes$centroidY
@@ -133,25 +134,61 @@ gifski(unlist(files), gif_file, 862, 551, delay = 0.5)
 utils::browseURL(gif_file)
 
 
+#-------------------------------------------------------------------------------
+# Finding the most important nodes
+# ------------------------------------------------------------------------------
 
-print(figure)
+# binding the rows 
 
-# building a grains of connectivity analysis 
-# Use 100 thresholds 
+combined <- centrality %>% 
+  purrr::reduce(., bind_rows) %>%
+  group_by(patchId) %>%
+  summarise(mean_centrality = mean(centrality, na.rm= T), x = median(x), y = median(y))
+
+quantile(combined$mean_centrality)
+
+# filter to the top 25% of points
+combined <- combined %>%
+  filter(mean_centrality >= 0.5790522)
+
+img <- rast(patches)
+
+img <- subst(img, NA, 100)
+
+x <- leastcostpath::create_slope_cs(img, exaggeration = TRUE)
+
+origins <- terra::cellFromXY(img, as.matrix(combined[ ,3:4]))
+
+cm_graph <- igraph::graph_from_adjacency_matrix(x$conductanceMatrix, mode = "directed", weighted = TRUE)
+
+igraph::E(cm_graph)$weight <- ((1/igraph::E(cm_graph)$weight))
+
+cm_df <- igraph::as_data_frame(cm_graph, what = c("edges"))
+
+cell_df <- data.frame('ID' = terra::cells(img), crds(img, df = T, na.rm = T))
+
+graph <- cppRouting::makegraph(cm_df, directed = T, coords = cell_df)
+
 tic()
-patchyGOC <- GOC(patchyMPG, nThresh = 50)
-toc() # 94 seconds
+pairs <- cppRouting::get_multi_paths(graph, origins, origins)
+toc()
 
+# 0.72 seconds
 
+get_lcps <- function(x, pairs, img) {
 
-# lets plot the connected regions at various thresholds:
-for(i in seq(1, 50, 5)) {
+  lcp_xy <- purrr::map(pairs[[x]], ~ terra::xyFromCell(img, as.numeric(.x)))
   
-  g <- plot(grain(patchyGOC, whichThresh = i), quick = "grainPlot", theme = FALSE) +
-    ggtitle(paste("threshold = ", i))
-  
-  print(g)
+  lcps <- purrr::map(lcp_xy, function(.x) sf::st_sf(geometry = sf::st_sfc(sf::st_linestring(.x)), crs = sf::st_crs(img))) %>%
+    purrr::reduce(., dplyr::bind_rows)
+
+  return(lcps)
   
 }
 
-#
+
+lcps <- map(1:length(origins), get_lcps, pairs = pairs, img = img) %>%
+  reduce(., bind_rows)
+
+
+
