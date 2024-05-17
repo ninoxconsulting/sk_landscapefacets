@@ -117,5 +117,4 @@ cowplot::plot_grid(ndvi, npp, npp_stretch, add, align = "hv")
 # writing out the added product
 writeRaster(added, file.path("..", "primary_productivity", "ndvi_npp_scaled_2019_2023.tif"), overwrite = T)
 
-rstudio.prefs::use_rstudio_prefs(editor_theme = 'Idle Fingers', indend_guides = 'rainbowlines')
 
