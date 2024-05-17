@@ -249,22 +249,22 @@ rc <- classify(con_rarec , rclmat, include.lowest=TRUE)
 writeRaster(rc, file.path("outputs", "sk_rarity_conc.tif"), overwrite = TRUE)
 
 
-## TESTING VERSION 2
-
-# read in clipped dataset
-con_rarec <- rast(file.path("outputs","sk_lf_rdc_rarity_101c.tif"))
-names(con_rarec)= "rarity"
-
-# might need to update these....
-m <- c(0, 1.1, 1,
-       1.1, 1.3, 2,
-       1.3, 1.5, 3,
-       1.5, 2, 4,
-       2, 6, 5)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc <- classify(con_rarec , rclmat, include.lowest=TRUE)
-
-writeRaster(rc, file.path("outputs", "sk_rarity_concV2.tif"), overwrite = TRUE)
-
+# ## TESTING VERSION 2
+# 
+# # read in clipped dataset
+# con_rarec <- rast(file.path("outputs","sk_lf_rdc_rarity_101c.tif"))
+# names(con_rarec)= "rarity"
+# 
+# # might need to update these....
+# m <- c(0, 1.1, 1,
+#        1.1, 1.3, 2,
+#        1.3, 1.5, 3,
+#        1.5, 2, 4,
+#        2, 6, 5)
+# rclmat <- matrix(m, ncol=3, byrow=TRUE)
+# rc <- classify(con_rarec , rclmat, include.lowest=TRUE)
+# 
+# writeRaster(rc, file.path("outputs", "sk_rarity_concV2.tif"), overwrite = TRUE)
+# 
 
 
