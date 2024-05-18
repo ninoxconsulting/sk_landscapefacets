@@ -249,6 +249,27 @@ st_write(rrrlak , file.path("inputs", "eaubc_lakes.gpkg"), append = FALSE)
     
 
 
+# create lake density 
+# determine percent density per pixel (100m x 100m) 
+wl <- st_read(file.path("inputs", "eaubc_lakes.gpkg"))%>% 
+  select(WSA_TYPE)
+
+wll <- vect(wl)
+tt <- rasterize(wll, srast, cover = TRUE)
+tt[is.na(tt)] <- 0 
+tt <- mask(tt, srast)
+writeRaster(tt, file.path("inputs", "sk_lake_density.tif"), overwrite = TRUE)
+
+
+
+
+
+
+
+
+
+
+
 # EAUBC freshwater ecoregions 
 # https://catalogue.data.gov.bc.ca/dataset/eaubc-freshwater-ecoregion
 #https://catalogue.data.gov.bc.ca/dataset/f8c3dc01-0fdc-41ce-a156-cc9cc0a80092
