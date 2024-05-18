@@ -46,19 +46,20 @@ ec <- st_read(file.path("outputs", "sk_ecoregions.gpkg"))
 divrare <- rast(file.path("outputs", "high_div_rare.tif"))
 
 # unique va;ues 
-# 1         0  - not rare or diversity 
-# 2         4  - Rare
-# 3         5  - Very Rare
-# 4        40  - High Variety 
-# 5        44  - high Variety and rare
-# 6        45  - high variety and very rare
-# 7        50  - Very High Variety 
-# 8        54  - Very High Variety and rare
-# 9        55  - Very High Variety and very rare
+# 1         0  - not rare or diversity (common)
+# 2         4  - Rare (r)
+# 3         5  - Very Rare (vr)
+# 4        40  - High Variety (hv)
+# 5        44  - high Variety and rare (hv_r)
+# 6        45  - high variety and very rare (hv_vr)
+# 7        50  - Very High Variety  (vhv)
+# 8        54  - Very High Variety and rare (vhv_r)
+# 9        55  - Very High Variety and very rare (vhv_vr)
+
+"r", "vr", "hv", "hv_r", "hv_vr", "vhv". "vhv_r", "vhv_vr"
 
 
-
-# summary by Ecoregion: 
+# TYPE 1 SUMMARY BY ECOREGION 
 
 ec <- ec %>%
   select(ECOREGION_NAME)%>% 
@@ -87,22 +88,23 @@ ecv <- vect(ec)
 ecr <- rasterize(ecv, aoi, field="ECOREGION_NAME")
 ex <- expanse(divrare, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
 
+names(ex)<- c("zone", "common", "r", "vr", "hv", "hv_r", "hv_vr", "vhv", "vhv_r", "vhv_vr")
+
 write_csv(ex, file.path("outputs", "div_per_ecoregion.csv"))
 
 
-ex <- readr::read_csv(file.path("outputs", "div_per_ecoregion.csv")) %>%
-  select(-...1)
+ex <- readr::read_csv(file.path("outputs", "div_per_ecoregion.csv")) 
 
 # calculate the % cover of each group by class 
 pc_div_sum <- ex %>%
   adorn_percentages("row") %>%
   adorn_pct_formatting(digits = 1) |> 
-  bind_cols(tot_area = ecsum$totsum)
-
+  bind_cols(tot_area = ecsum$totsum) 
+  
+  names(pc_div_sum)<- c("zone", "common", "r", "vr", "hv", "hv_r", "hv_vr", "vhv", "vhv_r", "vhv_vr", "tot_area")
+  
 write.csv(pc_div_sum,file.path("outputs", "div_pcper_ecoregion.csv"))
   
-
-
 
 
 # calculate % protected for all of Skeena
@@ -130,7 +132,6 @@ ecsum <- ec %>%
   group_by(ECOREGION_NAME) |> 
   mutate(totsum = sum(area_m2))
 
-
 ecpro <- left_join(pro_sum, ecsum)%>%
   group_by(ECOREGION_NAME) |> 
   mutate(pc_pro = (prosum/totsum)*100)
@@ -138,6 +139,7 @@ ecpro <- left_join(pro_sum, ecsum)%>%
 #library(readr)
 write_csv(ecpro, file.path("outputs", "protection_per_ecoregion.csv"))
 
+sum(ecpro$prosum)/sum(ecpro$totsum)*100
 
 
 ## HOw much rare and diverse areas are already protected
@@ -154,8 +156,10 @@ pro_rare  <- pro_rare  |>
 pro_rare <- st_intersection(pro_rare, ec) %>% 
   filter(!is.na(diversity))
 
-st_write(pro_rare, file.path("inputs", "test_pro_outputs.gpkg"))
+pro_rare <- pro_rare |> 
+  mutate(pro_area_m2 = st_area(pro_rare))
 
+#st_write(pro_rare, file.path("inputs", "test_pro_outputs.gpkg"))
 
 pro_sum <- pro_rare  %>%
   st_drop_geometry() |> 
