@@ -22,6 +22,7 @@ patches <- rasterize(test_patches, template_c, field = "CEF_DISTURB_GROUP_RANK")
 
 patches <- raster(patches)
 
+writeRaster(patches, 'F:/Other/Nixon/landscape_facets/connectivity/patches.tif')
 # creating the MPG
 patchyMPG <- MPG(patches, patch = (patches ==1 ))
 
@@ -50,9 +51,64 @@ for(i in seq(10, 100, 10)) {
   
 }
 
-# threshold around 50 seems reasonable to go with
+#-------------------------------------------------------------------------------
+# Link Thresholding to show components
+# ------------------------------------------------------------------------------
 
-# showing the components
+## Use the grainscape::threshold() function to create a new network
+## by thresholding links
+
+for (i in seq(1, 50, 5)) {
+  
+  fragTh <- threshold(patchyMPG, doThresh = i)
+  
+  
+  ## Find the components in that thresholded network using
+  ## an igraph package function
+  fragThC <- components(fragTh$th[[1]])
+  ## Extract the node table and append the
+  ## component membership information
+  fragThNodes <- data.frame(vertex_attr(fragTh$th[[1]]),
+                            component = fragThC$membership
+  )
+  
+  ## We don't want to show nodes that are in components with
+  ## only one node, so remove them
+  singleNodes <- fragThNodes$component %in% which(fragThC$csize == 1)
+  fragThNodes <- fragThNodes[!(singleNodes), ]
+  ## Rename some columns to improve readability
+  fragThNodes$x <- fragThNodes$centroidX
+  fragThNodes$y <- fragThNodes$centroidY
+  figure18 <- ggplot() +
+    geom_raster(
+      data = ggGS(patchyMPG, "patchId"),
+      aes(x = x, y = y, fill = value > 0)
+    ) +
+    scale_fill_manual(values = "grey") +
+    geom_segment(
+      data = ggGS(fragMPG, "links"),
+      aes(
+        x = x1, y = y1, xend = x2, yend = y2,
+        colour = lcpPerimWeight > 20
+      )
+    ) +
+    scale_colour_manual(values = c("forestgreen", NA)) +
+    geom_point(
+      data = fragThNodes,
+      aes(x = x, y = y), shape = 19, size = 4, colour = "darkgreen"
+    ) +
+    geom_text(
+      data = fragThNodes, aes(x = x, y = y, label = component),
+      colour = "white", size = 2
+    ) +
+    ggtitle(paste("Link thresholding to show components n_thresh =", i))
+  
+  
+  print(figure18)
+}
+
+
+# having around 15 components seems reasonable 
 
 ## Use the grainscape::threshold() function to create a new network
 ## by thresholding links
@@ -63,35 +119,35 @@ fragTh <- threshold(patchyMPG, nThresh = 50)
 
 
 centrality <- map(1:50, possibly(function(x) {
-
   
-    print(x)
-    ## Find the components in that thresholded network using
-    ## an igraph package function
-    fragThC <- components(fragTh$th[[x]])
-    ## Extract the node table and append the
-    ## component membership information
-    fragThNodes <- data.frame(vertex_attr(fragTh$th[[x]]),
-                              component = fragThC$membership
-    )
-    
-    ## Assess centrality of a thresholded network
-    ## made in the previous example (threshold = 20)
-    fragThDegree <- try(alpha_centrality(fragTh$th[[x]]))
-    ## Add degree to the node table
-    fragThNodes <- data.frame(vertex_attr(fragTh$th[[x]]), centrality = fragThDegree) %>%
-      mutate(threshold = x) %>%
-      mutate(centrality = (centrality - min(centrality))/(max(centrality) - min(centrality)))
-    
-    fragThNodes$x <- fragThNodes$centroidX
-    fragThNodes$y <- fragThNodes$centroidY
-    
-    return(fragThNodes)
-
-    
+  
+  print(x)
+  ## Find the components in that thresholded network using
+  ## an igraph package function
+  fragThC <- components(fragTh$th[[x]])
+  ## Extract the node table and append the
+  ## component membership information
+  fragThNodes <- data.frame(vertex_attr(fragTh$th[[x]]),
+                            component = fragThC$membership
+  )
+  
+  ## Assess centrality of a thresholded network
+  ## made in the previous example (threshold = 20)
+  fragThDegree <- try(alpha_centrality(fragTh$th[[x]]))
+  ## Add degree to the node table
+  fragThNodes <- data.frame(vertex_attr(fragTh$th[[x]]), centrality = fragThDegree) %>%
+    mutate(threshold = x) %>%
+    mutate(centrality = (centrality - min(centrality))/(max(centrality) - min(centrality)))
+  
+  fragThNodes$x <- fragThNodes$centroidX
+  fragThNodes$y <- fragThNodes$centroidY
+  
+  return(fragThNodes)
+  
+  
 })) %>%
   keep(~ !is.null(.x))
-  
+
 
 files <- list()
 # plot each as a function of node size:
@@ -128,6 +184,8 @@ for (i in seq_along(centrality)) {
 }
 
 
+library(gifski)
+
 gif_file <- "F:/Other/Nixon/landscape_facets/connectivity/node_importance.gif"
 gifski(unlist(files), gif_file, 862, 551, delay = 0.5)
 
@@ -135,10 +193,48 @@ utils::browseURL(gif_file)
 
 
 #-------------------------------------------------------------------------------
-# Finding the most important nodes
+# Finding the Aysmptote of change
 # ------------------------------------------------------------------------------
 
 # binding the rows 
+combined <- centrality %>% 
+  purrr::reduce(., bind_rows)
+
+delta <- combined %>%
+  mutate(p_centrality = lag(centrality)) %>%
+  group_by(threshold) %>%
+  mutate(centrality_dif = mean(centrality - p_centrality))
+
+ggplot(delta, aes(x = threshold, y = centrality_dif)) +
+  geom_point() +
+  geom_smooth() +
+  theme_classic() +
+  labs(y = "mean delta centrality", x = "number of thresholds")
+
+
+# we can see that around n threshold = 30 we see a stabilization of centrality
+
+#-------------------------------------------------------------------------------
+# Do the patch numbers line up with the MPG? 
+# ------------------------------------------------------------------------------
+
+test <- st_as_sf(centrality[[1]], coords = c(10:11)) %>%
+  st_set_crs(., st_crs(test_patches))
+
+library(tmap)
+
+tmap_mode("view")
+
+tm_shape(test) +
+  tm_text("patchId", col = "red") +
+  tm_dots() 
+
+
+
+
+#-------------------------------------------------------------------------------
+# Finding the most important nodes
+# ------------------------------------------------------------------------------
 
 combined <- centrality %>% 
   purrr::reduce(., bind_rows) %>%
@@ -157,7 +253,11 @@ img <- subst(img, NA, 100)
 
 x <- leastcostpath::create_slope_cs(img, exaggeration = TRUE)
 
-origins <- terra::cellFromXY(img, as.matrix(combined[ ,3:4]))
+df <- igraph::as_data_frame(patchyMPG@mpg)
+
+origins <- terra::cellFromXY(img, as.matrix(df[ , 5:6]))
+
+destinations <- terra::cellFromXY(img, as.matrix(df[ , 7:8]))
 
 cm_graph <- igraph::graph_from_adjacency_matrix(x$conductanceMatrix, mode = "directed", weighted = TRUE)
 
@@ -167,28 +267,72 @@ cm_df <- igraph::as_data_frame(cm_graph, what = c("edges"))
 
 cell_df <- data.frame('ID' = terra::cells(img), crds(img, df = T, na.rm = T))
 
-graph <- cppRouting::makegraph(cm_df, directed = T, coords = cell_df)
+graph <- cppRouting::makegraph(cm_df, directed = T, coords = cell_df, aux = ((1/igraph::E(cm_graph)$weight))) # WHAT ISTHIS??
 
-tic()
-pairs <- cppRouting::get_multi_paths(graph, origins, origins)
-toc()
+d_matrix <- cppRouting::get_distance_pair(graph, origins, destinations, aggregate_aux = T)
 
-# 0.72 seconds
+pairs <- cppRouting::get_path_pair(graph, origins, destinations)
+
+
+get_lcps_singular <- function(x, pairs, img) {
+  
+  lcp_xy <- purrr::map(pairs[[x]], ~ as.data.frame(terra::xyFromCell(img, as.numeric(.x)))) %>%
+    reduce(., bind_rows)
+  
+  points <- st_as_sf(lcp_xy, coords = c(1:2), crs = sf::st_crs(img)) 
+  
+  linestring <- st_combine(points) %>% st_cast("LINESTRING")
+  
+}
+
+map(get_lcps_singular)
+
+
 
 get_lcps <- function(x, pairs, img) {
-
+  
   lcp_xy <- purrr::map(pairs[[x]], ~ terra::xyFromCell(img, as.numeric(.x)))
   
   lcps <- purrr::map(lcp_xy, function(.x) sf::st_sf(geometry = sf::st_sfc(sf::st_linestring(.x)), crs = sf::st_crs(img))) %>%
-    purrr::reduce(., dplyr::bind_rows)
-
+    purrr::reduce(., dplyr::bind_rows) %>%
+    mutate(cost = d_matrix[x, ]) %>%
+    mutate(from_vertex = names(pairs)[x]) %>%
+    mutate(to_vertex = names(d_matrix[1,]))
+  
   return(lcps)
   
 }
 
+# get all the least cost paths 
+paths <- map(1:length(pairs), get_lcps, pairs = pairs, img = img) %>%
+  bind_rows() %>%
+  filter(cost > 0)
 
-lcps <- map(1:length(origins), get_lcps, pairs = pairs, img = img) %>%
-  reduce(., bind_rows)
+edges <- st_drop_geometry(paths) %>%
+  dplyr::select(from_vertex, to_vertex, cost)
 
 
 
+# generate the graph with just the nodes
+directed_graph <- makegraph(edges,directed=TRUE)
+
+
+# get all possible pairs
+trips <- data.frame(from = origins, to = origins, demand = combined$mean_centrality)
+from <- data.frame(from = origins)
+to <- data.frame(to = origins)
+
+
+cross <- tidyr::crossing(from, to) 
+
+trips <- cross %>%
+  mutate(demand = plyr::mapvalues(cross$from, trips$from, trips$demand)) %>%
+  filter(from != to)
+
+
+aon <- get_aon(Graph = directed_graph, from = trips$from, to = trips$to, demand = trips$demand)
+
+
+paths <- inner_join(paths, aon, by = "cost")
+
+st_write(paths, 'F:/Other/Nixon/landscape_facets/connectivity/paths_wt_flow.gpkg')
