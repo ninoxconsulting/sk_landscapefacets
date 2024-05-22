@@ -345,7 +345,9 @@ all_key <- bind_cols_fill(list(dem_key,mlfkey, skrocks_key))
 write_csv(all_key, file.path("outputs", "sk_lf_barcode_key.csv"))
   
 
+## read in the neighbourhood analysis version 
 
+div <- 
 
 
 
