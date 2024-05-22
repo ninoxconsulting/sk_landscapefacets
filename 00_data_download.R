@@ -422,3 +422,22 @@ st_write(eco, file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
 
 
 ## might want to further filter the reliability of the area via rqnk description/code/ Need to check with Paula.
+
+
+
+
+
+## Protected esstuariues 
+
+est <- st_read(file.path("inputs", "Pacific estuary ranking shape files-20240516T174559Z-001",
+                         "Pacific estuary ranking shape files","PECP_estuary_polys_ranked_2019_PUBLIC.shp"))
+
+est <- st_intersection(est, in_aoi)
+
+st_write(est, file.path("inputs", "sk_estuary.gpkg"))
+
+
+
+
+
+
