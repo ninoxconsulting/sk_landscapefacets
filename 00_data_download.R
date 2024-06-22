@@ -118,6 +118,22 @@ st_write(cons, file.path("inputs", "cons_lands.gpkg"), append = FALSE)
 
 
 
+# bc parks conservancy 
+#https://catalogue.data.gov.bc.ca/dataset/550b3133-2004-468f-ba1f-b95d0e281e78
+
+pcon <- bcdc_query_geodata("550b3133-2004-468f-ba1f-b95d0e281e78") |>
+  collect()
+
+pcon<- sf::st_intersection(pcon , in_aoi)|>   
+  select(ADMIN_AREA_SID, CONSERVANCY_AREA_NAME)%>%
+  rename("PROTECTED_LANDS_NAME" = CONSERVANCY_AREA_NAME)%>%
+  mutate(PROTECTED_LANDS_DESIGNATION = "BC CONSERVANCY")
+
+
+st_write(pcon, file.path("inputs", "bc_conservancy.gpkg"), append = FALSE)
+
+
+
 
 
 # # quarternary sedimte? # do not use - not reliable 
