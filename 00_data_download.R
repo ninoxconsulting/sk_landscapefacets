@@ -182,6 +182,9 @@ iw_sk <- mask(iw, template)
 writeRaster(iw_sk, file.path("inputs", "TAP_intact_watershed.tif"), overwrite = TRUE)
 
 
+
+
+
 # BIG TREES 
 bt<- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map2_BigTreeOG_2021_10_24.tif"))
 #bt <- project(bt, template)
