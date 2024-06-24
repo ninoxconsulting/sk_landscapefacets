@@ -1,18 +1,46 @@
 
-## ndvi 
-
-##align with template for NDVI 
-
 
 library(terra)
 library(sf)
 library(ggplot2)
 library(dplyr)
 library(readr)
-library(ggspatial)
-library(tidyterra)
-library(cowplot)
+#library(ggspatial)
+#library(tidyterra)
+#library(cowplot)
 
+## GDD 
+
+template <- rast(file.path("inputs", "sk_rast_template.tif"))
+srast = rast(file.path("inputs", "DD5.tif"))
+
+# # reproj data
+srast <- project(srast, template)
+gdd <- crop(srast, template)
+gdd <- mask(gdd , template)
+
+writeRaster(gdd, file.path("inputs", "gdd_sk.tif"))
+# classified 
+
+m <- c(-1, 800, 0,
+       800, 900, 1,
+       900, 1100, 2,
+       1100, 1400, 3, 
+       1400, 1600, 4)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc <- classify(gdd, rclmat, include.lowest=TRUE)
+
+writeRaster(rc, file.path("outputs", "gdd_sk_classed.tif"))
+
+
+
+
+
+
+
+## ndvi 
+
+##align with template for NDVI 
 
 template <- rast(file.path("inputs", "sk_rast_template.tif"))
 srast = rast(file.path("inputs", "ndvi_2019_2023.tif"))
