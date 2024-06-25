@@ -247,7 +247,7 @@ divrare <- rast(file.path("outputs", "high_div_rare.tif"))
 # 1         0  - not rare or diversity (common)
 # 2         4  - Rare (r)
 # 3         5  - Very Rare (vr)
-# 4        40  - High Variety (hv)
+# 4        40  - High Variety (hv)y
 # 5        44  - high Variety and rare (hv_r)
 # 6        45  - high variety and very rare (hv_vr)
 # 7        50  - Very High Variety  (vhv)
