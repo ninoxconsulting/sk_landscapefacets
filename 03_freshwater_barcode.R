@@ -4,8 +4,9 @@ library(dplyr)
 library(sf)
 library(tidyr)
 library(readr)
+library(terra)
 
-
+srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 
 in_aoi <- read_sf(file.path("inputs", "sk_poly_template.gpkg"))
 
@@ -86,9 +87,10 @@ ldf_sum <- ldf |>
            (1000* ecosystem_class) + (10000 * surface_area)) 
 
 lac_sf <- lac_sf %>% 
-  left_join(ldf_sum)
+  left_join(ldf_sum)%>% 
+  select( WSA_LAKE_ID,"surface_area", "ecosystem_class" , "wsa_elevation" , "shoreline_complex", "bedrock_class",  "lake_code")    
 
-st_write(lac_sf, file.path("inputs", "sk_lakes_barcode_poly.gpkg"))
+st_write(lac_sf, file.path("inputs", "sk_lakes_barcode_poly.gpkg"), append = FALSE)
 
 ldf_ss <- ldf_sum |> 
   select(-WSA_LAKE_ID)
@@ -97,11 +99,13 @@ summ <- ldf_ss %>%
   group_by(lake_code) %>%
   summarise(count= n())
 
-
 write_csv(summ, file.path("inputs", "fw_lakes_summary.csv"))
 
 # go straight to reading in...
 summ <- read_csv(file.path("inputs", "fw_lakes_summary.csv"))
+
+
+#hist(summ$count)
 
 ## Assign rarity code based on percent 
 ids = summ %>% 
@@ -143,13 +147,31 @@ sum_df <- lac_river_poly %>%
   select(-WSA_LAKE_ID)
 
 
+# select the rarist code per polygon and convert to a sparial output 
+
+rare_lake_ploy <- lac_river_poly %>% 
+  group_by(RIVER_ID )%>%
+  select(-WSA_LAKE_ID, -lake_code)%>%
+  mutate(rarity_lake_code = min(rare_id)) %>%
+  select(-rare_id)%>%
+  distinct()%>% 
+  st_drop_geometry()
+
+rare_lake_poly <- left_join(ri, rare_lake_ploy )
+
+st_write(rare_lake_poly , file.path("inputs", "lake_rare_poly_raw.gpkg"), append = FALSE)
+
+
+
+
+
+
 # number of lakes per watershed 
 no_lakes_per_river_watershed <- sum_df %>% 
   group_by(RIVER_ID) %>% 
   add_count() %>% 
   select(RIVER_ID, n) %>% 
   distinct()
-
 
 
 # number of lakes per code per watershed
@@ -185,29 +207,11 @@ st_write(ri_diversity , file.path("inputs", "lake_div_raw.gpkg"), append = FALSE
 
 
 
-
 #quantile(summ$count, seq(0,1, 0.1))
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+##############################################################################
 
 # EAUBC freshwater rivers
 ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
@@ -271,6 +275,7 @@ nodat_list = unique(ribr_nodata$RIVER_ID)
 ribr_multi <- multi_id %>% 
   filter(percent_type != -999) %>% 
   slice_head(n = 1)%>% 
+  mutate(bedrock_code = 8) %>%
   select(RIVER_ID, bedrock_code)
 
 
@@ -369,15 +374,24 @@ write_csv(summ, file.path("inputs", "fw_river_summary.csv"))
 ## determine the diversity values 
 # convert to raster and run neighbourhood analysis
 
-rri <- rasterize(ri_sf, srast, field = "river_code")
+rri <- terra::rasterize(ri_sf, srast, field = "river_code")
 
-writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"))
+writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"), overwrite = TRUE)
+
+
+
+# up to here - currently runinng on qgis
+
+
 
 # read in the neighbourhood version 
 
-div <- rast(file.path("outputs","sk_rivers_diversity_101c.tif"))
+div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
+div <- mask(div, srast)
+
 hist(div)
 
+writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
 
 
 
@@ -427,6 +441,7 @@ rr = terra::rast(file.path("inputs", "sk_river_barcodes_raw.tif"))
 
 hist(rare$count)
 hist(rare$rare_id)
+
 
 # assign rarity class
 class1 <-rare  %>% filter(rare_id == 1) %>% pull(river_code)
@@ -567,26 +582,17 @@ terra::writeRaster(rc1,file.path("outputs", "sk_rivers_rarity_class.tif"), overw
 # run the neighbourhood analysis on mean 
 
 
-
-# read back in an determine the histpgram and thresholds 
-
+# run in QGIS
 
 
-# hist 
+# read in the neighbourhood version 
 
+avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
+avrare <- mask(avrare, srast)
 
+hist(avrare)
 
-
-
-
-
-
-
-
-
-
-
-
+writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
 
 
 
