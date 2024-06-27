@@ -9,6 +9,8 @@ library(sf)
 
 srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 
+srast1km <- aggregate(srast, fact = 10)
+
 in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 
 #in_aoi <- st_as_sf(in_aoi)
@@ -71,6 +73,20 @@ tt <- rasterize(wll, srast, cover = TRUE)
 tt[is.na(tt)] <- 0 
 tt <- mask(tt, srast)
 writeRaster(tt, file.path("inputs", "sk_wetland_density.tif"), overwrite = TRUE)
+
+
+# determine percent density per pixel (1000m x 1000m) 
+wl <- st_read(file.path("inputs", "wetlands.gpkg"))
+
+wll <- vect(file.path("inputs", "wetlands.gpkg"))
+
+tt <- rasterize(wll, srast1km, cover = TRUE)
+tt[is.na(tt)] <- 0 
+tt <- mask(tt, srast1km)
+writeRaster(tt, file.path("inputs", "sk_wetland_density_1km.tif"), overwrite = TRUE)
+
+
+
 
 
 
@@ -158,12 +174,32 @@ ec <- bcdc_query_geodata("d00389e0-66da-4895-bd56-39a0dd64aa78") |>
 #st_write(ec , file.path("inputs", "bc_ecoreg.gpkg"), append = FALSE)
 ec <- st_read(file.path("inputs", "bc_ecoreg.gpkg"))
 
-
 ec <- sf::st_intersection(ec, in_aoi)%>% 
   select(ECOREGION_CODE,  ECOREGION_NAME)%>%
-  st_intersection(in_aoi)
+  st_intersection(in_aoi)%>% 
+  select(-MLF_Kehm_2012)%>% 
+  mutate(ECOREGION_NAME = case_when(
+    ECOREGION_NAME == "HECATE CONTINENTAL SHELF" ~ "COASTAL GAP",
+    ECOREGION_NAME == "INNER PACIFIC SHELF" ~ "COASTAL GAP",
+    .default = as.character(ECOREGION_NAME)
+  )) %>% 
+  select(-ECOREGION_CODE) %>%
+  st_union(by_feature = T)
+           
+ecc <- ec %>% group_by(ECOREGION_NAME)%>%
+summarise(.)
 
-st_write(ec , file.path("inputs", "sk_ecoreg.gpkg"), append = FALSE)
+
+ec <- ec %>% 
+  mutate(total_area = st_area(.))%>% 
+  arrange(total_area)
+
+
+st_write(ecc , file.path("inputs", "sk_ecoreg_reduced.gpkg"), append = FALSE)
+
+
+
+
 
 
 
@@ -180,8 +216,6 @@ iw_sk <- mask(iw, template)
 
 # MIGHT WANT TO REORDER TO SELECT WHERE vALUE >7 ETC 
 writeRaster(iw_sk, file.path("inputs", "TAP_intact_watershed.tif"), overwrite = TRUE)
-
-
 
 
 
@@ -280,6 +314,13 @@ tt <- mask(tt, srast)
 writeRaster(tt, file.path("inputs", "sk_lake_density.tif"), overwrite = TRUE)
 
 
+
+## create a lake density by 1km grid 
+
+tt <- rasterize(wll, srast1km, cover = TRUE)
+tt[is.na(tt)] <- 0 
+tt <- mask(tt,srast1km)
+writeRaster(tt, file.path("inputs", "sk_lake_density_1km.tif"), overwrite = TRUE)
 
 
 
@@ -455,6 +496,38 @@ est <- st_intersection(est, in_aoi)
 
 st_write(est, file.path("inputs", "sk_estuary.gpkg"))
 
+
+
+
+### Pitehr data sets 
+
+con <- rast(file.path("inputs", "Pither_etal", "Current_Density_1_Conductance.tif"))
+res <- rast(file.path("inputs", "Pither_etal", "Current_Density_2_Resistance.tif"))
+cost <- rast(file.path("inputs", "Pither_etal", "Movement_Cost_Layer.tif"))
+
+template <- rast(file.path("inputs", "sk_rast_template.tif"))
+
+# connectivity 
+conn <- project(con, template)
+conn <- crop(conn, template)
+conn <- mask(conn, template)
+  
+writeRaster(conn , file.path("inputs", "pither_conductance.tif"), overwrite = TRUE)
+
+# resistance
+ress <- project(res, template)
+ress<- crop(ress, template)
+ress <- mask(ress, template)
+
+writeRaster(ress , file.path("inputs", "pither_resistance.tif"), overwrite = TRUE)
+
+
+# cost
+costt <- project(cost, template)
+costt <- crop(costt, template)
+costt <- mask(costt, template)
+
+writeRaster(costt , file.path("inputs", "pither_move_cost.tif"), overwrite = TRUE)
 
 
 
