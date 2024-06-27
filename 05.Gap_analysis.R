@@ -47,7 +47,7 @@ temp <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 # or read in final protected areas and final ecoregion 
 
 pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
-ec <- st_read(file.path("outputs", "sk_ecoregions.gpkg"))
+ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
 
 
 # 1: calculate % protected for all of Skeena
