@@ -211,6 +211,67 @@ st_write(ri_diversity , file.path("inputs", "lake_div_raw.gpkg"), append = FALSE
 
 
 
+
+
+
+
+############################################################################
+
+## Lakes density values 
+
+srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+
+#srast1km <- aggregate(srast, fact = 10)
+
+den1km <- rast(file.path("inputs", "sk_lake_density_1km.tif"))
+# read in 1km density lakes and clasify to Weaver 
+
+# Weaver used the density values of % cover of 1km grid cell 
+# 
+# very high > 50 ~ 1
+# high 15 - 50%  ~ 2
+# moderate = <15% ~ 3 
+#
+m <- c(0, 0.15, 3,
+       0.15, 0.5, 2,
+       0.5, 1, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc1 <- classify(den1km, rclmat, include.lowest=TRUE)
+
+writeRaster(rc1, file.path("inputs", "sk_lake_density_class_1km.tif"), overwrite = TRUE)
+
+
+
+############################################################################
+
+##WETLAND density values 
+
+srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+
+wet1km <- rast(file.path("inputs", "sk_wetland_density_1km.tif"))
+# read in 1km density lakes and clasify to Weaver 
+
+# Weaver used the density values of % cover of 1km grid cell 
+# 
+# very high > 50 ~ 1
+# high 15 - 50%  ~ 2
+# moderate = <15% ~ 3 
+#
+m <- c(0, 0.15, 3,
+       0.15, 0.5, 2,
+       0.5, 1, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc1 <- classify(wet1km, rclmat, include.lowest=TRUE)
+
+writeRaster(rc1, file.path("inputs", "sk_wetland_density_class_1km.tif"), overwrite = TRUE)
+
+
+
+
+
+
+
+
 ##############################################################################
 
 # EAUBC freshwater rivers
@@ -593,6 +654,11 @@ avrare <- mask(avrare, srast)
 hist(avrare)
 
 writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
+
+
+
+
+
 
 
 
