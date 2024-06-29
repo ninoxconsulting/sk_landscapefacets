@@ -276,6 +276,8 @@ writeRaster(rc, file.path("outputs", "sk_rarity_conc.tif"), overwrite = TRUE)
 
 
 
+#################################################################################################
+
 
 ## MOST COMMON bARCODES
 
@@ -387,17 +389,82 @@ comm_sf <- left_join(bc_ec, common )%>%
 st_write(comm_sf, file.path("outputs", "sk_lf_barcode_ecoreg_detail_poly.gpkg"), append = FALSE)
 
 
-### UP TO HERE 
-
 # need to calculate number of barcodes per ecoregion 
+no_barcodes_per_ecoregion <- common %>%
+  filter(rare_id == 1)%>% 
+  select(ECOREGION_NAME)%>%
+  group_by(ECOREGION_NAME) %>% 
+  count()
+
+# generate the spatial layer 
+
+common_by_ecoregion <- comm_sf %>%
+  filter(rare_id == 1) %>% 
+  select(ECOREGION_NAME)
+  
+# generate the amount of area that the common class takes up per ecoregion 
+common_area_by_ecoregion <- common_by_ecoregion %>% 
+  dplyr::mutate(common_area = st_area(geometry))
+
+common_area_sum <- aggregate(common_area_by_ecoregion$common_area, by=list(ECOREGION_NAME=common_area_by_ecoregion$ECOREGION_NAME), FUN=sum)
+names(common_area_sum) <- c("ECOREGION_NAME", "common_ecoreg_m2")
+
+
 # overlay the protected areas with the most common to see how much is protected. 
+pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
+ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
 
-# 
-# 
-# # generate Summary tables 
-# write_csv(rare , file.path("outputs", "lf_barcode_summary.csv"))
+# 1: calculate % protected for most common for all Skeena
+## read in protected layers 
+
+# calculate the area of each region 
+ecsum <- ec %>%
+  group_by(ECOREGION_NAME) |>
+  mutate(area_m2 = st_area(geom)) 
+
+ecsum_df <- ecsum %>% 
+ st_drop_geometry()
+
+all_sk <- sum(ecsum_df$area_m2)
+
+ecsum_df <- ecsum_df %>% 
+  mutate(total_sk_area = all_sk) %>% 
+  rowwise() %>% 
+  mutate(pc_of_sk = (area_m2/total_sk_area)*100)
+
+write_csv(ecsum_df, file.path("outputs", "ecoregion_area_totals.csv"))
 
 
+## what proportion of the common region is currently protected? 
+# how much area is protected within each eco_region: ()
+
+# simplify protected area 
+pross_u <- pro %>% select(protected)
+pro_common_ecoreg <- st_intersection( common_by_ecoregion, pross_u) 
+
+pro_common_ecoreg  <- pro_common_ecoreg  |> 
+  mutate(pro_area = st_area(geometry))
+
+#st_write(pro_common_ecoreg , file.path("outputs", "sk_lf_common_ecoreg_protected.gpkg"), append = FALSE)
+
+pro_sum <- pro_common_ecoreg %>%
+       st_drop_geometry() |> 
+       select(-protected) 
+
+pro_sum <- aggregate(pro_sum$pro_area, by=list(ECOREGION_NAME=pro_sum$ECOREGION_NAME), FUN=sum)
+names(pro_sum) <- c("ECOREGION_NAME", "common_pro_m2")
+
+
+# join the protected area of common with the total area of common per ecoregion and calculate the percentage 
+
+pro_sum <- left_join(pro_sum, common_area_sum) %>% 
+  #select(-total_sk_area, -pc_of_sk) %>% 
+  rowwise() %>% 
+  dplyr::mutate(common_pro_pc = (common_pro_m2/common_ecoreg_m2)*100)
+
+# export 
+
+write_csv(pro_sum, file.path( "outputs", "common_protected_by_ecoregion.csv"))
 
 
 
