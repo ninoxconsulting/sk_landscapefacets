@@ -300,6 +300,7 @@ common <- rare %>%
 # assign rarity class
 class1 <-common %>% filter(rare_id == 1) %>% pull(layer1)
 
+write.csv(class1, file.path("outputs", "common_terrestrial_barcodes_allsk.csv"))
 length(class1)
 
 uvr <- as.vector(unique(values(rr)))
@@ -381,6 +382,10 @@ common <- ccc %>%
     csum >= 50 ~ 1,
     .default = as.numeric(0)
   ))
+
+#most_common <- common %>% filter(rare_id == 1)
+#write.csv(most_common , file.path("outputs", "common_terrestrial_barcodes_per_ecoregion.csv"))
+
 
 comm_sf <- left_join(bc_ec, common )%>% 
   filter(-area_type)
