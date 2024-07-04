@@ -266,6 +266,33 @@ aa <- pivot_wider(ec_divvv, names_from = diversity, values_from = divrare_class_
 aa <- left_join(aa, ecsum_df )%>%
     select(-total_sk_area, -pc_of_sk)
 
+
+# unique va;ues 
+# 1         0  - not rare or diversity (common)
+# 2         4  - Rare (r)
+# 3         5  - Very Rare (vr)
+# 4        40  - High Variety (hv)
+# 5        44  - high Variety and rare (hv_r)
+# 6        45  - high variety and very rare (hv_vr)
+# 7        50  - Very High Variety  (vhv)
+# 8        54  - Very High Variety and rare (vhv_r)
+# 9        55  - Very High Variety and very rare (vhv_vr)
+
+#"r", "vr", "hv", "hv_r", "hv_vr", "vhv". "vhv_r", "vhv_vr"
+
+aa <- aa %>%
+  dplyr::rename("common" = `0`,
+                "r" = `4`,
+                "vr" = `5`,
+                "hv" = `40`,
+                "hv_r" = `44`,
+                "hv_vr" = `45`,
+                "vhv" = `50`,
+                "vhv_r" = `54`,
+                "vhv_vr_p" = `55`)  
+
+
+
 names(aa)<- c("ECOREGION_NAME", "common", "r", "vr", "hv", "hv_r", "hv_vr", "vhv", "vhv_r", "vhv_vr", "area_m2")
 
 type_by_ecoregion <- aa # keep this for the calculation of protected areas below 
@@ -322,21 +349,41 @@ ec_div_pro <- st_intersection(ec_div, pross_u) %>%
   dplyr::filter(!is.na(diversity)) %>%
   dplyr::group_by(ECOREGION_NAME, diversity) %>%
   dplyr::mutate(pro_area_sum = sum(pro_ec_div_area)) %>% 
-  dplyr::mutate(pro_area = as.numeric(pro_area_sum/1000))%>%
+  dplyr::mutate(pro_area = as.numeric(pro_area_sum))%>%
   dplyr::select(-protected, -pro_area_sum, - pro_ec_div_area)%>%
   ungroup()%>% 
   st_drop_geometry()%>%
   distinct()
 
+#st_write(ec_div_pro, file.path("outputs", "sk_pro_high_div_test.gpkg"))
 
 aa <- pivot_wider(ec_div_pro, names_from = diversity, values_from = pro_area)%>%
   arrange(ECOREGION_NAME)
 
-names(aa)<- c("ECOREGION_NAME", "common_p", "r_p", "vr_p", "hv_p", "hv_r_p", "hv_vr_p", "vhv_p", "vhv_r_p", "vhv_vr_p")
+aa <- aa %>%
+  dplyr::rename("common_p" = `0`,
+                "r_p" = `4`,
+                       "vr_p" = `5`,
+                       "hv_p" = `40`,
+                       "hv_r_p" = `44`,
+                       "hv_vr_p" = `45`,
+                       "vhv_p" = `50`,
+                       "vhv_r_p" = `54`,
+                       "vhv_vr_p" = `55`)  
+                       
+# unique va;ues 
+# 1         0  - not rare or diversity (common)
+# 2         4  - Rare (r)
+# 3         5  - Very Rare (vr)
+# 4        40  - High Variety (hv)
+# 5        44  - high Variety and rare (hv_r)
+# 6        45  - high variety and very rare (hv_vr)
+# 7        50  - Very High Variety  (vhv)
+# 8        54  - Very High Variety and rare (vhv_r)
+# 9        55  - Very High Variety and very rare (vhv_vr)
 
 # area of protection per ecoregion per catergory (ha)
 aa 
-
 
 # # areas of ecoregion per catergory 
 # type_by_ecoregion <- type_by_ecoregion %>%
@@ -388,7 +435,6 @@ pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
 #       900, 1100, 2,
 #       1100, 1400, 3, 
 #       1400, 1600, 4)
-
 
 gddpoly <- as.polygons(gdd , na.rm=FALSE)
 gdd_sf <- st_as_sf(gddpoly)%>% 
@@ -479,7 +525,7 @@ sk_combined_ndvi <- ndvi_sf   %>%
 ec_ndvi <- st_intersection(ndvi_sf , ec) 
 
 ec_ndvii  <- ec_ndvi   |> 
-  mutate(ndvi_area_m2 = st_area(ec_ndvi))%>%
+  mutate(ndvi_area_m2 = st_area(geometry))%>%
   filter(!is.na(min))
 
 ec_ndvii <- ec_ndvii %>%
@@ -632,7 +678,9 @@ write_csv(eco_pro_ggd_output, file.path("outputs", "gdd_class_per_ecoregion_prot
 
 
 
+############################################################################
 
+## Potection for wilderness areas - seee wilderness script
 
 
 
@@ -665,122 +713,31 @@ write_csv(eco_pro_ggd_output, file.path("outputs", "gdd_class_per_ecoregion_prot
 
 
 
-ex <- expanse(divrare, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
 
-write_csv(ex, file.path("outputs", "div_per_ecoregion.csv"))
 
 
-ex <- readr::read_csv(file.path("outputs", "div_per_ecoregion.csv")) %>%
-  select(-...1)
-
-# calculate the % cover of each group by class 
-pc_div_sum <- ex %>%
-  adorn_percentages("row") %>%
-  adorn_pct_formatting(digits = 1) |> 
-  bind_cols(tot_area = ecsum$totsum)
-
-write.csv(pc_div_sum,file.path("outputs", "div_pcper_ecoregion.csv"))
-
-
-
-ecsum <- ec %>%
-  st_drop_geometry() |> 
-  group_by(ECOREGION_NAME) |> 
-  mutate(totsum = sum(area_m2))
-
-ecv <- vect(ec)
-
-
-# # calculate the number of pixels per group, per ecoregion 
-# e <- extract(div, ecv, un="table", na.rm=TRUE, exact=FALSE)
-# edf <- data.frame(NAME_2=ecv$ECOREGION_NAME[e[,1]], e[,-1])
-# 
-# edff <- edf %>% 
-#   group_by(NAME_2, e....1.) |> 
-#   count()
-
-# rasterize the zones
-ecr <- rasterize(ecv, aoi, field="ECOREGION_NAME")
-ex <- expanse(divrare, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# rasterize the zones
-pror <- rasterize(pross, temp, field="protected")
-
-
-
-#diversity
-div_ex <- expanse(div, unit="m", byValue=TRUE, zones=pror, wide=TRUE)[,-1]
-write.csv(div_ex, file.path("outputs", "div_per_protection.csv"))
-
-# rarity
-rare_ex <- expanse(rar, unit="m", byValue=TRUE, zones=pror, wide=TRUE)[,-1]
-
-
-
-## what proporion of diversity classes are protected? 
-
-
-write.csv(rare_ex, file.path("outputs", "rare_per_ecoregion.csv"))
-
-
-ex <- readr::read_csv(file.path("outputs", "rare_per_ecoregion.csv"))%>%
-  select(-...1)
-
-# calculate the % cover of each group by class 
-library(janitor)
-pc_rare_sum <- ex %>%
-  adorn_percentages("row") %>%
-  adorn_pct_formatting(digits = 1) |> 
-  bind_cols(tot_area = ecsum$totsum)
-
-write.csv(pc_rare_sum,file.path("outputs", "rare_pcper_ecoregion.csv"))
-
-
-
-
-## what proporion of rarity classes are protected? 
 
 
 # 
 # 
-# # read in concentration layers: diverity and rarity
-# divrare <- rast(file.path("outputs", "high_div_rare.tif"))
 # 
-# # unique va;ues 
-# # 1         0  - not rare or diversity (common)
-# # 2         4  - Rare (r)
-# # 3         5  - Very Rare (vr)
-# # 4        40  - High Variety (hv)
-# # 5        44  - high Variety and rare (hv_r)
-# # 6        45  - high variety and very rare (hv_vr)
-# # 7        50  - Very High Variety  (vhv)
-# # 8        54  - Very High Variety and rare (vhv_r)
-# # 9        55  - Very High Variety and very rare (vhv_vr)
+# ex <- expanse(divrare, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
 # 
-# #"r", "vr", "hv", "hv_r", "hv_vr", "vhv". "vhv_r", "vhv_vr"
+# write_csv(ex, file.path("outputs", "div_per_ecoregion.csv"))
 # 
 # 
-# # TYPE 1 SUMMARY BY ECOREGION 
+# ex <- readr::read_csv(file.path("outputs", "div_per_ecoregion.csv")) %>%
+#   select(-...1)
 # 
-# ec <- ec %>%
-#   select(ECOREGION_NAME)%>% 
-#   mutate(area_m2 = st_area(.))
+# # calculate the % cover of each group by class 
+# pc_div_sum <- ex %>%
+#   adorn_percentages("row") %>%
+#   adorn_pct_formatting(digits = 1) |> 
+#   bind_cols(tot_area = ecsum$totsum)
+# 
+# write.csv(pc_div_sum,file.path("outputs", "div_pcper_ecoregion.csv"))
 # 
 # 
-# # calculate the summary of ecoregions within skeeena region
 # 
 # ecsum <- ec %>%
 #   st_drop_geometry() |> 
@@ -802,23 +759,122 @@ write.csv(pc_rare_sum,file.path("outputs", "rare_pcper_ecoregion.csv"))
 # ecr <- rasterize(ecv, aoi, field="ECOREGION_NAME")
 # ex <- expanse(divrare, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
 # 
-# names(ex)<- c("zone", "common", "r", "vr", "hv", "hv_r", "hv_vr", "vhv", "vhv_r", "vhv_vr")
-# 
-# write_csv(ex, file.path("outputs", "div_per_ecoregion.csv"))
 # 
 # 
-# ex <- readr::read_csv(file.path("outputs", "div_per_ecoregion.csv")) 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# # rasterize the zones
+# pror <- rasterize(pross, temp, field="protected")
+# 
+# 
+# 
+# #diversity
+# div_ex <- expanse(div, unit="m", byValue=TRUE, zones=pror, wide=TRUE)[,-1]
+# write.csv(div_ex, file.path("outputs", "div_per_protection.csv"))
+# 
+# # rarity
+# rare_ex <- expanse(rar, unit="m", byValue=TRUE, zones=pror, wide=TRUE)[,-1]
+# 
+# 
+# 
+# ## what proporion of diversity classes are protected? 
+# 
+# 
+# write.csv(rare_ex, file.path("outputs", "rare_per_ecoregion.csv"))
+# 
+# 
+# ex <- readr::read_csv(file.path("outputs", "rare_per_ecoregion.csv"))%>%
+#   select(-...1)
 # 
 # # calculate the % cover of each group by class 
-# pc_div_sum <- ex %>%
+# library(janitor)
+# pc_rare_sum <- ex %>%
 #   adorn_percentages("row") %>%
 #   adorn_pct_formatting(digits = 1) |> 
-#   bind_cols(tot_area = ecsum$totsum) 
-#   
-#   names(pc_div_sum)<- c("zone", "common", "r", "vr", "hv", "hv_r", "hv_vr", "vhv", "vhv_r", "vhv_vr", "tot_area")
-#   
-# write.csv(pc_div_sum,file.path("outputs", "div_pcper_ecoregion.csv"))
-#   
+#   bind_cols(tot_area = ecsum$totsum)
+# 
+# write.csv(pc_rare_sum,file.path("outputs", "rare_pcper_ecoregion.csv"))
 # 
 # 
-
+# 
+# 
+# ## what proporion of rarity classes are protected? 
+# 
+# 
+# # 
+# # 
+# # # read in concentration layers: diverity and rarity
+# # divrare <- rast(file.path("outputs", "high_div_rare.tif"))
+# # 
+# # # unique va;ues 
+# # # 1         0  - not rare or diversity (common)
+# # # 2         4  - Rare (r)
+# # # 3         5  - Very Rare (vr)
+# # # 4        40  - High Variety (hv)
+# # # 5        44  - high Variety and rare (hv_r)
+# # # 6        45  - high variety and very rare (hv_vr)
+# # # 7        50  - Very High Variety  (vhv)
+# # # 8        54  - Very High Variety and rare (vhv_r)
+# # # 9        55  - Very High Variety and very rare (vhv_vr)
+# # 
+# # #"r", "vr", "hv", "hv_r", "hv_vr", "vhv". "vhv_r", "vhv_vr"
+# # 
+# # 
+# # # TYPE 1 SUMMARY BY ECOREGION 
+# # 
+# # ec <- ec %>%
+# #   select(ECOREGION_NAME)%>% 
+# #   mutate(area_m2 = st_area(.))
+# # 
+# # 
+# # # calculate the summary of ecoregions within skeeena region
+# # 
+# # ecsum <- ec %>%
+# #   st_drop_geometry() |> 
+# #   group_by(ECOREGION_NAME) |> 
+# #   mutate(totsum = sum(area_m2))
+# # 
+# # ecv <- vect(ec)
+# # 
+# # 
+# # # # calculate the number of pixels per group, per ecoregion 
+# # # e <- extract(div, ecv, un="table", na.rm=TRUE, exact=FALSE)
+# # # edf <- data.frame(NAME_2=ecv$ECOREGION_NAME[e[,1]], e[,-1])
+# # # 
+# # # edff <- edf %>% 
+# # #   group_by(NAME_2, e....1.) |> 
+# # #   count()
+# # 
+# # # rasterize the zones
+# # ecr <- rasterize(ecv, aoi, field="ECOREGION_NAME")
+# # ex <- expanse(divrare, unit="m", byValue=TRUE, zones=ecr, wide=TRUE)[,-1]
+# # 
+# # names(ex)<- c("zone", "common", "r", "vr", "hv", "hv_r", "hv_vr", "vhv", "vhv_r", "vhv_vr")
+# # 
+# # write_csv(ex, file.path("outputs", "div_per_ecoregion.csv"))
+# # 
+# # 
+# # ex <- readr::read_csv(file.path("outputs", "div_per_ecoregion.csv")) 
+# # 
+# # # calculate the % cover of each group by class 
+# # pc_div_sum <- ex %>%
+# #   adorn_percentages("row") %>%
+# #   adorn_pct_formatting(digits = 1) |> 
+# #   bind_cols(tot_area = ecsum$totsum) 
+# #   
+# #   names(pc_div_sum)<- c("zone", "common", "r", "vr", "hv", "hv_r", "hv_vr", "vhv", "vhv_r", "vhv_vr", "tot_area")
+# #   
+# # write.csv(pc_div_sum,file.path("outputs", "div_pcper_ecoregion.csv"))
+# #   
+# # 
+# # 
+# 

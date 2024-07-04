@@ -78,7 +78,6 @@ ldf <- ldf %>%
 ## combine datasets 
 # Filter out the -999 for ecosystem class. 
 
-
 ldf_sum <- ldf |> 
   select(WSA_LAKE_ID, "surface_area","ecosystem_class",
          "wsa_elevation", "shoreline_complex" ,
@@ -96,8 +95,8 @@ ldf_ss <- ldf_sum |>
   select(-WSA_LAKE_ID)
 
 summ <- ldf_ss %>%
-  group_by(lake_code) %>%
-  summarise(count= n())
+  dplyr::group_by(lake_code) %>%
+  dplyr::summarise(count= n())
 
 write_csv(summ, file.path("inputs", "fw_lakes_summary.csv"))
 
@@ -128,7 +127,6 @@ rare <- ids %>%
 
 # re join the rarity code back with the lake id and then group with the rivers polygon. 
 
-
 rlac_sf <- lac_sf %>%
   left_join(rare) %>% 
   select("WSA_LAKE_ID", "lake_code", "rare_id") 
@@ -147,19 +145,483 @@ sum_df <- lac_river_poly %>%
   select(-WSA_LAKE_ID)
 
 
-# select the rarist code per polygon and convert to a sparial output 
+# select the mean rarity code per polygon and convert to a sparial output 
 
-rare_lake_ploy <- lac_river_poly %>% 
-  group_by(RIVER_ID )%>%
-  select(-WSA_LAKE_ID, -lake_code)%>%
-  mutate(rarity_lake_code = min(rare_id)) %>%
-  select(-rare_id)%>%
-  distinct()%>% 
+mrare_lake <- lac_river_poly %>% 
+  dplyr::group_by(RIVER_ID )%>%
+  dplyr::select(-WSA_LAKE_ID, -lake_code)%>%
+  dplyr::mutate(rarity_lake_code = mean(rare_id)) %>%
+  dplyr::select(-rare_id)%>%
+  dplyr::distinct()%>% 
   st_drop_geometry()
 
-rare_lake_poly <- left_join(ri, rare_lake_ploy )
+rare_lake_poly <- left_join(ri, mrare_lake )
 
-st_write(rare_lake_poly , file.path("inputs", "lake_rare_poly_raw.gpkg"), append = FALSE)
+st_write(rare_lake_poly , file.path("inputs", "lake_rare_poly_mean_raw.gpkg"), append = FALSE)
+
+
+## convert to a tif then run through the neighbourhood analysis 
+rare_lake_poly <-vect(file.path("inputs", "lake_rare_poly_mean_raw.gpkg"))
+
+rare_laker <- rasterize(rare_lake_poly , srast, field= "rarity_lake_code")
+
+plot(rare_laker)
+
+writeRaster(rare_laker, file.path("outputs","lake_rare_mean.tif"))
+
+
+# ran rarity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
+
+rar <- rast(file.path("outputs", "sk_lakes_mean_rarity_101c.tif"))
+
+hist(rar)
+
+
+
+
+
+
+
+
+
+
+################################################################################
+## MOST COMMON bARCODES
+##############################################################################
+
+## Calculate the most common bar code types for 1) all of skeena region and 2) per ecoregion 
+
+# 1 ) skeena 
+
+# read in the rare csv file 
+rare <- read_csv(file.path("inputs", "fw_lakes_summary.csv"))
+lac_sf<- st_read(file.path("inputs", "sk_lakes_barcode_poly.gpkg"))
+
+## Assign rarity/common code based on percent of number of lakes 
+ids = rare %>% 
+  mutate(total = sum(count))%>%
+  rowwise() %>%
+  mutate(pc = (count/total)*100)%>%
+  arrange(count)
+
+ids <-within(ids, acc_sum <- cumsum(pc))
+
+common <- ids %>% 
+  mutate(rare_id = case_when(
+    acc_sum >= 50 ~ 1,
+    .default = as.numeric(0)
+  ))
+
+write.csv(common, file.path("outputs", "sk_lakes_common_barcodes.csv"))
+
+# re join the rarity code back with the lake id and then keep the common polygons
+rlac_sf <- lac_sf %>%
+  left_join(common) %>% 
+  dplyr::select("lake_code", "rare_id") %>% 
+  dplyr::filter(rare_id == 1) %>%
+  dplyr::select(lake_code) %>% 
+  mutate(lake_area_m2 = st_area(geom))
+
+nrow(rlac_sf)
+
+# calculate the common lakes that are under protection 
+
+pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
+# simplify protected area 
+pross_u <- pro %>% select(protected)
+pro_common_sk <- st_intersection( rlac_sf, pross_u) 
+
+nrow(pro_common_ecoreg)
+
+pro_common_ecoreg  <- pro_common_sk  |> 
+  mutate(pro_lake_area = st_area(geom))%>% 
+  select(-protected)
+
+sk_lakes <- rlac_sf %>% 
+  st_drop_geometry() %>% 
+  dplyr::group_by(lake_code) %>% 
+  dplyr::mutate(sum_lake_area_m2  = sum(lake_area_m2))%>%
+  dplyr::select(-lake_area_m2)%>%
+  distinct()
+
+sk_pro_lakes <- pro_common_ecoreg %>% 
+  st_drop_geometry() %>% 
+  dplyr::group_by(lake_code) %>% 
+  dplyr::mutate(sum_pro_lake_area_m2  = sum(pro_lake_area))%>%
+  dplyr::select(-pro_lake_area, -lake_area_m2)%>%
+  distinct()
+
+protected_lakes <- left_join(sk_lakes, sk_pro_lakes)%>%
+  rowwise() %>% 
+  mutate(pc_protected = (sum_pro_lake_area_m2/ sum_lake_area_m2)*100)
+
+
+
+
+
+
+# read in study area 
+
+ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+
+rr = terra::rast(file.path("outputs", "sk_lf_barcode.tif"))
+rr_poly <-  as.polygons(rr, na.rm=FALSE)
+rr_sf <- st_as_sf(rr_poly)
+
+bc_ec <- st_intersection(rr_sf, ec) 
+
+bc_ec <- bc_ec %>% 
+  mutate(area_type = st_area(.))%>% 
+  filter(!is.na(lyr.1))
+
+st_write(bc_ec, file.path("outputs", "sk_lf_barcode_ecoreg_poly.gpkg"), append = FALSE)
+
+
+ec <- ec %>% 
+  mutate(ec_area_type = st_area(.))
+
+
+# calculate the barcodes most common for each of the ecoregions 
+
+comm <- bc_ec %>% 
+  st_drop_geometry() %>% 
+  left_join(ec)%>% 
+  select(-geom) %>% 
+  rowwise() %>% 
+  mutate(pc = (area_type /ec_area_type)*100) %>% 
+  select(-area_type, -ec_area_type)%>%
+  ungroup()%>%
+  arrange(pc)
+
+library(plyr)
+ccc <- ddply(comm,.(ECOREGION_NAME),transform,csum=cumsum(pc))
+ccc <- as_tibble(ccc)%>% 
+  mutate(pc = as.numeric(pc), 
+         csum = as.numeric(csum))
+
+common <- ccc %>% 
+  mutate(rare_id = case_when(
+    csum >= 50 ~ 1,
+    .default = as.numeric(0)
+  ))
+
+#most_common <- common %>% filter(rare_id == 1)
+#write.csv(most_common , file.path("outputs", "common_terrestrial_barcodes_per_ecoregion.csv"))
+
+
+comm_sf <- left_join(bc_ec, common )%>% 
+  filter(-area_type)
+
+
+st_write(comm_sf, file.path("outputs", "sk_lf_barcode_ecoreg_detail_poly.gpkg"), append = FALSE)
+
+
+# need to calculate number of barcodes per ecoregion 
+no_barcodes_per_ecoregion <- common %>%
+  filter(rare_id == 1)%>% 
+  select(ECOREGION_NAME)%>%
+  group_by(ECOREGION_NAME) %>% 
+  count()
+
+# generate the spatial layer 
+
+common_by_ecoregion <- comm_sf %>%
+  filter(rare_id == 1) %>% 
+  select(ECOREGION_NAME)
+
+# generate the amount of area that the common class takes up per ecoregion 
+common_area_by_ecoregion <- common_by_ecoregion %>% 
+  dplyr::mutate(common_area = st_area(geometry))
+
+common_area_sum <- aggregate(common_area_by_ecoregion$common_area, by=list(ECOREGION_NAME=common_area_by_ecoregion$ECOREGION_NAME), FUN=sum)
+names(common_area_sum) <- c("ECOREGION_NAME", "common_ecoreg_m2")
+
+
+# overlay the protected areas with the most common to see how much is protected. 
+pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
+ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+
+# 1: calculate % protected for most common for all Skeena
+## read in protected layers 
+
+# calculate the area of each region 
+ecsum <- ec %>%
+  group_by(ECOREGION_NAME) |>
+  mutate(area_m2 = st_area(geom)) 
+
+ecsum_df <- ecsum %>% 
+  st_drop_geometry()
+
+all_sk <- sum(ecsum_df$area_m2)
+
+ecsum_df <- ecsum_df %>% 
+  mutate(total_sk_area = all_sk) %>% 
+  rowwise() %>% 
+  mutate(pc_of_sk = (area_m2/total_sk_area)*100)
+
+write_csv(ecsum_df, file.path("outputs", "ecoregion_area_totals.csv"))
+
+
+## what proportion of the common region is currently protected? 
+# how much area is protected within each eco_region: ()
+
+# simplify protected area 
+pross_u <- pro %>% select(protected)
+pro_common_ecoreg <- st_intersection( common_by_ecoregion, pross_u) 
+
+pro_common_ecoreg  <- pro_common_ecoreg  |> 
+  mutate(pro_area = st_area(geometry))
+
+#st_write(pro_common_ecoreg , file.path("outputs", "sk_lf_common_ecoreg_protected.gpkg"), append = FALSE)
+
+pro_sum <- pro_common_ecoreg %>%
+  st_drop_geometry() |> 
+  select(-protected) 
+
+pro_sum <- aggregate(pro_sum$pro_area, by=list(ECOREGION_NAME=pro_sum$ECOREGION_NAME), FUN=sum)
+names(pro_sum) <- c("ECOREGION_NAME", "common_pro_m2")
+
+
+# join the protected area of common with the total area of common per ecoregion and calculate the percentage 
+
+pro_sum <- left_join(pro_sum, common_area_sum) %>% 
+  #select(-total_sk_area, -pc_of_sk) %>% 
+  rowwise() %>% 
+  dplyr::mutate(common_pro_pc = (common_pro_m2/common_ecoreg_m2)*100)
+
+# export 
+
+write_csv(pro_sum, file.path( "outputs", "common_protected_by_ecoregion.csv"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Read in the skeena facets and update the most common barcodes >50% by land area 
+
+common <- rare %>% 
+  mutate(rare_id = case_when(
+    acc_sum >= 50 ~ 1,
+    .default = as.numeric(0)
+  ))
+
+# assign rarity class
+class1 <-common %>% filter(rare_id == 1) %>% pull(layer1)
+
+write.csv(class1, file.path("outputs", "common_terrestrial_barcodes_allsk.csv"))
+length(class1)
+
+uvr <- as.vector(unique(values(rr)))
+
+# check if needs class 1: 
+
+if(any(unique(uvr %in% class1)) == TRUE){
+  print("reclass values")
+  
+  for(i in class1){
+    #  i = class1[1]
+    print(i)
+    rr <- subst(rr, i, 1)
+    
+  }
+  
+}else {
+  print("no class1 reclass needed")
+}
+
+reclass <- as.vector(unique(values(rr)))
+sort(reclass)
+
+# classify the values into groups 
+
+m <- c(1, 1, 1,
+       2, 999999, 0)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+common <- classify(rr, rclmat, include.lowest=TRUE)
+
+unique(values(common))
+rc1 <- mask(common, aoi )
+terra::writeRaster(rc1,file.path("outputs", "sk_entire_common.tif"), overwrite = TRUE)
+
+
+### 
+
+# read in study area 
+
+ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+
+rr = terra::rast(file.path("outputs", "sk_lf_barcode.tif"))
+rr_poly <-  as.polygons(rr, na.rm=FALSE)
+rr_sf <- st_as_sf(rr_poly)
+
+bc_ec <- st_intersection(rr_sf, ec) 
+
+bc_ec <- bc_ec %>% 
+  mutate(area_type = st_area(.))%>% 
+  filter(!is.na(lyr.1))
+
+st_write(bc_ec, file.path("outputs", "sk_lf_barcode_ecoreg_poly.gpkg"), append = FALSE)
+
+
+ec <- ec %>% 
+  mutate(ec_area_type = st_area(.))
+
+
+# calculate the barcodes most common for each of the ecoregions 
+
+comm <- bc_ec %>% 
+  st_drop_geometry() %>% 
+  left_join(ec)%>% 
+  select(-geom) %>% 
+  rowwise() %>% 
+  mutate(pc = (area_type /ec_area_type)*100) %>% 
+  select(-area_type, -ec_area_type)%>%
+  ungroup()%>%
+  arrange(pc)
+
+library(plyr)
+ccc <- ddply(comm,.(ECOREGION_NAME),transform,csum=cumsum(pc))
+ccc <- as_tibble(ccc)%>% 
+  mutate(pc = as.numeric(pc), 
+         csum = as.numeric(csum))
+
+common <- ccc %>% 
+  mutate(rare_id = case_when(
+    csum >= 50 ~ 1,
+    .default = as.numeric(0)
+  ))
+
+#most_common <- common %>% filter(rare_id == 1)
+#write.csv(most_common , file.path("outputs", "common_terrestrial_barcodes_per_ecoregion.csv"))
+
+
+comm_sf <- left_join(bc_ec, common )%>% 
+  filter(-area_type)
+
+
+st_write(comm_sf, file.path("outputs", "sk_lf_barcode_ecoreg_detail_poly.gpkg"), append = FALSE)
+
+
+# need to calculate number of barcodes per ecoregion 
+no_barcodes_per_ecoregion <- common %>%
+  filter(rare_id == 1)%>% 
+  select(ECOREGION_NAME)%>%
+  group_by(ECOREGION_NAME) %>% 
+  count()
+
+# generate the spatial layer 
+
+common_by_ecoregion <- comm_sf %>%
+  filter(rare_id == 1) %>% 
+  select(ECOREGION_NAME)
+
+# generate the amount of area that the common class takes up per ecoregion 
+common_area_by_ecoregion <- common_by_ecoregion %>% 
+  dplyr::mutate(common_area = st_area(geometry))
+
+common_area_sum <- aggregate(common_area_by_ecoregion$common_area, by=list(ECOREGION_NAME=common_area_by_ecoregion$ECOREGION_NAME), FUN=sum)
+names(common_area_sum) <- c("ECOREGION_NAME", "common_ecoreg_m2")
+
+
+# overlay the protected areas with the most common to see how much is protected. 
+pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
+ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+
+# 1: calculate % protected for most common for all Skeena
+## read in protected layers 
+
+# calculate the area of each region 
+ecsum <- ec %>%
+  group_by(ECOREGION_NAME) |>
+  mutate(area_m2 = st_area(geom)) 
+
+ecsum_df <- ecsum %>% 
+  st_drop_geometry()
+
+all_sk <- sum(ecsum_df$area_m2)
+
+ecsum_df <- ecsum_df %>% 
+  mutate(total_sk_area = all_sk) %>% 
+  rowwise() %>% 
+  mutate(pc_of_sk = (area_m2/total_sk_area)*100)
+
+write_csv(ecsum_df, file.path("outputs", "ecoregion_area_totals.csv"))
+
+
+## what proportion of the common region is currently protected? 
+# how much area is protected within each eco_region: ()
+
+# simplify protected area 
+pross_u <- pro %>% select(protected)
+pro_common_ecoreg <- st_intersection( common_by_ecoregion, pross_u) 
+
+pro_common_ecoreg  <- pro_common_ecoreg  |> 
+  mutate(pro_area = st_area(geometry))
+
+#st_write(pro_common_ecoreg , file.path("outputs", "sk_lf_common_ecoreg_protected.gpkg"), append = FALSE)
+
+pro_sum <- pro_common_ecoreg %>%
+  st_drop_geometry() |> 
+  select(-protected) 
+
+pro_sum <- aggregate(pro_sum$pro_area, by=list(ECOREGION_NAME=pro_sum$ECOREGION_NAME), FUN=sum)
+names(pro_sum) <- c("ECOREGION_NAME", "common_pro_m2")
+
+
+# join the protected area of common with the total area of common per ecoregion and calculate the percentage 
+
+pro_sum <- left_join(pro_sum, common_area_sum) %>% 
+  #select(-total_sk_area, -pc_of_sk) %>% 
+  rowwise() %>% 
+  dplyr::mutate(common_pro_pc = (common_pro_m2/common_ecoreg_m2)*100)
+
+# export 
+
+write_csv(pro_sum, file.path( "outputs", "common_protected_by_ecoregion.csv"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -461,7 +923,7 @@ writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite
 
 ############################################################
 
-# Set ribers rarity based on barcode 
+# Set rivers rarity based on barcode 
 
 # number of codes within Aoi 
 uval = length(unique(values(rri)))
