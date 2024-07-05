@@ -176,7 +176,20 @@ rar <- rast(file.path("outputs", "sk_lakes_mean_rarity_101c.tif"))
 
 hist(rar)
 
+names(rar)= "rarity"
+#reclass the valyers to a conccentration 
 
+unique(values(rar))
+
+m <- c(0, 1.1, 1,
+       1.1, 1.2, 2,
+       1.2, 1.4, 3,
+       1.4, 1.8, 4,
+       1.8, 10, 5)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc <- classify(rar , rclmat, include.lowest=TRUE)
+
+writeRaster(rc, file.path("outputs", "sk_lakes_rarity_conc.tif"), overwrite = TRUE)
 
 
 
@@ -413,319 +426,442 @@ write_csv(pro_sum, file.path( "outputs", "common_protected_by_ecoregion.csv"))
 
 
 
+# 
+# 
+# 
+# # Read in the skeena facets and update the most common barcodes >50% by land area 
+# 
+# common <- rare %>% 
+#   mutate(rare_id = case_when(
+#     acc_sum >= 50 ~ 1,
+#     .default = as.numeric(0)
+#   ))
+# 
+# # assign rarity class
+# class1 <-common %>% filter(rare_id == 1) %>% pull(layer1)
+# 
+# write.csv(class1, file.path("outputs", "common_terrestrial_barcodes_allsk.csv"))
+# length(class1)
+# 
+# uvr <- as.vector(unique(values(rr)))
+# 
+# # check if needs class 1: 
+# 
+# if(any(unique(uvr %in% class1)) == TRUE){
+#   print("reclass values")
+#   
+#   for(i in class1){
+#     #  i = class1[1]
+#     print(i)
+#     rr <- subst(rr, i, 1)
+#     
+#   }
+#   
+# }else {
+#   print("no class1 reclass needed")
+# }
+# 
+# reclass <- as.vector(unique(values(rr)))
+# sort(reclass)
+# 
+# # classify the values into groups 
+# 
+# m <- c(1, 1, 1,
+#        2, 999999, 0)
+# rclmat <- matrix(m, ncol=3, byrow=TRUE)
+# common <- classify(rr, rclmat, include.lowest=TRUE)
+# 
+# unique(values(common))
+# rc1 <- mask(common, aoi )
+# terra::writeRaster(rc1,file.path("outputs", "sk_entire_common.tif"), overwrite = TRUE)
+# 
+# 
+# ### 
+# 
+# # read in study area 
+# 
+# ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+# 
+# rr = terra::rast(file.path("outputs", "sk_lf_barcode.tif"))
+# rr_poly <-  as.polygons(rr, na.rm=FALSE)
+# rr_sf <- st_as_sf(rr_poly)
+# 
+# bc_ec <- st_intersection(rr_sf, ec) 
+# 
+# bc_ec <- bc_ec %>% 
+#   mutate(area_type = st_area(.))%>% 
+#   filter(!is.na(lyr.1))
+# 
+# st_write(bc_ec, file.path("outputs", "sk_lf_barcode_ecoreg_poly.gpkg"), append = FALSE)
+# 
+# 
+# ec <- ec %>% 
+#   mutate(ec_area_type = st_area(.))
+# 
+# 
+# # calculate the barcodes most common for each of the ecoregions 
+# 
+# comm <- bc_ec %>% 
+#   st_drop_geometry() %>% 
+#   left_join(ec)%>% 
+#   select(-geom) %>% 
+#   rowwise() %>% 
+#   mutate(pc = (area_type /ec_area_type)*100) %>% 
+#   select(-area_type, -ec_area_type)%>%
+#   ungroup()%>%
+#   arrange(pc)
+# 
+# library(plyr)
+# ccc <- ddply(comm,.(ECOREGION_NAME),transform,csum=cumsum(pc))
+# ccc <- as_tibble(ccc)%>% 
+#   mutate(pc = as.numeric(pc), 
+#          csum = as.numeric(csum))
+# 
+# common <- ccc %>% 
+#   mutate(rare_id = case_when(
+#     csum >= 50 ~ 1,
+#     .default = as.numeric(0)
+#   ))
+# 
+# #most_common <- common %>% filter(rare_id == 1)
+# #write.csv(most_common , file.path("outputs", "common_terrestrial_barcodes_per_ecoregion.csv"))
+# 
+# 
+# comm_sf <- left_join(bc_ec, common )%>% 
+#   filter(-area_type)
+# 
+# 
+# st_write(comm_sf, file.path("outputs", "sk_lf_barcode_ecoreg_detail_poly.gpkg"), append = FALSE)
+# 
+# 
+# # need to calculate number of barcodes per ecoregion 
+# no_barcodes_per_ecoregion <- common %>%
+#   filter(rare_id == 1)%>% 
+#   select(ECOREGION_NAME)%>%
+#   group_by(ECOREGION_NAME) %>% 
+#   count()
+# 
+# # generate the spatial layer 
+# 
+# common_by_ecoregion <- comm_sf %>%
+#   filter(rare_id == 1) %>% 
+#   select(ECOREGION_NAME)
+# 
+# # generate the amount of area that the common class takes up per ecoregion 
+# common_area_by_ecoregion <- common_by_ecoregion %>% 
+#   dplyr::mutate(common_area = st_area(geometry))
+# 
+# common_area_sum <- aggregate(common_area_by_ecoregion$common_area, by=list(ECOREGION_NAME=common_area_by_ecoregion$ECOREGION_NAME), FUN=sum)
+# names(common_area_sum) <- c("ECOREGION_NAME", "common_ecoreg_m2")
+# 
+# 
+# # overlay the protected areas with the most common to see how much is protected. 
+# pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
+# ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+# 
+# # 1: calculate % protected for most common for all Skeena
+# ## read in protected layers 
+# 
+# # calculate the area of each region 
+# ecsum <- ec %>%
+#   group_by(ECOREGION_NAME) |>
+#   mutate(area_m2 = st_area(geom)) 
+# 
+# ecsum_df <- ecsum %>% 
+#   st_drop_geometry()
+# 
+# all_sk <- sum(ecsum_df$area_m2)
+# 
+# ecsum_df <- ecsum_df %>% 
+#   mutate(total_sk_area = all_sk) %>% 
+#   rowwise() %>% 
+#   mutate(pc_of_sk = (area_m2/total_sk_area)*100)
+# 
+# write_csv(ecsum_df, file.path("outputs", "ecoregion_area_totals.csv"))
+# 
+# 
+# ## what proportion of the common region is currently protected? 
+# # how much area is protected within each eco_region: ()
+# 
+# # simplify protected area 
+# pross_u <- pro %>% select(protected)
+# pro_common_ecoreg <- st_intersection( common_by_ecoregion, pross_u) 
+# 
+# pro_common_ecoreg  <- pro_common_ecoreg  |> 
+#   mutate(pro_area = st_area(geometry))
+# 
+# #st_write(pro_common_ecoreg , file.path("outputs", "sk_lf_common_ecoreg_protected.gpkg"), append = FALSE)
+# 
+# pro_sum <- pro_common_ecoreg %>%
+#   st_drop_geometry() |> 
+#   select(-protected) 
+# 
+# pro_sum <- aggregate(pro_sum$pro_area, by=list(ECOREGION_NAME=pro_sum$ECOREGION_NAME), FUN=sum)
+# names(pro_sum) <- c("ECOREGION_NAME", "common_pro_m2")
+# 
+# 
+# # join the protected area of common with the total area of common per ecoregion and calculate the percentage 
+# 
+# pro_sum <- left_join(pro_sum, common_area_sum) %>% 
+#   #select(-total_sk_area, -pc_of_sk) %>% 
+#   rowwise() %>% 
+#   dplyr::mutate(common_pro_pc = (common_pro_m2/common_ecoreg_m2)*100)
+# 
+# # export 
+# 
+# write_csv(pro_sum, file.path( "outputs", "common_protected_by_ecoregion.csv"))
 
 
 
-# Read in the skeena facets and update the most common barcodes >50% by land area 
 
-common <- rare %>% 
-  mutate(rare_id = case_when(
-    acc_sum >= 50 ~ 1,
-    .default = as.numeric(0)
-  ))
 
-# assign rarity class
-class1 <-common %>% filter(rare_id == 1) %>% pull(layer1)
 
-write.csv(class1, file.path("outputs", "common_terrestrial_barcodes_allsk.csv"))
-length(class1)
 
-uvr <- as.vector(unique(values(rr)))
 
-# check if needs class 1: 
 
-if(any(unique(uvr %in% class1)) == TRUE){
-  print("reclass values")
+
+
+############################################
+
+## Lake diversity base calculation 
+library(dplyr)
+
+lac_sf <- st_read(file.path("inputs", "sk_lakes_barcode_poly.gpkg"))
+
+ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg")) %>% 
+                    select(RIVER_ID)%>% 
+  mutate(river_poly_area_m2 = st_area(geom))
+
+# intersect the watershed
+lac_river_poly <- st_intersection(lac_sf, ri)%>% 
+  select(WSA_LAKE_ID, lake_code, RIVER_ID, river_poly_area_m2) %>% 
+  mutate(lake_area_m2 = st_area(geom))
+
+lac_count_per_poly <- lac_river_poly %>% 
+  dplyr::group_by(RIVER_ID)%>% 
+  dplyr::mutate(lake_no_per_watershed = n())%>% 
+  dplyr::mutate(lake_area_per_watershed = sum(lake_area_m2)) %>% 
+  select(RIVER_ID, river_poly_area_m2, lake_no_per_watershed,lake_area_per_watershed)%>% 
+  st_drop_geometry() %>% 
+  distinct()%>%
+  rowwise() %>% 
+  dplyr::mutate(pc_cover_lakes = as.numeric((lake_area_per_watershed/river_poly_area_m2)*100)) %>% 
+  ungroup()
+
+# summary of no of lakes and area per polygon *not broken down by barcode)
+write.csv <- st_write(lac_count_per_poly, file.path("outputs", "lac_count_per_watershed_no_area.csv"),append=FALSE)
   
-  for(i in class1){
-    #  i = class1[1]
-    print(i)
-    rr <- subst(rr, i, 1)
-    
+pc_cover <- left_join(ri, lac_count_per_poly)
+
+st_write(pc_cover , file.path("inputs", "lake_div_pccover.gpkg"), append = FALSE)
+
+lakecode_area_per_poly <- lac_river_poly %>% 
+  dplyr::group_by(RIVER_ID)%>% 
+  dplyr::mutate(lake_area_per_watershed = sum(lake_area_m2)) %>%
+  ungroup() %>%
+  group_by(RIVER_ID, lake_code) %>% 
+  dplyr::mutate(lakecode_no_per_watershed = n())%>% 
+  dplyr::mutate(lakecode_area_per_watershed = sum(lake_area_m2)) %>% 
+  select(RIVER_ID, lake_code,lakecode_no_per_watershed,lakecode_area_per_watershed)%>% 
+  st_drop_geometry() %>% 
+  distinct()
+
+# summary of no of lake codes and areas per polygon 
+write.csv <- st_write(lakecode_area_per_poly, file.path("outputs", "lakecode_count_per_watershed_no_area.csv"))
+
+
+
+
+
+
+
+
+# 
+# install.packages("vegan", dep = T)
+# library(vegan)
+
+diversity <- function (x, index = "shannon", groups, equalize.groups = FALSE, 
+          MARGIN = 1, base = exp(1)) 
+{
+  
+  x <- xx
+  x <- drop(as.matrix(x))
+  if (!is.numeric(x)) 
+    stop("input data must be numeric")
+  if (any(x < 0, na.rm = TRUE)) 
+    stop("input data must be non-negative")
+  if (!missing(groups)) {
+    if (MARGIN == 2) 
+      x <- t(x)
+    if (length(groups) == 1) 
+      groups <- rep(groups, NROW(x))
+    if (equalize.groups) 
+      x <- decostand(x, "total")
+    x <- aggregate(x, list(groups), sum)
+    rownames(x) <- x[, 1]
+    x <- x[, -1, drop = FALSE]
+    if (MARGIN == 2) 
+      x <- t(x)
   }
-  
-}else {
-  print("no class1 reclass needed")
+  INDICES <- c("shannon", "simpson", "invsimpson")
+  index <- match.arg(index, INDICES)
+  if (length(dim(x)) > 1) {
+    total <- apply(x, MARGIN, sum)
+    x <- sweep(x, MARGIN, total, "/")
+  }
+  else {
+    x <- x/(total <- sum(x))
+  }
+  if (index == "shannon") 
+    x <- -x * log(x, base)
+  else x <- x * x
+  if (length(dim(x)) > 1) 
+    H <- apply(x, MARGIN, sum, na.rm = TRUE)
+  else H <- sum(x, na.rm = TRUE)
+  if (index == "simpson") 
+    H <- 1 - H
+  else if (index == "invsimpson") 
+    H <- 1/H
+  if (any(NAS <- is.na(total))) 
+    H[NAS] <- NA
+  H
 }
 
-reclass <- as.vector(unique(values(rr)))
-sort(reclass)
 
-# classify the values into groups 
+# Need a table with lake codes and no of lakes = columns  axis and rows = river_polygons  
+# format the table 
 
-m <- c(1, 1, 1,
-       2, 999999, 0)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-common <- classify(rr, rclmat, include.lowest=TRUE)
+lakecode_count = lakecode_area_per_poly %>% 
+  select(-lakecode_area_per_watershed)
 
-unique(values(common))
-rc1 <- mask(common, aoi )
-terra::writeRaster(rc1,file.path("outputs", "sk_entire_common.tif"), overwrite = TRUE)
+#length(unique(lakecode_count$RIVER_ID)) #4368
+#length(lakecode_count$RIVER_ID) # 16968
 
+# convert to table format  to run Shannon index 
+ab <- pivot_wider(lakecode_count, names_from = lake_code, values_from = lakecode_no_per_watershed) %>% 
+  mutate_if(is.integer, ~replace(., is.na(.), 0)) %>%
+  ungroup() 
 
-### 
+ab <- ab %>% 
+  select(-RIVER_ID)
 
-# read in study area 
+shannon_count <- diversity(ab, index = "shannon")
 
-ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
 
-rr = terra::rast(file.path("outputs", "sk_lf_barcode.tif"))
-rr_poly <-  as.polygons(rr, na.rm=FALSE)
-rr_sf <- st_as_sf(rr_poly)
 
-bc_ec <- st_intersection(rr_sf, ec) 
 
-bc_ec <- bc_ec %>% 
-  mutate(area_type = st_area(.))%>% 
-  filter(!is.na(lyr.1))
+xx <- ab[1,]
+xx1<- ab[1,1]
 
-st_write(bc_ec, file.path("outputs", "sk_lf_barcode_ecoreg_poly.gpkg"), append = FALSE)
+diversity(xx, index = "shannon")
+diversity(xx1, index = "shannon")
 
+diversity_count <- tibble(shannon_count, RIVER_ID = unique(lakecode_count$RIVER_ID))
 
-ec <- ec %>% 
-  mutate(ec_area_type = st_area(.))
 
 
-# calculate the barcodes most common for each of the ecoregions 
+# repeat based on the size of the lakes (area) not count 
+lakecode_area = lakecode_area_per_poly %>% 
+  select(-lakecode_no_per_watershed )%>%
+  mutate(lakecode_area_per_watershed = as.numeric(lakecode_area_per_watershed))
 
-comm <- bc_ec %>% 
-  st_drop_geometry() %>% 
-  left_join(ec)%>% 
-  select(-geom) %>% 
-  rowwise() %>% 
-  mutate(pc = (area_type /ec_area_type)*100) %>% 
-  select(-area_type, -ec_area_type)%>%
-  ungroup()%>%
-  arrange(pc)
+ac <- pivot_wider(lakecode_area, names_from = lake_code, values_from = lakecode_area_per_watershed) %>% 
+  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>%
+  ungroup() %>% 
+  select(-RIVER_ID)
 
-library(plyr)
-ccc <- ddply(comm,.(ECOREGION_NAME),transform,csum=cumsum(pc))
-ccc <- as_tibble(ccc)%>% 
-  mutate(pc = as.numeric(pc), 
-         csum = as.numeric(csum))
+# calcualte shannon index by area of lake type
+shannon_area <- diversity(ac, index = "shannon")
+diversity_area<- tibble( shannon_area, RIVER_ID = unique(lakecode_count$RIVER_ID))
 
-common <- ccc %>% 
-  mutate(rare_id = case_when(
-    csum >= 50 ~ 1,
-    .default = as.numeric(0)
-  ))
 
-#most_common <- common %>% filter(rare_id == 1)
-#write.csv(most_common , file.path("outputs", "common_terrestrial_barcodes_per_ecoregion.csv"))
+# join together the tables 
 
+shannon <- left_join(diversity_area, diversity_count)
+shannon <- left_join(lac_count_per_poly, shannon)
 
-comm_sf <- left_join(bc_ec, common )%>% 
-  filter(-area_type)
+# summary of diversity 
 
+write_csv(shannon, file.path("outputs", "sk_lake_shannon_div_raw.csv"))
 
-st_write(comm_sf, file.path("outputs", "sk_lf_barcode_ecoreg_detail_poly.gpkg"), append = FALSE)
 
+hist(shannon$shannon_area)
 
-# need to calculate number of barcodes per ecoregion 
-no_barcodes_per_ecoregion <- common %>%
-  filter(rare_id == 1)%>% 
-  select(ECOREGION_NAME)%>%
-  group_by(ECOREGION_NAME) %>% 
-  count()
+hist(shannon$shannon_count)
 
-# generate the spatial layer 
-
-common_by_ecoregion <- comm_sf %>%
-  filter(rare_id == 1) %>% 
-  select(ECOREGION_NAME)
-
-# generate the amount of area that the common class takes up per ecoregion 
-common_area_by_ecoregion <- common_by_ecoregion %>% 
-  dplyr::mutate(common_area = st_area(geometry))
-
-common_area_sum <- aggregate(common_area_by_ecoregion$common_area, by=list(ECOREGION_NAME=common_area_by_ecoregion$ECOREGION_NAME), FUN=sum)
-names(common_area_sum) <- c("ECOREGION_NAME", "common_ecoreg_m2")
-
-
-# overlay the protected areas with the most common to see how much is protected. 
-pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
-ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
-
-# 1: calculate % protected for most common for all Skeena
-## read in protected layers 
-
-# calculate the area of each region 
-ecsum <- ec %>%
-  group_by(ECOREGION_NAME) |>
-  mutate(area_m2 = st_area(geom)) 
-
-ecsum_df <- ecsum %>% 
-  st_drop_geometry()
-
-all_sk <- sum(ecsum_df$area_m2)
-
-ecsum_df <- ecsum_df %>% 
-  mutate(total_sk_area = all_sk) %>% 
-  rowwise() %>% 
-  mutate(pc_of_sk = (area_m2/total_sk_area)*100)
-
-write_csv(ecsum_df, file.path("outputs", "ecoregion_area_totals.csv"))
-
-
-## what proportion of the common region is currently protected? 
-# how much area is protected within each eco_region: ()
-
-# simplify protected area 
-pross_u <- pro %>% select(protected)
-pro_common_ecoreg <- st_intersection( common_by_ecoregion, pross_u) 
-
-pro_common_ecoreg  <- pro_common_ecoreg  |> 
-  mutate(pro_area = st_area(geometry))
-
-#st_write(pro_common_ecoreg , file.path("outputs", "sk_lf_common_ecoreg_protected.gpkg"), append = FALSE)
-
-pro_sum <- pro_common_ecoreg %>%
-  st_drop_geometry() |> 
-  select(-protected) 
-
-pro_sum <- aggregate(pro_sum$pro_area, by=list(ECOREGION_NAME=pro_sum$ECOREGION_NAME), FUN=sum)
-names(pro_sum) <- c("ECOREGION_NAME", "common_pro_m2")
-
-
-# join the protected area of common with the total area of common per ecoregion and calculate the percentage 
-
-pro_sum <- left_join(pro_sum, common_area_sum) %>% 
-  #select(-total_sk_area, -pc_of_sk) %>% 
-  rowwise() %>% 
-  dplyr::mutate(common_pro_pc = (common_pro_m2/common_ecoreg_m2)*100)
-
-# export 
-
-write_csv(pro_sum, file.path( "outputs", "common_protected_by_ecoregion.csv"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# number of lakes per watershed 
-no_lakes_per_river_watershed <- sum_df %>% 
-  group_by(RIVER_ID) %>% 
-  add_count() %>% 
-  select(RIVER_ID, n) %>% 
-  distinct()
-
-
-# number of lakes per code per watershed
-no_lakes_per_river_watershed_per_code <- sum_df %>% 
-  group_by(RIVER_ID, lake_code) %>% 
-  add_count() %>% 
-  select(RIVER_ID, n, lake_code) %>% 
-  distinct()
-  
-
-# calculate diversity of barcodes per watershed (ie. no of different code)
-
-div_lake <- no_lakes_per_river_watershed_per_code %>% 
-  group_by(RIVER_ID)%>% 
-  select(-n) %>% 
-  count(RIVER_ID) %>%
-  rename( "unique_lakecodes" = n)
-
-
-div_lak <- left_join(div_lake, no_lakes_per_river_watershed)%>%
-  rename( "no_lakes_total" = n) %>% 
-  mutate(div_prop = unique_lakecodes/ no_lakes_total)
-
-# calculate a ratio of number of distinct lake types/ total no of lakes 
-# ie nuique codes / no lakes total 
-# scaled from 0 - 1 where 0 = lower diversity and 1 = high diversity 
 
 # rejoin to the spatial data and export 
 
-ri_diversity <- left_join(ri, div_lak )
+ri_diversity <- left_join(ri, shannon )
 
 st_write(ri_diversity , file.path("inputs", "lake_div_raw.gpkg"), append = FALSE)
 
 
 
-#quantile(summ$count, seq(0,1, 0.1))
 
 
 
 
-
-
-
-############################################################################
-
-## Lakes density values 
-
-srast <- rast(file.path("inputs", "sk_rast_template.tif"))
-
-#srast1km <- aggregate(srast, fact = 10)
-
-den1km <- rast(file.path("inputs", "sk_lake_density_1km.tif"))
-# read in 1km density lakes and clasify to Weaver 
-
-# Weaver used the density values of % cover of 1km grid cell 
 # 
-# very high > 50 ~ 1
-# high 15 - 50%  ~ 2
-# moderate = <15% ~ 3 
-#
-m <- c(0, 0.15, 3,
-       0.15, 0.5, 2,
-       0.5, 1, 1)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc1 <- classify(den1km, rclmat, include.lowest=TRUE)
-
-writeRaster(rc1, file.path("inputs", "sk_lake_density_class_1km.tif"), overwrite = TRUE)
-
-
-
-############################################################################
-
-##WETLAND density values 
-
-srast <- rast(file.path("inputs", "sk_rast_template.tif"))
-
-wet1km <- rast(file.path("inputs", "sk_wetland_density_1km.tif"))
-# read in 1km density lakes and clasify to Weaver 
-
-# Weaver used the density values of % cover of 1km grid cell 
 # 
-# very high > 50 ~ 1
-# high 15 - 50%  ~ 2
-# moderate = <15% ~ 3 
-#
-m <- c(0, 0.15, 3,
-       0.15, 0.5, 2,
-       0.5, 1, 1)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc1 <- classify(wet1km, rclmat, include.lowest=TRUE)
+# ############################################################################
+# 
+# ## Lakes density values 
+# 
+# srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+# 
+# #srast1km <- aggregate(srast, fact = 10)
+# 
+# den1km <- rast(file.path("inputs", "sk_lake_density_1km.tif"))
+# # read in 1km density lakes and clasify to Weaver 
+# 
+# # Weaver used the density values of % cover of 1km grid cell 
+# # 
+# # very high > 50 ~ 1
+# # high 15 - 50%  ~ 2
+# # moderate = <15% ~ 3 
+# #
+# m <- c(0, 0.15, 3,
+#        0.15, 0.5, 2,
+#        0.5, 1, 1)
+# rclmat <- matrix(m, ncol=3, byrow=TRUE)
+# rc1 <- classify(den1km, rclmat, include.lowest=TRUE)
+# 
+# writeRaster(rc1, file.path("inputs", "sk_lake_density_class_1km.tif"), overwrite = TRUE)
+# 
+# 
+# 
+# ############################################################################
+# 
+# ##WETLAND density values 
+# 
+# srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+# 
+# wet1km <- rast(file.path("inputs", "sk_wetland_density_1km.tif"))
+# # read in 1km density lakes and clasify to Weaver 
+# 
+# # Weaver used the density values of % cover of 1km grid cell 
+# # 
+# # very high > 50 ~ 1
+# # high 15 - 50%  ~ 2
+# # moderate = <15% ~ 3 
+# #
+# m <- c(0, 0.15, 3,
+#        0.15, 0.5, 2,
+#        0.5, 1, 1)
+# rclmat <- matrix(m, ncol=3, byrow=TRUE)
+# rc1 <- classify(wet1km, rclmat, include.lowest=TRUE)
+# 
+# writeRaster(rc1, file.path("inputs", "sk_wetland_density_class_1km.tif"), overwrite = TRUE)
+# 
+# 
 
-writeRaster(rc1, file.path("inputs", "sk_wetland_density_class_1km.tif"), overwrite = TRUE)
+
+
+
+
+
+
 
 
 
@@ -735,7 +871,7 @@ writeRaster(rc1, file.path("inputs", "sk_wetland_density_class_1km.tif"), overwr
 
 
 ##############################################################################
-
+library(dplyr)
 # EAUBC freshwater rivers
 ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg"))
 
@@ -771,10 +907,10 @@ ribr_max <- ribr %>%
 
 # select the river ids where more than one max value (i.e. equal percent or -9999 no data )
 multi_id <- ribr_max %>%
-  group_by(RIVER_ID) %>% 
+  dplyr::group_by(RIVER_ID) %>% 
   #filter(percent_type != -999) %>%
-  mutate(count = n()) %>%
-  filter(count > 1)
+  dplyr::mutate(count = n()) %>%
+  dplyr::filter(count > 1)
 
 # get list of all imulti idas
 multi_id_list = unique(multi_id$RIVER_ID)
@@ -885,8 +1021,8 @@ rdf_ss <-rdf_sum  |>
   select(-RIVER_ID)
 
 summ <- rdf_ss %>%
-  group_by(river_code) %>%
-  summarise(count= n())
+  dplyr::group_by(river_code) %>%
+  dplyr::summarise(count= n())
 
 
 write_csv(summ, file.path("inputs", "fw_river_summary.csv"))
@@ -912,13 +1048,30 @@ writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"), overwrite = T
 div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
 div <- mask(div, srast)
 
-hist(div)
-
+#hist(div)
+#aa <- values(div, na.rm = T)
+#quantile(aa, seq(0,1, 0.1))
 writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
 
+# set thresholds 
+names(div)= "diversity"
+#reclass the valyers to a conccentration 
+
+unique(values(div))
+
+m <- c(1, 2.5, 1,
+       2.5, 3, 2,
+       3, 4.5, 3, 
+       4.5, 6, 4,
+       6, 20, 5)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc <- classify(div , rclmat, include.lowest=TRUE)
+
+writeRaster(rc, file.path("outputs", "sk_rivers_diversity_conc.tif"), overwrite = TRUE)
 
 
 
+##############################################################################
 
 
 ############################################################
@@ -1115,7 +1268,20 @@ avrare <- mask(avrare, srast)
 
 hist(avrare)
 
-writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
+#writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
+
+unique(values(avrare))
+
+m <- c(1, 1.1, 1,
+       1.1, 1.2, 2,
+       1.2, 1.8, 3,
+       1.8, 2.8, 4,
+       2.8, 20, 5)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc <- classify(avrare , rclmat, include.lowest=TRUE)
+
+writeRaster(rc, file.path("outputs", "sk_rivers_rarity_mean_conc.tif"), overwrite = TRUE)
+
 
 
 

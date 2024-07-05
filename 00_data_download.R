@@ -257,17 +257,17 @@ writeRaster(bt_sk , file.path("inputs", "TAP_ancient_forest_raw.tif"), overwrite
 ref_path <- file.path("inputs", "Stolar_et_al_2024_CiCP_Zenodo_upload_Version_1.1")
 ref <- list.files(ref_path , pattern = "*.tif")
 
-ref1 <- rast(file.path(ref_path, "2080s_macro_micro_connectivity.tif"))
+#ref1 <- rast(file.path(ref_path, "2080s_macro_micro_connectivity.tif"))
 ref3 <- rast(file.path(ref_path, "2080s_macrorefugia.tif"))
-ref4 <- rast(file.path(ref_path, "Conservation_priorities_2080s.tif"))
+#ref4 <- rast(file.path(ref_path, "Conservation_priorities_2080s.tif"))
 ref5 <- rast(file.path(ref_path, "microrefugia.tif"))
-ref6 <- rast(file.path(ref_path, "Restoration_priorities_2080s.tif"))
+#ref6 <- rast(file.path(ref_path, "Restoration_priorities_2080s.tif"))
 
-reff <- ref5
+reff <- ref3
 
 cc <- resample(reff, srast)
 mcc <- mask(cc, srast)
-writeRaster(mcc, file.path("inputs", "microrefugia.tif"), overwrite = TRUE)
+writeRaster(mcc, file.path("inputs", "2080s_macrorefugia.tif"), overwrite = TRUE)
 plot(mcc)
 #rast(c(mcc, base_raster))
 
@@ -528,6 +528,18 @@ costt <- crop(costt, template)
 costt <- mask(costt, template)
 
 writeRaster(costt , file.path("inputs", "pither_move_cost.tif"), overwrite = TRUE)
+
+
+
+
+#########################################################################
+
+# wildlife inventory 
+#https://catalogue.data.gov.bc.ca/dataset/wildlife-species-inventory-telemetry-observations-publicly-available
+
+tele <- bcdc_query_geodata("6d48657f-ab33-43c5-ad40-09bd56140845") |>
+  collect()
+
 
 
 
