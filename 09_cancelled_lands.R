@@ -413,8 +413,6 @@ write_csv(ec_divvv, file.path("outputs", "cancelled_rivers_diversity_class_per_e
 
 
 
-
-
 ## refugia
 
 #microrefugia 
