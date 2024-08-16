@@ -38,6 +38,10 @@ hist(res)
 aa <- sort(values(res, na.rm = T))
 quantile(aa, probs = seq(0, 1, 0.05), na.rm = TRUE)
 
+median(aa)
+mean(aa)
+
+
 aq <- as.data.frame(quantile(aa, probs = seq(0, 1, 0.05), na.rm = TRUE))
 names(aq) = "value"
 

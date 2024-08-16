@@ -10,66 +10,66 @@ in_aoi <- read_sf(file.path("inputs", "sk_poly_template.gpkg"))
 
 
 # read in the datasets
-
-# cristinas lands file 
-
-cancelled <- st_read(file.path("inputs", "cancelled_lands", "cancelled_lands_removed.gpkg"))%>%
-  st_cast("POLYGON")%>%
-  st_transform(3005)%>%
-  select("CONSERVATI","SITE_NAME","SITE_NUMBE" ,"TANTALIS_L")
-
-
-# paulas points 
-pts <- st_read(file.path("inputs", "cancelled_lands", "placemarks_paula.gpkg")) %>% 
-  select(Name)%>% 
-  st_transform(3005)
-
-cancelled_merge <- st_join(cancelled, pts)
-
-st_write(cancelled_merge, file.path("inputs", "cancelled_lands", "cancelled_lands_removed_labelled.gpkg"))
-
-# add additional missing layers 
-
-# list.files(file.path("inputs", "cancelled_lands"))
 # 
-# fp <- st_read(file.path("inputs", "cancelled_lands", "fishpan_lake_official.gpkg" )) 
-# fl <- st_read(file.path("inputs", "cancelled_lands", "flintcreek_official.gpkg" )) 
-# sn <- st_read(file.path("inputs", "cancelled_lands", "seymourlake_official.gpkg" )) 
-# ssth <- st_read(file.path("inputs", "cancelled_lands", "seymourlake_sth_official.gpkg" )) 
-#            
-#          
-# aa <- st_union(fp, fl)
+# # cristinas lands file 
 # 
-
-cl <- st_read(file.path("inputs", "cancelled_lands","crownlands_official.gpkg"), layer = "merged")%>% 
-  select("CROWN_LANDS_FILE", "TENURE_LOCATION", "DISPOSITION_TRANSACTION_SID")
-
-
-# conservation lands 
-
-cons <- st_read(file.path("inputs", "cons_lands.gpkg")) %>% 
-  filter(TENURE_TYPE %in% c ("Map Reserve", "Notation of Interest","Designated Use Area")) %>% 
-  #filter(CONSERVATION_LAND_TYPE!= "Administered Lands")%>%
-  select(-TENURE_DESCRIPTION)
-
-st_write(cons, file.path("inputs", "cancelled_lands", "cons_lands_map_reserved.gpkg"), append = FALSE)
-
-
-## In QGIS - merge the three layers above and export as QGIS 
-# merge the layers and add cancel and not cancellea
-
-
-## 
-canc <- st_read(file.path("inputs", "cancelled_lands_merge.gpkg"), layer = "final")
-
-canc <- canc %>% 
-  mutate(cancelled_status = ifelse(is.na(CONSERVATI), "not_cancelled", "cancelled")) %>%
-  mutate(cancelled_status = case_when(
-    SITE_NAME == "Round Lake Northeast (NOI)" ~ "cancelled",
-    .default = cancelled_status))
-
-
-canc <- st_write(canc, file.path("inputs", "cancelled_lands_final.gpkg"))
+# cancelled <- st_read(file.path("inputs", "cancelled_lands", "cancelled_lands_removed.gpkg"))%>%
+#   st_cast("POLYGON")%>%
+#   st_transform(3005)%>%
+#   select("CONSERVATI","SITE_NAME","SITE_NUMBE" ,"TANTALIS_L")
+# 
+# 
+# # paulas points 
+# pts <- st_read(file.path("inputs", "cancelled_lands", "placemarks_paula.gpkg")) %>% 
+#   select(Name)%>% 
+#   st_transform(3005)
+# 
+# cancelled_merge <- st_join(cancelled, pts)
+# 
+# st_write(cancelled_merge, file.path("inputs", "cancelled_lands", "cancelled_lands_removed_labelled.gpkg"))
+# 
+# # add additional missing layers 
+# 
+# # list.files(file.path("inputs", "cancelled_lands"))
+# # 
+# # fp <- st_read(file.path("inputs", "cancelled_lands", "fishpan_lake_official.gpkg" )) 
+# # fl <- st_read(file.path("inputs", "cancelled_lands", "flintcreek_official.gpkg" )) 
+# # sn <- st_read(file.path("inputs", "cancelled_lands", "seymourlake_official.gpkg" )) 
+# # ssth <- st_read(file.path("inputs", "cancelled_lands", "seymourlake_sth_official.gpkg" )) 
+# #            
+# #          
+# # aa <- st_union(fp, fl)
+# # 
+# 
+# cl <- st_read(file.path("inputs", "cancelled_lands","crownlands_official.gpkg"), layer = "merged")%>% 
+#   select("CROWN_LANDS_FILE", "TENURE_LOCATION", "DISPOSITION_TRANSACTION_SID")
+# 
+# 
+# # conservation lands 
+# 
+# cons <- st_read(file.path("inputs", "cons_lands.gpkg")) %>% 
+#   filter(TENURE_TYPE %in% c ("Map Reserve", "Notation of Interest","Designated Use Area")) %>% 
+#   #filter(CONSERVATION_LAND_TYPE!= "Administered Lands")%>%
+#   select(-TENURE_DESCRIPTION)
+# 
+# st_write(cons, file.path("inputs", "cancelled_lands", "cons_lands_map_reserved.gpkg"), append = FALSE)
+# 
+# 
+# ## In QGIS - merge the three layers above and export as QGIS 
+# # merge the layers and add cancel and not cancellea
+# 
+# 
+# ## 
+# canc <- st_read(file.path("inputs", "cancelled_lands_merge.gpkg"), layer = "final")
+# 
+# canc <- canc %>% 
+#   mutate(cancelled_status = ifelse(is.na(CONSERVATI), "not_cancelled", "cancelled")) %>%
+#   mutate(cancelled_status = case_when(
+#     SITE_NAME == "Round Lake Northeast (NOI)" ~ "cancelled",
+#     .default = cancelled_status))
+# 
+# 
+# canc <- st_write(canc, file.path("inputs", "cancelled_lands_final.gpkg"))
 
 
 
