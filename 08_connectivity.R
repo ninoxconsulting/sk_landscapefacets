@@ -6,6 +6,10 @@ library(tidyr)
 # download the data from pither
 
 template <- rast(file.path("inputs", "sk_rast_template.tif"))
+ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+#ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg"))
+
+ecsum_df <- read_csv(file.path("outputs", "ecoregion_area_totals.csv"))%>% select(-X)
 
 # connectivity 
 #conn <- rast(file.path("inputs", "pither_conductance.tif"))
@@ -330,8 +334,8 @@ macrorefugia_area_totals = aa
 ab <-aa %>% 
   dplyr::ungroup() %>% 
   dplyr::rowwise() %>%
-  dplyr::mutate(across(where(is.numeric), ~.x/area_m2 *100))%>% 
-  select(-area_m2)%>% 
+  dplyr::mutate(dplyr::across(where(is.numeric), ~.x/area_m2 *100))%>% 
+  select(-area_m2) %>% 
   dplyr::mutate(across(where(is.numeric), round, 1))
 
 write_csv(ab, file.path("outputs", "macrorefugia_per_ecoregion.csv"))
