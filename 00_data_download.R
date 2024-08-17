@@ -486,6 +486,72 @@ st_write(eco, file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
 
 
 
+# wildlife species inventory publically available 
+
+species to keep: 
+
+American Bull trout. 
+steel head, 
+american dipper 
+samlon, 
+amphibians
+mt goat 
+wolverine
+Fishers
+merten
+flying squirrel 
+
+
+#Wildlife observations
+#https://catalogue.data.gov.bc.ca/dataset/6d48657f-ab33-43c5-ad40-09bd56140845
+
+sp <- bcdc_query_geodata("6d48657f-ab33-43c5-ad40-09bd56140845") %>%
+  select(SCIENTIFIC_NAME, SPECIES_ENGLISH_NAME, OBSERVATION_DATE, VISUAL_FLAG) %>%
+  collect() %>%
+  st_intersection(in_aoi)
+
+#Filter for species
+
+st_write(sp, file.path("inputs", "wildlife_telemetry_pts.gpkg"))
+
+
+#Wildlife survey
+https://catalogue.data.gov.bc.ca/dataset/94695736-6a35-4688-bb5f-dca4fc5a23de
+
+su <- bcdc_query_geodata("94695736-6a35-4688-bb5f-dca4fc5a23de") %>%
+  select(SCIENTIFIC_NAME, SPECIES_ENGLISH_NAME, OBSERVATION_DATE, VISUAL_FLAG) %>%
+  collect() %>%
+  st_intersection(in_aoi)
+
+#Filter for species
+
+st_write(sp, file.path("inputs", "wildlife_telemetry_pts.gpkg"))
+
+
+
+
+# bc Known fish locations 
+#https://catalogue.data.gov.bc.ca/dataset/aca81811-4b08-4382-9af7-204e0b9d2448
+# downloaded directly from website 
+
+fi <- st_read(file.path('/home/user/Documents/00_data/base_vector/bc/BC_fish_obs/FISS_FISH_OBSRVTN_PNT_SP.gpkg'))
+
+#fi <- bcdc_query_geodata("aca81811-4b08-4382-9af7-204e0b9d2448") %>%
+  #select(SCIENTIFIC_NAME, SPECIES_ENGLISH_NAME, OBSERVATION_DATE, VISUAL_FLAG) %>%
+  #collect() %>%
+  
+fi <- fi %>% 
+    st_intersection(in_aoi)
+
+head(fi)
+
+st_write(fi, file.path("inputs", "sk_known_fish_pts.gpkg"))
+
+
+
+
+
+
 
 ## Protected esstuariues 
 
@@ -495,6 +561,31 @@ est <- st_read(file.path("inputs", "Pacific estuary ranking shape files-20240516
 est <- st_intersection(est, in_aoi)
 
 st_write(est, file.path("inputs", "sk_estuary.gpkg"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
