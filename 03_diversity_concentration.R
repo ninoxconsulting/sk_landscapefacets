@@ -1,4 +1,4 @@
-#1. Gap analysis 
+# fix diversity areas  - combine very high and and very rare areas 
 
 # review the proteced areas: 
 
@@ -39,17 +39,64 @@ hist(svals)
 ## from-to-becomes
 # classify the values into groups 
 # all values >= 0 and <= 0.25 become 1, etc.
-m <- c(0, 20, 1, # lowest diversity 
-       20, 40, 2,
-       40, 80, 3,
-       80, 150 , 4,
-       150, 300, 5) # highest diversity 
+m <- c(0, 50, 1, # lowest diversity 
+       50, 100, 2,
+       100, 150, 3,
+       150, 250 , 4,
+       250, 700, 5) # highest diversity 
 
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 div_con <- classify(srast, rclmat, include.lowest=TRUE)
 
 
-writeRaster(div_con, file.path("outputs", "sk_diveristy_conc.tif"), overwrite = TRUE)
+writeRaster(div_con, file.path("outputs", "sk_diversity_conc.tif"), overwrite = TRUE)
+
+
+
+############################################################################
+
+# Combine both very high and very diversity into a single output 
+
+
+
+div <- rast(file.path("outputs", "sk_diversity_conc.tif"))
+rare <- rast(file.path("outputs", "sk_rarity_conc.tif"))
+
+
+# keep only top two codes for each output 
+
+m <- c(0, 3, 0, # lowest diversity 
+       4, 4, 4,
+       5, 5, 5) # highest diversity 
+
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+
+div_vh <- classify(div, rclmat, include.lowest=TRUE)
+rar_vh <- classify(rare, rclmat, include.lowest=TRUE)
+
+div_vh <- div_vh*10
+
+
+out <- div_vh + rar_vh
+# 
+# unique va;ues 
+# 1         0  - not rare or diversity 
+# 2         4  - Rare
+# 3         5  - Very Rare
+# 4        40  - High Variety 
+# 5        44  - high Variety and rare
+# 6        45  - high variety and very rare
+# 7        50  - Very High Variety 
+# 8        54  - Very High Variety and rare
+# 9        55  - Very High Variety and very rare
+
+writeRaster(out, file.path("outputs", "high_div_rare.tif"))
+
+
+
+
+
+
 
 
 
