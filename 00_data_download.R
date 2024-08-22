@@ -49,17 +49,17 @@ st_write(lakes1, file.path("inputs", "lakes.gpkg"), append = FALSE)
 # 
 # # wetlands 
 # #https://catalogue.data.gov.bc.ca/dataset/93b413d8-1840-4770-9629-641d74bd1cc6
-# wetlands <- bcdc_query_geodata("93b413d8-1840-4770-9629-641d74bd1cc6") |>
-#   # filter(INTERSECTS(aoi_sf)) |> 
-#   select( WATERBODY_TYPE, AREA_HA) |>
-#   collect()
-# 
-# wetlands <- sf::st_intersection(wetlands, in_aoi) #|> 
-#       #select(WATERBODY_TYPE, AREA_HA)
-# 
-# # select area > xxxx 
-# 
-# st_write(wetlands, file.path("inputs", "wetlands.gpkg"), append = FALSE)
+wetlands <- bcdc_query_geodata("93b413d8-1840-4770-9629-641d74bd1cc6") |>
+  # filter(INTERSECTS(aoi_sf)) |>
+  select( WATERBODY_TYPE, AREA_HA) |>
+  collect()
+
+wetlands <- sf::st_intersection(wetlands, in_aoi) |>
+      select(WATERBODY_TYPE, AREA_HA)
+
+# select area > xxxx
+
+st_write(wetlands, file.path("inputs", "wetlands.gpkg"), append = FALSE)
 
 
 
