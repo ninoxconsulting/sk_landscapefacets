@@ -502,29 +502,32 @@ flying squirrel
 
 #Wildlife observations
 #https://catalogue.data.gov.bc.ca/dataset/6d48657f-ab33-43c5-ad40-09bd56140845
+# downloaded directly from website 
 
-sp <- bcdc_query_geodata("6d48657f-ab33-43c5-ad40-09bd56140845") %>%
+ff = "D:\\r_repo\\2024_landscape_facets\\sk_landscapefacets\\inputs\\wildlife_sightings\\BCGW_7113060B_1724310111241_12932\\SPI_TELEMETRY_OBS_NONSENS_SP.gpkg"
+sp <- st_read(file.path(ff)) %>%
   select(SCIENTIFIC_NAME, SPECIES_ENGLISH_NAME, OBSERVATION_DATE, VISUAL_FLAG) %>%
-  collect() %>%
   st_intersection(in_aoi)
+              
+# sp <- bcdc_query_geodata("6d48657f-ab33-43c5-ad40-09bd56140845") %>%
+#   select(SCIENTIFIC_NAME, SPECIES_ENGLISH_NAME, OBSERVATION_DATE, VISUAL_FLAG) %>%
+#   collect() %>%
+#   st_intersection(in_aoi)
 
-#Filter for species
-
+unique(sp$SPECIES_ENGLISH_NAME)
 st_write(sp, file.path("inputs", "wildlife_telemetry_pts.gpkg"))
 
 
 #Wildlife survey
-https://catalogue.data.gov.bc.ca/dataset/94695736-6a35-4688-bb5f-dca4fc5a23de
+#https://catalogue.data.gov.bc.ca/dataset/94695736-6a35-4688-bb5f-dca4fc5a23de
 
-su <- bcdc_query_geodata("94695736-6a35-4688-bb5f-dca4fc5a23de") %>%
-  select(SCIENTIFIC_NAME, SPECIES_ENGLISH_NAME, OBSERVATION_DATE, VISUAL_FLAG) %>%
-  collect() %>%
+ff = "D:\\r_repo\\2024_landscape_facets\\sk_landscapefacets\\inputs\\wildlife_sightings\\BCGW_7113060B_1724310602855_19100\\SPI_STUDY_AREAS_ALL_SP.gpkg"
+su <- st_read(file.path(ff)) %>%
+#su <- bcdc_query_geodata("94695736-6a35-4688-bb5f-dca4fc5a23de") %>%
+#  select(SCIENTIFIC_NAME, SPECIES_ENGLISH_NAME, OBSERVATION_DATE, VISUAL_FLAG) %>%
   st_intersection(in_aoi)
 
-#Filter for species
-
-st_write(sp, file.path("inputs", "wildlife_telemetry_pts.gpkg"))
-
+st_write(su, file.path("inputs", "wildlife_surveys.gpkg"))
 
 
 
@@ -541,12 +544,16 @@ fi <- st_read(file.path('/home/user/Documents/00_data/base_vector/bc/BC_fish_obs
 fi <- fi %>% 
     st_intersection(in_aoi)
 
-head(fi)
+# subset species?
+#fi <- fi |> 
+#  select(fid, SPECIES_CODE, SPECIES_NAME, OBSERVATION_DATE, )
 
-st_write(fi, file.path("inputs", "sk_known_fish_pts.gpkg"))
+#st_write(fi, file.path("inputs", "sk_known_fish_pts.gpkg"))
 
 
+fi <- st_read(file.path("inputs", "sk_known_fish_pts.gpkg"))
 
+unique(fi$SPECIES_NAME)
 
 
 
