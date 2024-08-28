@@ -152,58 +152,58 @@ sum_df <- lac_river_poly %>%
   select(-WSA_LAKE_ID)
 
 
-# OPTION 1: MEAN RARITY 
-#select the mean rarity code per polygon and convert to a sparial output 
+# # OPTION 1: MEAN RARITY 
+# #select the mean rarity code per polygon and convert to a sparial output 
+# 
+# mrare_lake <- lac_river_poly %>% 
+#   dplyr::group_by(RIVER_ID )%>%
+#   dplyr::select(-WSA_LAKE_ID, -lake_code)%>%
+#   dplyr::mutate(rarity_lake_code = mean(rare_id)) %>%
+#   dplyr::select(-rare_id)%>%
+#   dplyr::distinct()%>% 
+#   st_drop_geometry()
+# 
+# rare_lake_poly <- left_join(ri, mrare_lake )
+# 
+# st_write(rare_lake_poly , file.path("inputs", "lake_rare_poly_mean_raw.gpkg"), append = FALSE)
+# 
+# 
+# ## convert to a tif then run through the neighbourhood analysis 
+# rare_lake_poly <-vect(file.path("inputs", "lake_rare_poly_mean_raw.gpkg"))
+# 
+# rare_laker <- rasterize(rare_lake_poly , srast, field= "rarity_lake_code")
+# 
+# plot(rare_laker)
+# 
+# writeRaster(rare_laker, file.path("outputs","lake_rare_mean.tif"))
+# 
+# 
+# # ran rarity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
+# 
+# rar <- rast(file.path("outputs", "sk_lakes_mean_rarity_101c.tif"))
+# 
+# hist(rar)
+# 
+# names(rar)= "rarity"
+# #reclass the valyers to a conccentration 
+# 
+# unique(values(rar))
+# 
+# m <- c(0, 1.1, 1,
+#        1.1, 1.2, 2,
+#        1.2, 1.4, 3,
+#        1.4, 1.8, 4,
+#        1.8, 10, 5)
+# rclmat <- matrix(m, ncol=3, byrow=TRUE)
+# rc <- classify(rar , rclmat, include.lowest=TRUE)
+# 
+# writeRaster(rc, file.path("outputs", "sk_lakes_rarity_conc.tif"), overwrite = TRUE)
+# 
+# 
 
-mrare_lake <- lac_river_poly %>% 
-  dplyr::group_by(RIVER_ID )%>%
-  dplyr::select(-WSA_LAKE_ID, -lake_code)%>%
-  dplyr::mutate(rarity_lake_code = mean(rare_id)) %>%
-  dplyr::select(-rare_id)%>%
-  dplyr::distinct()%>% 
-  st_drop_geometry()
-
-rare_lake_poly <- left_join(ri, mrare_lake )
-
-st_write(rare_lake_poly , file.path("inputs", "lake_rare_poly_mean_raw.gpkg"), append = FALSE)
 
 
-## convert to a tif then run through the neighbourhood analysis 
-rare_lake_poly <-vect(file.path("inputs", "lake_rare_poly_mean_raw.gpkg"))
-
-rare_laker <- rasterize(rare_lake_poly , srast, field= "rarity_lake_code")
-
-plot(rare_laker)
-
-writeRaster(rare_laker, file.path("outputs","lake_rare_mean.tif"))
-
-
-# ran rarity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
-
-rar <- rast(file.path("outputs", "sk_lakes_mean_rarity_101c.tif"))
-
-hist(rar)
-
-names(rar)= "rarity"
-#reclass the valyers to a conccentration 
-
-unique(values(rar))
-
-m <- c(0, 1.1, 1,
-       1.1, 1.2, 2,
-       1.2, 1.4, 3,
-       1.4, 1.8, 4,
-       1.8, 10, 5)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc <- classify(rar , rclmat, include.lowest=TRUE)
-
-writeRaster(rc, file.path("outputs", "sk_lakes_rarity_conc.tif"), overwrite = TRUE)
-
-
-
-
-
-## Option 2 : DIVIDE THE MOST RARE by watershed area  (codes 5 and 6)
+## Option 2 : DIVIDE THE MOST RARE by watershed area  (codes 4, 5 and 6)
 
 #1 produce tabel with the rarity class and number per watershed , then select the units of interest
 
@@ -280,11 +280,16 @@ plot(rare_laker)
 writeRaster(rare_laker, file.path("outputs","lake_rare_byarea.tif"))
 
 
+
 # ran rarity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
 
 rar <- rast(file.path("outputs", "sk_lakes_meanbyarea_rarity_101c.tif"))
 
 hist(rar)
+#values(rar)
+t = quantile(values(rar), probs = seq(0, 1, 0.1), na.rm = TRUE)
+
+t = data.frame(t)
 
 names(rar)= "rarity"
 #reclass the valyers to a conccentration 
@@ -293,35 +298,18 @@ names(rar)= "rarity"
 
 ## still to decide on these values 
 
-unique(values(rar))
-# 
-# m <- c(0, 1.1, 1,
-#        1.1, 1.2, 2,
-#        1.2, 1.4, 3,
-#        1.4, 1.8, 4,
-#        1.8, 10, 5)
-# rclmat <- matrix(m, ncol=3, byrow=TRUE)
-# rc <- classify(rar , rclmat, include.lowest=TRUE)
-# 
-# writeRaster(rc, file.path("outputs", "sk_lakes_rarity_conc.tif"), overwrite = TRUE)
+sort(unique(values(rar)))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+m <- c(0, 0.0001, 1,
+       0.0001, 0.0002, 2,
+       0.0002, 0.0003, 3,
+       0.0003, 0.0005, 4,
+       0.0005, 10, 5)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc <- classify(rar , rclmat, include.lowest=TRUE)
+plot(rc)
+ 
+writeRaster(rc, file.path("outputs", "sk_lakes_raritybyarea_conc.tif"), overwrite = TRUE)
 
 
 
@@ -791,6 +779,8 @@ pc_cover <- left_join(ri, lac_count_per_poly)
 st_write(pc_cover , file.path("inputs", "lake_div_pccover.gpkg"), append = FALSE)
 
 
+
+
 # count number of barcodes per river polygon
 lakecode_area_per_poly <- lac_river_poly %>% 
   dplyr::group_by(RIVER_ID)%>% 
@@ -860,23 +850,33 @@ div <- rast(file.path("outputs", "sk_lakes_meanbyarea_div_101c.tif"))
 hist(div)
 
 names(div)= "diversity"
-#reclass the valyers to a conccentration 
 
-## still to do = august 16th 
+#reclass the layers to a conccentration 
+
+#t = quantile(values(div), probs = seq(0, 1, 0.1), na.rm = TRUE)
+#
+#t = data.frame(t)
+
+
 
 ## still to decide on these values 
 
-unique(values(rar))
-# 
-# m <- c(0, 1.1, 1,
-#        1.1, 1.2, 2,
-#        1.2, 1.4, 3,
-#        1.4, 1.8, 4,
-#        1.8, 10, 5)
-# rclmat <- matrix(m, ncol=3, byrow=TRUE)
-# rc <- classify(rar , rclmat, include.lowest=TRUE)
-# 
-# writeRaster(rc, file.path("outputs", "sk_lakes_rarity_conc.tif"), overwrite = TRUE)
+unique(values(div))
+
+m <- c(0, 0.002, 1,
+       0.002, 0.003, 2,
+       0.003, 0.004, 3,
+       0.004 , 0.006, 4,
+       0.006, 1, 5)
+ rclmat <- matrix(m, ncol=3, byrow=TRUE)
+ rc <- classify(div , rclmat, include.lowest=TRUE)
+ plot(rc)
+ 
+ 
+ #This still needs to be reviewed by Paula to determine thresholds 
+ # after done then need to redo gap analysis 
+ 
+ writeRaster(rc, file.path("outputs", "sk_lakes_divarea_conc.tif"), overwrite = TRUE)
 
 
  

@@ -174,11 +174,11 @@ ecsum_df <- read_csv(file.path("outputs", "ecoregion_area_totals.csv"))%>% selec
 
 
 
-##### Lakes Rairy - by ecosystem and by protection #################################3
+##### Lakes Rarity - by ecosystem and by protection #################################3
 
 library(tidyr)
 # read in concentration layers:  rarity
-rar <- rast(file.path("outputs", "sk_lakes_rarity_conc.tif"))
+rar <- rast(file.path("outputs", "sk_lakes_raritybyarea_conc.tif"))
 divpoly <- as.polygons(rar, na.rm=FALSE)
 div_sf <- st_as_sf(divpoly)
 
@@ -271,6 +271,116 @@ eco_pro_rardiv_output <-eco_pro_rardiv_output %>%
 
 
 write_csv(eco_pro_rardiv_output, file.path("outputs", "lakes_rarity_class_per_ecoregion_protection.csv"))
+
+
+
+
+################################################################################3
+
+# Lakes  # 1) diverity 
+
+# read in concentration layers: diverity 
+div <- rast(file.path("outputs", "sk_lakes_divarea_conc.tif"))
+
+divpoly <- as.polygons(div, na.rm=FALSE)
+div_sf <- st_as_sf(divpoly)
+
+# calcualte for all of skeena combined
+sk_combined <- div_sf %>% 
+  dplyr::filter(!is.na(diversity)) %>%
+  dplyr::mutate(div_area_sk = st_area(.))%>% 
+  st_drop_geometry()%>% 
+  dplyr::mutate(all_area_sk = sum(div_area_sk))%>% 
+  dplyr::rowwise()%>%
+  dplyr::mutate(pc_type = div_area_sk/all_area_sk * 100)%>% 
+  filter(diversity>0)
+
+
+# 1 # calcaulte per ecoregion 
+ec_div <- st_intersection(div_sf , ec) %>% 
+  filter(diversity>0)
+
+ec_divv <- ec_div   |> 
+  dplyr::mutate(ec_area_m2 = st_area(ec_div ))%>%
+  filter(!is.na(diversity))
+
+ec_divvv <- ec_divv %>%
+  dplyr::group_by(ECOREGION_NAME, diversity)%>%
+  dplyr::mutate(div_class_sum = sum(ec_area_m2)) %>% 
+  dplyr::select( -ec_area_m2) %>% 
+  st_drop_geometry()
+
+aa <- pivot_wider(ec_divvv, names_from = diversity, values_from = div_class_sum)
+
+aa <- left_join(aa, ecsum_df )%>%
+  select(-total_sk_area, -pc_of_sk)
+
+lakes_diversity_area_totals = aa
+
+ab <-aa %>% 
+  dplyr::ungroup() %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(across(where(is.numeric), ~.x/area_m2 *100))%>% 
+  select(-area_m2)%>% 
+  dplyr::mutate(across(where(is.numeric), round, 1))
+
+write_csv(ab, file.path("outputs", "lakes_diversity_class_per_ecoregion.csv"))
+
+
+# 2 Determine level of protection per class
+pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
+pross_u <- pro %>% select(protected)
+
+# 1 # get diversity class per ecoregion 
+ec_div <- st_intersection(div_sf , ec) 
+
+# intersect protected areas
+ec_div_pro <- st_intersection(ec_div, pross_u) %>%
+  dplyr::mutate(pro_ec_div_area = st_area(.))%>% 
+  dplyr::filter(!is.na(diversity)) %>%
+  dplyr::group_by(ECOREGION_NAME, diversity) %>%
+  dplyr::mutate(pro_area_sum = sum(pro_ec_div_area)) %>% 
+  dplyr::mutate(pro_area = as.numeric(pro_area_sum))%>%
+  dplyr::select(-protected, -pro_area_sum, - pro_ec_div_area)%>%
+  ungroup()%>% 
+  st_drop_geometry()%>%
+  distinct()
+
+aa <- pivot_wider(ec_div_pro, names_from = diversity, values_from = pro_area)%>%
+  arrange(ECOREGION_NAME)
+
+aa <- aa %>%
+  dplyr::rename("1_p" = `1`,
+                "2_p" = `2`,
+                "3_p" = `3`,
+                "4_p" = `4`,
+                "5_p" = `5`)  
+
+
+# area of protection per ecoregion per catergory (ha)
+aa 
+
+eco_pro_rardiv_output <- left_join(lakes_diversity_area_totals, aa) 
+
+eco_pro_rardiv_output <-eco_pro_rardiv_output %>%
+  mutate(across(where(is.numeric), round, 0)) %>% 
+  select("ECOREGION_NAME", "1", "1_p",  "2" ,"2_p" ,
+         "3", "3_p", "4", "4_p", "5","5_p","area_m2" )           
+
+
+write_csv(eco_pro_rardiv_output, file.path("outputs", "lakes_diversity_class_per_ecoregion_protection.csv"))
+
+
+
+#################################
+
+
+
+
+
+
+
+
 
 
 ################################################################################3

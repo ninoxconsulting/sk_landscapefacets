@@ -65,6 +65,21 @@ terra::writeRaster(rc1,file.path("outputs", "sk_pither_resistence_90threshold.ti
 
 
 
+# or 40% 
+
+m <- c(-10, 1.037420e+00, 0,
+       1.037420e+00, 999999, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+common <- classify(res, rclmat, include.lowest=TRUE)
+
+unique(values(common))
+rc1 <- mask(common, template )
+terra::writeRaster(rc1,file.path("outputs", "sk_pither_resistence_40threshold.tif"), overwrite = TRUE)
+
+
+
+
+
 ###################################################################################
 
 ## Compare the areas per ecoregion and protected areas 
@@ -331,7 +346,7 @@ aa <- left_join(aa, ecsum_df )%>%
 
 macrorefugia_area_totals = aa
 
-ab <-aa %>% 
+ab <- aa %>% 
   dplyr::ungroup() %>% 
   dplyr::rowwise() %>%
   dplyr::mutate(dplyr::across(where(is.numeric), ~.x/area_m2 *100))%>% 
@@ -366,7 +381,12 @@ ec_div_pro <- st_intersection(ec_div, pross_u) %>%
 
 #st_write(ec_div_pro, file.path("outputs", "sk_pro_high_div_test.gpkg"))
 
-aa <- pivot_wider(ec_div_pro, names_from = microrefugia, values_from = pro_area)%>%
+ec_div_pro <- ec_div_pro %>%
+  mutate(macrorefugia = microrefugia)%>%
+  select(-microrefugia)
+  
+
+aa <- pivot_wider(ec_div_pro, names_from = macrorefugia, values_from = pro_area)%>%
   arrange(ECOREGION_NAME)
 
 aa <- aa %>%
@@ -376,12 +396,14 @@ aa <- aa %>%
 # area of protection per ecoregion per catergory (ha)
 aa 
 
-eco_pro_rardiv_output <- left_join(marorefugia_area_totals, aa) 
+eco_pro_rardiv_output <- left_join(macrorefugia_area_totals, aa) 
 
 eco_pro_rardiv_output <-eco_pro_rardiv_output %>%
   mutate(across(where(is.numeric), round, 0)) %>% 
   select("ECOREGION_NAME", "1", "1_p",  "0" ,"0_p" ,
          "area_m2" )           
+
+# rename to macrorefugia 
 
 
 write_csv(eco_pro_rardiv_output, file.path("outputs", "macrorefugia_per_ecoregion_protection.csv"))

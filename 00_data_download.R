@@ -500,7 +500,10 @@ merten
 flying squirrel 
 
 
-#Wildlife observations
+#Wildlife observations ####################
+
+
+# 1) Wildlife Species Inventory - Telemetry Points - Publicly Available 
 #https://catalogue.data.gov.bc.ca/dataset/6d48657f-ab33-43c5-ad40-09bd56140845
 # downloaded directly from website 
 
@@ -518,7 +521,8 @@ unique(sp$SPECIES_ENGLISH_NAME)
 st_write(sp, file.path("inputs", "wildlife_telemetry_pts.gpkg"))
 
 
-#Wildlife survey
+# 2) Wildlife survey
+#Wildlife Species Inventory Study Areas - All
 #https://catalogue.data.gov.bc.ca/dataset/94695736-6a35-4688-bb5f-dca4fc5a23de
 
 ff = "D:\\r_repo\\2024_landscape_facets\\sk_landscapefacets\\inputs\\wildlife_sightings\\BCGW_7113060B_1724310602855_19100\\SPI_STUDY_AREAS_ALL_SP.gpkg"
@@ -528,6 +532,50 @@ su <- st_read(file.path(ff)) %>%
   st_intersection(in_aoi)
 
 st_write(su, file.path("inputs", "wildlife_surveys.gpkg"))
+
+
+# 3) Wildlife Species Inventory - Survey Observations - Publicly Available 
+#https://catalogue.data.gov.bc.ca/dataset/wildlife-species-inventory-survey-observations-publicly-available
+
+# manual download from internet in pieces and added back together for one dataset 
+
+wilddir <- "inputs\\wildlife_sightings\\wildlife"
+
+
+nonzip <- grep(list.files(wilddir), pattern=".zip", invert=TRUE, value=TRUE)
+
+# survey incidental 
+
+wl1 <- st_read(file.path(wilddir, nonzip[1],"SPI_INCIDENT_OBS_NONSENS_SP.gpkg"))
+wl1 <- wl1 %>% 
+  st_intersection(in_aoi)
+
+st_write(wl1, file.path("inputs", "wildlife_incident_obs.gpkg"))
+
+
+
+
+# survey non-sensittive
+wl2 <- st_read(file.path(wilddir, nonzip[2],"SPI_SURVEY_OBS_NONSENS_SP.gpkg"))
+wl3 <- st_read(file.path(wilddir, nonzip[3],"SPI_SURVEY_OBS_NONSENS_SP.gpkg"))
+wl4 <- st_read(file.path(wilddir, nonzip[4],"SPI_SURVEY_OBS_NONSENS_SP.gpkg"))
+wl5 <- st_read(file.path(wilddir, nonzip[5],"SPI_SURVEY_OBS_NONSENS_SP.gpkg"))
+wl6 <- st_read(file.path(wilddir, nonzip[6],"SPI_SURVEY_OBS_NONSENS_SP.gpkg"))
+wl7 <- st_read(file.path(wilddir, nonzip[7],"SPI_SURVEY_OBS_NONSENS_SP.gpkg"))
+
+
+wl <- rbind(wl2, wl3, wl4, wl5, wl5, wl6, wl7)
+wl <- unique(wl)
+wl <- wl %>% 
+  st_intersection(in_aoi)
+ 
+st_write(wl, file.path("inputs", "wildlife_obs_all.gpkg"))
+
+
+# length(wl2$SURVEY_OBSERVATION_ID)
+# length(wl3$SURVEY_OBSERVATION_ID)
+# length(wl4$SURVEY_OBSERVATION_ID)
+
 
 
 
