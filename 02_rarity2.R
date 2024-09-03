@@ -1,4 +1,4 @@
-#02. Gneerate rarity codes for barcode 
+#02. Generate rarity codes for barcode 
 
 library(terra)
 library(sf)
@@ -65,7 +65,7 @@ hist(rare$rare_id)
 
  # assign rarity class
 class1 <-rare  %>% filter(rare_id == 1) %>% pull(layer1)
-class2 <- rare %>% filter(rare_id == 2)%>% pull(layer1)
+class2 <- rare %>% filter(rare_id == 2) %>% pull(layer1)
 class3 <-rare  %>% filter(rare_id == 3) %>% pull(layer1)
 class4 <-rare  %>% filter(rare_id == 4) %>% pull(layer1)
 class5 <-rare  %>% filter(rare_id == 5) %>% pull(layer1)
