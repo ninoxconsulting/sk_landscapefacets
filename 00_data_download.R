@@ -471,6 +471,11 @@ eco <- bcdc_query_geodata("0e035e55-f257-458f-9a96-80c01c69d389") |>
   select(SCI_NAME, ENG_NAME, EL_TYPE, PROV_RANK, BC_LIST, RANK, RANK_DESC) %>%
   collect()
 
+eco <- eco %>%st_intersection(in_aoi)
+
+st_write(eco, file.path("inputs", "bc_cbc_sp_raw.gpkg"))
+
+
 eco <- eco %>%
   select(SCI_NAME, ENG_NAME, EL_TYPE, PROV_RANK, BC_LIST, RANK, RANK_DESC) %>%
   st_intersection(in_aoi)%>% 
@@ -481,23 +486,11 @@ st_write(eco, file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
 
 ## might want to further filter the reliability of the area via rqnk description/code/ Need to check with Paula.
 
+sort(unique(eco$ENG_NAME))
 
 
 
 # wildlife species inventory publically available 
-
-species to keep: 
-
-American Bull trout. 
-steel head, 
-american dipper 
-samlon, 
-amphibians
-mt goat 
-wolverine
-Fishers
-merten
-flying squirrel 
 
 
 #Wildlife observations ####################
@@ -621,19 +614,24 @@ st_write(est, file.path("inputs", "sk_estuary.gpkg"))
 
 
 
+## Jokulhaups
+gg <- read.csv(file.path("inputs", "glofdatabase_nthAm.csv"))
 
+gg <- gg[,1:58]
+gg <- gg[c(-1,-2),]
+gg$Lat = as.numeric(gg$Latitude)
+gg$Long = as.numeric(gg$Longitude)
 
+gg <- gg %>%
+  filter(!is.na(Lat))
 
+ggsf <- st_as_sf(gg, crs = 4326, coords = c("Long", "Lat"))
+ggsf <- st_transform(ggsf, 3005)
 
+ggsf <- st_intersection(ggsf, in_aoi)
 
-
-
-
-
-
-
-
-
+ggsf
+st_write(ggsf, file.path("outputs", "Jokulhaups_sk.gpkg"))
 
 
 
