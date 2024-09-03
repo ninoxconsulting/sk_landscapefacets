@@ -873,8 +873,7 @@ m <- c(0, 0.002, 1,
  plot(rc)
  
  
- #This still needs to be reviewed by Paula to determine thresholds 
- # after done then need to redo gap analysis 
+
  
  writeRaster(rc, file.path("outputs", "sk_lakes_divarea_conc.tif"), overwrite = TRUE)
 
