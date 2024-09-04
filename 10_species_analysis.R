@@ -351,7 +351,74 @@ DF <- DF %>% select(SPECIES_ENGLISH_NAME,  SCIENTIFIC_NAME, OBSERVATION_DATETIME
 # n = 34862 
 
 # intersect with land 
-wt_land <- st_intersection(DF, te)
+unique(DF$lf_group)
+
+#[1] "bat_pt.gpkg"              "blackbear_pt.gpkg"       
+#[3] "bulltrout_pt.gpkg"        "coastaltail_pt.gpkg"     
+#[5] "columbiaspotfrog_pt.gpkg" "cottonwood_pt.gpkg"      
+#[7] "epiphyticlichen_pt.gpkg"  "eulachon_pt.gpkg"        
+#[9] "grasslands_pt.gpkg"       "grizbear_pt.gpkg"        
+#[11] "northerngoshawk_pt.gpkg"  "northwestsal_pt.gpkg"    
+#[13] "nthfylingsq_pt.gpkg"      "odonata_pt.gpkg"         
+#[15] "osprey_pt.gpkg"           "pacificmarten_pt.gpkg"   
+#[17] "roughskinnewt_pt.gpkg"    "salmon_pt.gpkg"          
+#[19] "steelhead_pt.gpkg"        "sthredbackedvole_pt.gpkg"
+#[21] "western_toad_pt.gpkg"     "whitebarkpine_pt.gpkg"   
+#[23] "woodfrog_pt.gpkg" 
+
+DF1 <- DF %>% filter(lf_group == "bat_pt.gpkg" )
+DF2 <- DF %>% filter(lf_group == "blackbear_pt.gpkg")
+DF3 <- DF %>% filter(lf_group == "bulltrout_pt.gpkg")
+DF4 <- DF %>% filter(lf_group == "coastaltail_pt.gpkg" )
+DF5 <- DF %>% filter(lf_group == "columbiaspotfrog_pt.gpkg" )
+DF6 <- DF %>% filter(lf_group == "cottonwood_pt.gpkg"  )
+DF7 <- DF %>% filter(lf_group == "epiphyticlichen_pt.gpkg")
+DF8 <- DF %>% filter(lf_group == "eulachon_pt.gpkg" )
+DF9 <- DF %>% filter(lf_group == "grasslands_pt.gpkg" )
+DF10 <- DF %>% filter(lf_group == "grizbear_pt.gpkg" )
+DF11 <- DF %>% filter(lf_group == "northerngoshawk_pt.gpkg" )
+DF12 <- DF %>% filter(lf_group == "northwestsal_pt.gpkg" )
+DF13 <- DF %>% filter(lf_group == "nthfylingsq_pt.gpkg"  )
+DF14 <- DF %>% filter(lf_group == "odonata_pt.gpkg"  )
+DF15 <- DF %>% filter(lf_group == "osprey_pt.gpkg")
+DF16 <- DF %>% filter(lf_group == "pacificmarten_pt.gpkg" )
+DF17 <- DF %>% filter(lf_group == "roughskinnewt_pt.gpkg" )
+DF18 <- DF %>% filter(lf_group == "salmon_pt.gpkg" )
+DF19 <- DF %>% filter(lf_group == "steelhead_pt.gpkg" )
+DF20 <- DF %>% filter(lf_group == "sthredbackedvole_pt.gpkg"  )
+DF21 <- DF %>% filter(lf_group == "western_toad_pt.gpkg" )
+DF22 <- DF %>% filter(lf_group == "whitebarkpine_pt.gpkg"  )
+DF23 <- DF %>% filter(lf_group == "woodfrog_pt.gpkg" )
+
+
+wt1 <- st_intersection(DF1, te)
+wt2 <- st_intersection(DF2, te)
+wt3 <- st_intersection(DF3, te)
+wt4 <- st_intersection(DF4, te)
+wt5 <- st_intersection(DF5, te)
+wt6 <- st_intersection(DF6, te)
+wt7 <- st_intersection(DF7, te)
+wt8 <- st_intersection(DF8, te)
+wt9 <- st_intersection(DF9, te)
+wt10 <- st_intersection(DF10, te)
+wt11 <- st_intersection(DF11, te)
+wt12 <- st_intersection(DF12, te)
+wt13 <- st_intersection(DF13, te)
+wt14 <- st_intersection(DF14, te)
+wt15 <- st_intersection(DF15, te)
+wt16 <- st_intersection(DF16, te)
+wt17 <- st_intersection(DF17, te)
+wt18 <- st_intersection(DF18, te)
+wt19 <- st_intersection(DF19, te)
+wt20 <- st_intersection(DF20, te)
+wt21 <- st_intersection(DF21, te)
+wt22 <- st_intersection(DF22, te)
+wt23 <- st_intersection(DF23, te)
+
+
+
+
+
 
 
 ## up to here
