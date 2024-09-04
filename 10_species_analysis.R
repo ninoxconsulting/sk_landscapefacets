@@ -353,9 +353,26 @@ DF <- DF %>% select(SPECIES_ENGLISH_NAME,  SCIENTIFIC_NAME, OBSERVATION_DATETIME
 # intersect with land 
 wt_land <- st_intersection(DF, te)
 
-st_write(wt_land, file.path("outputs", "allsp_land.gpkg"))
 
-%>% select(SPECIES_ENGLISH_NAME, lf_group, land_barcode)
+## up to here
+
+
+wte <- wt_land %>% 
+  select(lf_group, land_barcode)%>% 
+  mutate(lf_group = gsub("*_pt.gpkg", "", lf_group)) %>%
+  st_drop_geometry()%>% 
+  group_by(lf_group)%>% 
+  count(land_barcode)
+
+wte <- wte %>% 
+  pivot_wider( names_from = lf_group , values_from = n)
+
+wter <- left_join(te_csv, wte)
+wter <- wter %>%
+  mutate_all(~replace(., is.na(.), 0))
+
+write.csv(wter, file.path("outputs", "all_sp_landbarcodes.csv"))
+
 
 
 
