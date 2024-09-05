@@ -8,10 +8,16 @@ library(dplyr)
 library(terra)
 library(sf)
 library(readr)
+library(tidyr)
 
 srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 
 in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
+
+# convert terra landbarcode to points 
+ter <- rast(file.path("inputs", "sk_lf_barcode.tif"))
+#terpt <- as.points(ter)
+
 
 
 # read in species dataset 
@@ -62,78 +68,49 @@ wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg")) %>%
 ## amphibians 
 wwa <- ww %>% filter(CLASS_NAME == "Amphibia")
 
-#-western toad
+#-western toad #6670 all records #5219 unique
 
 wt <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Western Toad")%>%
- distinct()
+  distinct()
 st_write(wt, file.path("outputs", "western_toad_pt.gpkg"), append = FALSE)
-# 
-# # intersect with 
-# wt_la <- st_intersection(wt, la) %>% select(SPECIES_ENGLISH_NAME,lake_code)
-# wt_ri <- st_intersection(wt, ri) %>% select(SPECIES_ENGLISH_NAME, river_code)
-# wt_land <- st_intersection(wt, tesf) %>% select(SPECIES_ENGLISH_NAME, land_barcode)
-# 
-# wt_lake <- wt_la %>%
-#   group_by(lake_code)%>% 
-#   count()%>%
-#   mutate(westtoad_lake_n = n)%>% 
-#   select(-n)
-# 
-# wt_river <- wt_ri %>%
-#   group_by(river_code)%>% 
-#   count()%>%
-#   mutate(westtoad_river_n = n)%>% 
-#   select(-n)
-# 
-# wt_land <- wt_land %>%
-#   group_by(land_barcode)%>% 
-#   count()%>%
-#   mutate(westtoad_land_n = n)%>% 
-#   select(-n)
-# 
-# ter_csv <- left_join(ter_csv, wt_land)
-# la_csv <- left_join(la_csv, wt_lake)
-# ri_csv <- left_join(ri_csv, wt_river)
-# 
 
 
-
-#-northwest salamander
+#-northwest salamander #7087 #3938
 nwsal <- wwa %>% filter(SPECIES_ENGLISH_NAME == "Northwestern Salamander")%>%
   distinct()
 st_write(nwsal, file.path("outputs", "northwestsal_pt.gpkg"), append = FALSE)
 
 
-#-rough-skinned newt
+#-rough-skinned newt #1535  #1111
 srn <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Roughskin Newt")%>%
   distinct()
 st_write(srn, file.path("outputs", "roughskinnewt_pt.gpkg"), append = FALSE)
 
-
-
-#-wood frog
+#-wood frog #188 # 166
 wf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Wood Frog")%>%
   distinct()
-
 st_write(wf, file.path("outputs", "woodfrog_pt.gpkg"), append = FALSE)
 
 
-# coastal tailed frog (and bc cdc too)
-ctf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Coastal Tailed Frog")
-ctf2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Coastal Tailed Frog")%>%
-  mutate(area_m = st_area(.))%>%
-  mutate(area = as.numeric(area_m))%>%
-  filter(area < 100000)
-         
-ctf22 <- st_centroid(ctf2)%>% select(-area_m, -area)
-
-ctf <- bind_rows(ctf, ctf22) %>% 
+# coastal tailed frog (and bc cdc too) #973  #897
+ctf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Coastal Tailed Frog")%>%
   distinct()
+
+# all the wcdc locations are already captured with the pt data 
+
+##ctf2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Coastal Tailed Frog") 
+#  mutate(area_m = st_area(.))%>%
+#  mutate(area = as.numeric(area_m))%>%
+#  filter(area < 100000)
+         
+# ctf22 <- st_centroid(ctf2)%>% select(-area_m, -area)
+# 
+#ctf <- bind_rows(ctf, ctf2) 
 
 st_write(ctf, file.path("outputs", "coastaltail_pt.gpkg"), append = FALSE)
 
 
-#-Columbia spotted frog
+#-Columbia spotted frog #2346 
 csf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Columbia Spotted Frog")%>%
   distinct()
 st_write(csf, file.path("outputs", "columbiaspotfrog_pt.gpkg"), append = FALSE)
@@ -151,90 +128,153 @@ soi <- c("Eulachon", "Bull Trout",
 fii <- fi %>% filter(SPECIES_NAME %in% soi)
 
 
-# Eulachon
+# Eulachon #63
 ee <- fii %>% filter(SPECIES_NAME =="Eulachon") 
 
 st_write(ee, file.path("outputs", "eulachon_pt.gpkg"), append = FALSE)
 
 
-# bulltrout
+# bulltrout # 992
 ee <- fii %>% filter(SPECIES_NAME =="Bull Trout")#%>%
   #distinct()
 st_write(ee, file.path("outputs", "bulltrout_pt.gpkg"), append = FALSE)
 
 
-# salmon 
+# salmon #13452
 ee <- fii %>% filter(SPECIES_NAME %in% c(
   "Chum Salmon", "Sockeye Salmon" ,"Pink Salmon","Coho Salmon",
   "Chinook Salmon", "All Salmon"))
 st_write(ee, file.path("outputs", "salmon_pt.gpkg"), append = FALSE)
 
-# steel head 
-ee <- fii %>% filter(SPECIES_NAME %in% c(
-  "Steelhead",  "Steelhead (Summer-run)", "Steelhead (Winter-run)"))
-
-st_write(ee, file.path("outputs", "steelhead_pt.gpkg"),append = FALSE)
-
-# steel head 
+# steel head  #2940
 ee <- fii %>% filter(SPECIES_NAME %in% c(
   "Steelhead",  "Steelhead (Summer-run)", "Steelhead (Winter-run)"))
 
 st_write(ee, file.path("outputs", "steelhead_pt.gpkg"),append = FALSE)
 
 
-## Osprey 
+## Osprey #413 # 304
 
-os <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Osprey")
+os <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Osprey")%>%distinct()
 st_write(os, file.path("outputs", "osprey_pt.gpkg"), append = FALSE)
 
 
-# dragon flies 
+# dragon flies #3340 # 1521
 
-dra <- ww %>% filter(ORDER_NAME == "Odonata")
+dra <- ww %>% filter(ORDER_NAME == "Odonata")%>% distinct()
 st_write(dra, file.path("outputs", "odonata_pt.gpkg"), append = FALSE)
-
 
 
 ### terrestrial 
 
-# whitebark pine (also in bc cdc)
+# whitebark pine (also in bc cdc) #1299 
 wbp <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Whitebark Pine")
-#wbp2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "whitebark pine")
-# these are already included
-##wbp <- bind_rows(wbp, wbp2)%>%
-#  distinct()
+
+wbp2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "whitebark pine")
+wbp2 <- st_centroid(wbp2)
+wbp <- bind_rows(wbp, wbp2) %>%
+  distinct()
 
 st_write(wbp, file.path("outputs", "whitebarkpine_pt.gpkg"), append = FALSE)
 
 
-# Pacific marten
+# Pacific marten #136 # 72
 ee <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Pacific Marten")%>%
   distinct()
 st_write(ee, file.path("outputs", "pacificmarten_pt.gpkg"), append = FALSE)
 
 
-# northern flying squirrel
+# northern flying squirrel #135 #81 
 ee <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Northern Flying Squirrel")%>%
   distinct()
 st_write(ee, file.path("outputs", "nthfylingsq_pt.gpkg"), append = FALSE)
 
 
+# bats #34704 # 505
+#-bats (all species and “bats” (unidentified bats group in data set)
+         
+bb <- ww %>% filter(ORDER_NAME =="Chiroptera")  
+bb <- bb %>% distinct()                 
+st_write(bb, file.path("outputs", "bat_pt.gpkg"), append = FALSE)
+
+
+#northern goshawk 1520
+nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "Northern Goshawk")      
+nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "Northern Goshawk") 
+nn <- bind_rows(nn, nn2) %>% distinct()  
+st_write(nn, file.path("outputs", "northerngoshawk_pt.gpkg"), append = FALSE)
+
+        
+# -red-backed vole # 290
+ee <- ww %>% filter(SPECIES_ENGLISH_NAME == "Southern Red-backed Vole") %>% distinct()  
+st_write(ee , file.path("outputs", "sthredbackedvole_pt.gpkg"), append = FALSE)
+
+#black bear #518
+nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "American Black Bear")      
+nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "American Black Bear") 
+nn <- bind_rows(nn, nn2)%>% distinct()  
+st_write(nn , file.path("outputs", "blackbear_pt.gpkg"), append = FALSE)
+
+# grizz # 6825
+nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "Grizzly Bear")      
+nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "Grizzly Bear") 
+nn <- bind_rows(nn, nn2)%>% distinct()  
+st_write(nn , file.path("outputs", "grizbear_pt.gpkg"), append = FALSE)
+
+
+
+
 # rare epiphytic lichen
-#rare epiphytic lichens (BC CDC - group cryptic paw, smoker’s lung combined)
+# rare epiphytic lichens (BC CDC - group cryptic paw, smoker’s lung combined)
 
-el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "cryptic paw" )
-el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "smoker's lung" )
+wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg")) %>% 
+  #select(ENG_NAME, SCI_NAME, EL_TYPE)%>%
+  rename("SPECIES_ENGLISH_NAME" = ENG_NAME,
+         "SCIENTIFIC_NAME" = SCI_NAME,
+         "NAME_TYPE_SUB" = EL_TYPE)
 
-el <- bind_rows(el, el2)%>%
-  distinct()%>%
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "cryptic paw" ) #56
+el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "smoker's lung" ) #49
+# 
+# el <- bind_rows(el, el2) 
+# st_write(el, file.path("outputs", "epiphyticlichen_poly.gpkg"), append = FALSE)
+
+el <- bind_rows(el, el2) %>%
+  st_cast("POLYGON") %>%
+  distinct() %>%
   mutate(area_m = st_area(.))%>%
-  mutate(area = as.numeric(area_m))%>%
-  filter(area < 100000)
+  mutate(area = as.numeric(area_m))
 
-el <- st_centroid(el)%>% select(-area_m, -area)
+ellarge <- el %>%
+  filter(area > 1000000) %>%
+  st_centroid(.)
+  
+elsmall <- el %>%
+  filter(area < 1000000) 
+
+
+# elsmall$ID = seq(1:length(elsmall$id))
+# 
+# # convert to vect and extract XY values from land barcode 
+# 
+# elsmallv <- vect(elsmall)
+# elsmallpt <- terra::extract(ter, elsmallv, xy = TRUE, bind = TRUE)
+# 
+# elsmall <- left_join(elsmall, elsmallpt)
+# 
+
+
+
+el <- bind_rows(ellarge, elsmall) 
 
 st_write(el, file.path("outputs", "epiphyticlichen_pt.gpkg"), append = FALSE)
 
+
+
+
+
+
+# waiting for Paula to check mapping 
 
 #grasslands bulkley (BC CDC - group  Saskatoon/slender wheatgrass and Sandbergs bluegrass - slender wheatgrass
 
@@ -250,10 +290,17 @@ el <- st_centroid(el)%>% select(-area_m, -area)
 st_write(el, file.path("outputs", "grasslands_pt.gpkg"), append = FALSE)
 
 
+
+# waiting for Paula to check mapping 
+
 # -cottonwood floodplain forests (BC CDC - group black cottonwood	-red alder salmonberry & black cottonwood - hybrid spruce -redosier)
 el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "black cottonwood - hybrid white spruce / red-osier dogwood" )
 el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "black cottonwood - red alder / salmonberry"  )
-el <- bind_rows(el, el2)%>%
+
+el <- bind_rows(el, el2)
+st_write(el, file.path("outputs", "cottonwood_poly.gpkg"), append = FALSE)
+
+el <- el %>%
   distinct()%>%
   mutate(area_m = st_area(.))%>%
   mutate(area = as.numeric(area_m))%>%
@@ -263,54 +310,26 @@ el <- st_centroid(el)%>% select(-area_m, -area)
 st_write(el, file.path("outputs", "cottonwood_pt.gpkg"), append = FALSE)
 
 
-# bats 
-#-bats (all species and “bats” (unidentified bats group in data set)
-         
-# ww        
-sort(unique(ww$ORDER_NAME ))
-   
-bb <- ww %>% filter(ORDER_NAME =="Chiroptera")    %>% distinct()                 
-st_write(bb, file.path("outputs", "bat_pt.gpkg"), append = FALSE)
 
 
-#northern goshawk
-nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "Northern Goshawk")      
-nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "Northern Goshawk") 
-nn <- bind_rows(nn, nn2)%>% distinct()  
-st_write(nn, file.path("outputs", "northerngoshawk_pt.gpkg"), append = FALSE)
-
-        
-# -red-backed vole
-ee <- ww %>% filter(SPECIES_ENGLISH_NAME == "Southern Red-backed Vole")  
-st_write(ee , file.path("outputs", "sthredbackedvole_pt.gpkg"), append = FALSE)
 
 
-#black bear
-nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "American Black Bear")      
-nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "American Black Bear") 
-nn <- bind_rows(nn, nn2)%>% distinct()  
-st_write(nn , file.path("outputs", "blackbear_pt.gpkg"), append = FALSE)
-
-# grizz 
-nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "Grizzly Bear")      
-nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "Grizzly Bear") 
-nn <- bind_rows(nn, nn2)%>% distinct()  
-st_write(nn , file.path("outputs", "grizbear_pt.gpkg"), append = FALSE)
-
-                            
 
 
+                          
 ############################################################
 library(tidyverse)
 
 # intersect with terrestrial barcodes
+ter <- rast(file.path("inputs", "sk_lf_barcode.tif"))
 
-te <- st_read(file.path("outputs", "final", "sk_lf_barcode_poly.gpkg"))
+#te <- st_read(file.path("outputs", "final", "sk_lf_barcode_poly.gpkg"))
 
 # land barcode 
 te_csv <- read_csv(file.path("outputs", "lf_barcode_summary.csv"))%>%
   select(layer1, count)%>% 
   rename("land_barcode" = layer1)
+
 
 
 # lakes barcode 
@@ -347,87 +366,24 @@ for (f in sp[-1]) DF <- bind_rows(DF, st_read(file.path("outputs", f))%>% mutate
 DF <- DF %>% select(SPECIES_ENGLISH_NAME,  SCIENTIFIC_NAME, OBSERVATION_DATETIME,lf_group)%>%
   distinct(.)
 
-#st_write(DF, file.path("outputs", "allsp.gpkg"))
-# n = 34862 
+st_write(DF, file.path("outputs", "allsp.gpkg"), append = F)
 
-# intersect with land 
-unique(DF$lf_group)
+#DF <- st_read(file.path("outputs", "allsp.gpkg"))
+  
 
-#[1] "bat_pt.gpkg"              "blackbear_pt.gpkg"       
-#[3] "bulltrout_pt.gpkg"        "coastaltail_pt.gpkg"     
-#[5] "columbiaspotfrog_pt.gpkg" "cottonwood_pt.gpkg"      
-#[7] "epiphyticlichen_pt.gpkg"  "eulachon_pt.gpkg"        
-#[9] "grasslands_pt.gpkg"       "grizbear_pt.gpkg"        
-#[11] "northerngoshawk_pt.gpkg"  "northwestsal_pt.gpkg"    
-#[13] "nthfylingsq_pt.gpkg"      "odonata_pt.gpkg"         
-#[15] "osprey_pt.gpkg"           "pacificmarten_pt.gpkg"   
-#[17] "roughskinnewt_pt.gpkg"    "salmon_pt.gpkg"          
-#[19] "steelhead_pt.gpkg"        "sthredbackedvole_pt.gpkg"
-#[21] "western_toad_pt.gpkg"     "whitebarkpine_pt.gpkg"   
-#[23] "woodfrog_pt.gpkg" 
+# intersect with landscape barcode
 
-DF1 <- DF %>% filter(lf_group == "bat_pt.gpkg" )
-DF2 <- DF %>% filter(lf_group == "blackbear_pt.gpkg")
-DF3 <- DF %>% filter(lf_group == "bulltrout_pt.gpkg")
-DF4 <- DF %>% filter(lf_group == "coastaltail_pt.gpkg" )
-DF5 <- DF %>% filter(lf_group == "columbiaspotfrog_pt.gpkg" )
-DF6 <- DF %>% filter(lf_group == "cottonwood_pt.gpkg"  )
-DF7 <- DF %>% filter(lf_group == "epiphyticlichen_pt.gpkg")
-DF8 <- DF %>% filter(lf_group == "eulachon_pt.gpkg" )
-DF9 <- DF %>% filter(lf_group == "grasslands_pt.gpkg" )
-DF10 <- DF %>% filter(lf_group == "grizbear_pt.gpkg" )
-DF11 <- DF %>% filter(lf_group == "northerngoshawk_pt.gpkg" )
-DF12 <- DF %>% filter(lf_group == "northwestsal_pt.gpkg" )
-DF13 <- DF %>% filter(lf_group == "nthfylingsq_pt.gpkg"  )
-DF14 <- DF %>% filter(lf_group == "odonata_pt.gpkg"  )
-DF15 <- DF %>% filter(lf_group == "osprey_pt.gpkg")
-DF16 <- DF %>% filter(lf_group == "pacificmarten_pt.gpkg" )
-DF17 <- DF %>% filter(lf_group == "roughskinnewt_pt.gpkg" )
-DF18 <- DF %>% filter(lf_group == "salmon_pt.gpkg" )
-DF19 <- DF %>% filter(lf_group == "steelhead_pt.gpkg" )
-DF20 <- DF %>% filter(lf_group == "sthredbackedvole_pt.gpkg"  )
-DF21 <- DF %>% filter(lf_group == "western_toad_pt.gpkg" )
-DF22 <- DF %>% filter(lf_group == "whitebarkpine_pt.gpkg"  )
-DF23 <- DF %>% filter(lf_group == "woodfrog_pt.gpkg" )
+dfv <- vect(DF)
+wt_land <- terra::extract( ter, dfv)
 
+dfcsv <- st_drop_geometry(DF)
+dfcsv <- bind_cols(dfcsv, wt_land) %>%
+  rename("land_barcode" = lyr.1)
 
-wt1 <- st_intersection(DF1, te)
-wt2 <- st_intersection(DF2, te)
-wt3 <- st_intersection(DF3, te)
-wt4 <- st_intersection(DF4, te)
-wt5 <- st_intersection(DF5, te)
-wt6 <- st_intersection(DF6, te)
-wt7 <- st_intersection(DF7, te)
-wt8 <- st_intersection(DF8, te)
-wt9 <- st_intersection(DF9, te)
-wt10 <- st_intersection(DF10, te)
-wt11 <- st_intersection(DF11, te)
-wt12 <- st_intersection(DF12, te)
-wt13 <- st_intersection(DF13, te)
-wt14 <- st_intersection(DF14, te)
-wt15 <- st_intersection(DF15, te)
-wt16 <- st_intersection(DF16, te)
-wt17 <- st_intersection(DF17, te)
-wt18 <- st_intersection(DF18, te)
-wt19 <- st_intersection(DF19, te)
-wt20 <- st_intersection(DF20, te)
-wt21 <- st_intersection(DF21, te)
-wt22 <- st_intersection(DF22, te)
-wt23 <- st_intersection(DF23, te)
-
-
-
-
-
-
-
-## up to here
-
-
-wte <- wt_land %>% 
+wte <- dfcsv %>% 
   select(lf_group, land_barcode)%>% 
   mutate(lf_group = gsub("*_pt.gpkg", "", lf_group)) %>%
-  st_drop_geometry()%>% 
+  #st_drop_geometry()%>% 
   group_by(lf_group)%>% 
   count(land_barcode)
 
@@ -443,7 +399,11 @@ write.csv(wter, file.path("outputs", "all_sp_landbarcodes.csv"))
 
 
 
+
+
+
 # intersect with river
+
 wt_ri <- st_intersection(DF, ri) 
 wri <- wt_ri %>% 
   select(lf_group, river_code)%>% 
