@@ -224,7 +224,11 @@ st_write(nn , file.path("outputs", "grizbear_pt.gpkg"), append = FALSE)
 
 
 
-# rare epiphytic lichen
+
+
+
+# Ecosystem / community types 
+
 # rare epiphytic lichens (BC CDC - group cryptic paw, smoker’s lung combined)
 
 wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg")) %>% 
@@ -235,61 +239,40 @@ wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg")) %>%
 
 el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "cryptic paw" ) #56
 el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "smoker's lung" ) #49
-# 
-# el <- bind_rows(el, el2) 
-# st_write(el, file.path("outputs", "epiphyticlichen_poly.gpkg"), append = FALSE)
 
 el <- bind_rows(el, el2) %>%
-  st_cast("POLYGON") %>%
-  distinct() %>%
-  mutate(area_m = st_area(.))%>%
-  mutate(area = as.numeric(area_m))
+st_cast("POLYGON") 
 
-ellarge <- el %>%
-  filter(area > 1000000) %>%
+st_write(el, file.path("outputs", "epiphyticlichen_poly_raw.gpkg"), append = FALSE)
+
+
+# in QGIS identify the pts and polygons and export 
+
+# the polygons will be intersected with the raster area and
+# points selected for uncertain and then taken centroids
+
+elpol <- st_read(file.path("outputs", "epiphyticlichen_poly_only_raw.gpkg"))
+elpt <- st_read(file.path("outputs", "epiphyticlichen_pts_raw.gpkg"))
+
+elptt <- elpt %>%
   st_centroid(.)
-  
-elsmall <- el %>%
-  filter(area < 1000000) 
 
-
-# elsmall$ID = seq(1:length(elsmall$id))
-# 
-# # convert to vect and extract XY values from land barcode 
-# 
-# elsmallv <- vect(elsmall)
-# elsmallpt <- terra::extract(ter, elsmallv, xy = TRUE, bind = TRUE)
-# 
-# elsmall <- left_join(elsmall, elsmallpt)
-# 
+st_write(elptt, file.path("outputs", "epiphyticlichen_pt.gpkg"), append = FALSE)
 
 
 
-el <- bind_rows(ellarge, elsmall) 
-
-st_write(el, file.path("outputs", "epiphyticlichen_pt.gpkg"), append = FALSE)
-
-
-
-
-
-
-# waiting for Paula to check mapping 
+# using polygons, no large areas where uncertainty 
 
 #grasslands bulkley (BC CDC - group  Saskatoon/slender wheatgrass and Sandbergs bluegrass - slender wheatgrass
 
 el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "saskatoon / slender wheatgrass" )
 el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Sandberg's bluegrass - slender wheatgrass" )
 el <- bind_rows(el, el2)%>%
-  distinct()%>%
-  mutate(area_m = st_area(.))%>%
-  mutate(area = as.numeric(area_m))%>%
-  filter(area < 100000)
+  st_cast("POLYGON") 
 
-el <- st_centroid(el)%>% select(-area_m, -area)
-st_write(el, file.path("outputs", "grasslands_pt.gpkg"), append = FALSE)
+st_write(el, file.path("outputs", "grasslands_poly_raw.gpkg"), append = FALSE)
 
-
+  
 
 # waiting for Paula to check mapping 
 
@@ -297,18 +280,20 @@ st_write(el, file.path("outputs", "grasslands_pt.gpkg"), append = FALSE)
 el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "black cottonwood - hybrid white spruce / red-osier dogwood" )
 el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "black cottonwood - red alder / salmonberry"  )
 
-el <- bind_rows(el, el2)
-st_write(el, file.path("outputs", "cottonwood_poly.gpkg"), append = FALSE)
+el <- bind_rows(el, el2)%>%
+  st_cast("POLYGON") 
+st_write(el, file.path("outputs", "cottonwood_poly_raw.gpkg"), append = FALSE)
 
-el <- el %>%
-  distinct()%>%
-  mutate(area_m = st_area(.))%>%
-  mutate(area = as.numeric(area_m))%>%
-  filter(area < 100000)
 
-el <- st_centroid(el)%>% select(-area_m, -area)
-st_write(el, file.path("outputs", "cottonwood_pt.gpkg"), append = FALSE)
-
+# el <- el %>%
+#   distinct()%>%
+#   mutate(area_m = st_area(.))%>%
+#   mutate(area = as.numeric(area_m))%>%
+#   filter(area < 100000)
+# 
+# el <- st_centroid(el)%>% select(-area_m, -area)
+# st_write(el, file.path("outputs", "cottonwood_pt.gpkg"), append = FALSE)
+# 
 
 
 
@@ -356,7 +341,7 @@ ri_csv <- ri %>%
   count()
 
 
-## Read in the land intersect species 
+## Read in the land intersect species pts 
 
 sp <- list.files(file.path("outputs"), pattern = "*_pt.gpkg")
 
@@ -370,8 +355,26 @@ st_write(DF, file.path("outputs", "allsp.gpkg"), append = F)
 
 #DF <- st_read(file.path("outputs", "allsp.gpkg"))
   
+#Intersect with polygons 
+elpol <- st_read(file.path("outputs", "epiphyticlichen_poly_only_raw.gpkg"))%>%
+  mutate(lf_group = "epiphyticlichen_poly")  %>%
+  select(SPECIES_ENGLISH_NAME,  SCIENTIFIC_NAME,lf_group)
 
-# intersect with landscape barcode
+# grassland
+grpol <- st_read(file.path("outputs", "grasslands_poly_raw.gpkg"))%>%
+  mutate(lf_group = "grasslands_poly") %>%
+  select(SPECIES_ENGLISH_NAME,  SCIENTIFIC_NAME, lf_group)
+
+cotton <- st_read(file.path("outputs", "cottonwood_poly_raw.gpkg"))%>%
+  mutate(lf_group = "cottonwood_poly") %>%
+  select(SPECIES_ENGLISH_NAME,  SCIENTIFIC_NAME, lf_group)
+
+
+pols <- rbind(elpol, grpol, cotton)
+st_write(pols, file.path("outputs", "allsp_pols.gpkg"), append = F)
+
+
+# intersect with landscape barcode with the points 
 
 dfv <- vect(DF)
 wt_land <- terra::extract( ter, dfv)
@@ -394,7 +397,36 @@ wter <- left_join(te_csv, wte)
 wter <- wter %>%
   mutate_all(~replace(., is.na(.), 0))
 
-write.csv(wter, file.path("outputs", "all_sp_landbarcodes.csv"))
+write.csv(wter, file.path("outputs", "all_sp_landbarcodes_pt.csv"))
+
+
+# intersect with polygons: 
+
+
+dfv <- vect(pols)
+wt_land <- terra::extract( ter, dfv)
+
+dfcsv <- st_drop_geometry(pols)%>% 
+  dplyr::mutate( ID = row_number())
+
+dfcsv <- left_join(dfcsv, wt_land, by = "ID") %>%
+  rename("land_barcode" = lyr.1)
+
+wte <- dfcsv %>% 
+  select(lf_group, land_barcode)%>% 
+  mutate(lf_group = gsub("*_poly.gpkg", "", lf_group)) %>%
+  #st_drop_geometry()%>% 
+  group_by(lf_group)%>% 
+  count(land_barcode)
+
+wte <- wte %>% 
+  pivot_wider(names_from = lf_group , values_from = n)
+
+wter <- left_join(te_csv, wte)
+wter <- wter %>%
+  mutate_all(~replace(., is.na(.), 0))
+
+write.csv(wter, file.path("outputs", "all_sp_landbarcodes_poly.csv"))
 
 
 
@@ -423,6 +455,29 @@ write.csv(ri_wri, file.path("outputs", "all_sp_riverbarcodes.csv"))
 
 
 
+
+# intersect with polygons: 
+
+
+wt_ri <- st_intersection(pols, ri) 
+wri <- wt_ri %>% 
+  select(lf_group, river_code)%>% 
+  mutate(lf_group = gsub("*_poly.gpkg", "", lf_group)) %>%
+  st_drop_geometry()%>% 
+  group_by(lf_group)%>% 
+  count(river_code)
+
+wri <- wri %>% 
+  pivot_wider( names_from = lf_group , values_from = n)
+
+ri_wri <- left_join(ri_csv, wri)
+ri_wri <- ri_wri%>%
+  mutate_all(~replace(., is.na(.), 0))
+
+write.csv(ri_wri, file.path("outputs", "all_sp_riverbarcodes_poly.csv"))
+
+
+
 # intersect with lakes
 wt_la <- st_intersection(DF, la) 
 wla <- wt_la %>% 
@@ -442,4 +497,23 @@ law <- law %>%
 write.csv(law, file.path("outputs", "all_sp_lakebarcodes.csv"))
 
 
+
+# intersect with lakes with polygons
+
+wt_la <- st_intersection(pols, la) 
+wla <- wt_la %>% 
+  select(lf_group, lake_code)%>% 
+  mutate(lf_group = gsub("*_pt.gpkg", "", lf_group)) %>%
+  st_drop_geometry()%>% 
+  group_by(lf_group)%>% 
+  count(lake_code)
+
+wla <- wla %>% 
+  pivot_wider( names_from = lf_group , values_from = n)
+
+law <- left_join(la_csv, wla)
+law <- law %>%
+  mutate_all(~replace(., is.na(.), 0))
+
+write.csv(law, file.path("outputs", "all_sp_lakebarcodes_poly.csv"))
 
