@@ -504,8 +504,8 @@ wt_la <- st_intersection(pols, la)
 wla <- wt_la %>% 
   select(lf_group, lake_code)%>% 
   mutate(lf_group = gsub("*_pt.gpkg", "", lf_group)) %>%
-  st_drop_geometry()%>% 
-  group_by(lf_group)%>% 
+  st_drop_geometry() %>% 
+  group_by(lf_group) %>% 
   count(lake_code)
 
 wla <- wla %>% 
