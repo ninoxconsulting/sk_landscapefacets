@@ -19,7 +19,6 @@ ter <- rast(file.path("inputs", "sk_lf_barcode.tif"))
 #terpt <- as.points(ter)
 
 
-
 # read in species dataset 
 
 # 1) fish observations
@@ -516,4 +515,66 @@ law <- law %>%
   mutate_all(~replace(., is.na(.), 0))
 
 write.csv(law, file.path("outputs", "all_sp_lakebarcodes_poly.csv"))
+
+
+
+
+
+## Convert the species layers to a raster presence/absence 
+
+library(dplyr)
+library(terra)
+library(sf)
+library(readr)
+library(tidyr)
+
+srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
+
+
+# species list # not yet working.....
+
+df <- st_read(file.path("outputs", "allsp.gpkg"))
+
+splist <- unique(df$lf_group)
+splist <- splist[-c(1:12)] # "epiphyticlichen_pt.gpkg" 
+
+for(i in splist){
+  
+  #i = splist[1]
+  outname <- gsub("_pt.gpkg", "", i)
+  
+  isp <- df %>% filter(lf_group == i) %>% 
+    select(geom)%>% 
+    mutate(pres = 1)
+  
+  # convert to raster 
+  isr <- rasterize(isp, srast, field = "pres", background = 0)
+  rr <- mask(isr, srast)
+  
+  names(rr) = "pa"
+  
+  writeRaster(rr, file.path("outputs", paste0(outname, "_presabs.tif")), overwrite = TRUE)
+  
+}
+
+dfpol <- st_read(pols, file.path("outputs", "allsp_pols.gpkg"))
+                 
+                 
+                 
+
+
+
+# CDC species 
+
+# create a new layer for each species and output as matching raster 
+wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg"))
+
+# species list 
+
+df <- st_read(file.path("outputs", "allsp.gpkg"))
+
+dfpol <- st_read(st_write(pols, file.path("outputs", "allsp_pols.gpkg"), append = F)
+
+
 
