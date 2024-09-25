@@ -447,6 +447,34 @@ write_csv(ec_divvv, file.path("outputs", "wma_lake_rarity_class_per_ecoregion.cs
 
 
 
+## Lakes Diversity code
+
+rar <- rar <- rast(file.path("outputs", "sk_lakes_divarea_conc.tif"))
+divpoly <- as.polygons(rar, na.rm=FALSE)
+div_sf <- st_as_sf(divpoly)
+
+# 1 # calcaulte per ecoregion 
+ec_div <- st_intersection(div_sf , wma ) 
+
+ec_divv <- ec_div   |> 
+  dplyr::mutate(lake_div_wma_area_m2 = as.numeric(st_area(ec_div )))%>%
+ filter(!is.na(diversity))# mutate_all(., ~replace_na(.,0)) 
+
+ec_divvv <- ec_divv %>%
+  #dplyr::group_by(ECOREGION_NAME, rarity, cancelled_status)%>%
+  #dplyr::mutate(rare_class_sum = sum(div_cancel_area_m2)) %>% 
+  dplyr::select( -area_m) %>% 
+  st_drop_geometry() %>% 
+  distinct()
+
+write_csv(ec_divvv, file.path("outputs", "wma_lake_diversity_class.csv"))
+
+
+
+
+
+
+
 ## connectivity
 
 rar <- rast(file.path("outputs", "sk_pither_resistence_90threshold.tif"))
@@ -527,4 +555,25 @@ write_csv(ec_divvv, file.path("outputs", "wma_red_blue_sp_area.csv"))
 
 
 
+# fed listed species
+
+
+rb <- st_read(file.path("inputs", "fed_listed_sp_raw.gpkg"))
+
+
+# 1 # calcaulte per ecoregion 
+ec_div <- st_intersection(rb , wma ) 
+
+ec_divv <- ec_div   |> 
+  dplyr::mutate(sp_area_m2 = as.numeric(st_area(ec_div ))) %>%
+  select(c(SITE_NAME,COMMON_NAME_ENGLISH,sp_area_m2))
+
+ec_divvv <- ec_divv %>%
+  dplyr::group_by(SITE_NAME,COMMON_NAME_ENGLISH)%>%
+  dplyr::mutate(fed_sp_sum = sum(sp_area_m2)) %>% 
+  #dplyr::select( -div_cancel_area_m2, -area_m) %>% 
+  st_drop_geometry() %>% 
+  distinct()
+
+write_csv(ec_divvv, file.path("outputs", "wma_fed_sp_area.csv"))
 
