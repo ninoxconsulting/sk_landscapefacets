@@ -224,8 +224,6 @@ st_write(nn , file.path("outputs", "grizbear_pt.gpkg"), append = FALSE)
 
 
 
-
-
 # Ecosystem / community types 
 
 # rare epiphytic lichens (BC CDC - group cryptic paw, smoker’s lung combined)
@@ -282,6 +280,7 @@ el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "black cottonwood - red alder / s
 el <- bind_rows(el, el2)%>%
   st_cast("POLYGON") 
 st_write(el, file.path("outputs", "cottonwood_poly_raw.gpkg"), append = FALSE)
+#st_write(el, file.path("outputs", "grasslands_poly_raw.gpkg"), append = FALSE)
 
 
 # el <- el %>%
@@ -302,6 +301,7 @@ st_write(el, file.path("outputs", "cottonwood_poly_raw.gpkg"), append = FALSE)
 
                           
 ############################################################
+
 library(tidyverse)
 
 # intersect with terrestrial barcodes
@@ -519,6 +519,7 @@ write.csv(law, file.path("outputs", "all_sp_lakebarcodes_poly.csv"))
 
 
 
+##########################################################################
 
 ## Convert the species layers to a raster presence/absence 
 
@@ -537,11 +538,12 @@ in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 df <- st_read(file.path("outputs", "allsp.gpkg"))
 
 splist <- unique(df$lf_group)
-splist <- splist[-c(1:12)] # "epiphyticlichen_pt.gpkg" 
+splist <- splist[-c(1:15)] # "epiphyticlichen_pt.gpkg" 
+
 
 for(i in splist){
   
-  #i = splist[1]
+  #i = splist[2]
   outname <- gsub("_pt.gpkg", "", i)
   
   isp <- df %>% filter(lf_group == i) %>% 
@@ -562,19 +564,41 @@ dfpol <- st_read(pols, file.path("outputs", "allsp_pols.gpkg"))
                  
                  
                  
+## convert cotton wood and grassland to polygons
+
+cw <-  st_read(file.path("outputs", "cottonwood_poly_raw.gpkg"))
+isp<- cw %>% 
+  select(geom)%>% 
+  mutate(pres = 1)    
+
+isr <- rasterize(isp, srast, field = "pres", background = 0)
+rr <- mask(isr, srast)
+names(rr) = "pa"
+
+writeRaster(rr, file.path("outputs", "cottonwood_presabs.tif"), overwrite = TRUE)
+
+
+# repeat with grassland 
+cw <-  st_read(file.path("outputs", "grasslands_poly_raw.gpkg"))
+isp<- cw %>% 
+  select(geom)%>% 
+  mutate(pres = 1)    
+
+isr <- rasterize(isp, srast, field = "pres", background = 0)
+rr <- mask(isr, srast)
+names(rr) = "pa"
+
+writeRaster(rr, file.path("outputs", "grassland_presabs.tif"), overwrite = TRUE)
+
+
+ 
 
 
 
-# CDC species 
+# CDC species # have not yet added all these species. 
 
 # create a new layer for each species and output as matching raster 
 wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg"))
-
-# species list 
-
-df <- st_read(file.path("outputs", "allsp.gpkg"))
-
-dfpol <- st_read(st_write(pols, file.path("outputs", "allsp_pols.gpkg"), append = F)
 
 
 
