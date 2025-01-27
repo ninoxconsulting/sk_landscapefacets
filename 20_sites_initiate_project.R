@@ -559,7 +559,9 @@ dataset <- wheretowork::new_dataset_from_auto(
 ### loop over unique theme groups (ex. Endemic Species, Species at Risk, etc.)
 themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
-  i <- "Themes"
+  # start test line
+  #i <- "Themes"
+  # end test line 
   
   #### store temp variables associated with group (i)
   curr_theme_groups <- unique(theme_groups)[i]
@@ -644,7 +646,7 @@ themes <- lapply(seq_along(unique(theme_groups)), function(i) {
 if (!is.null(weight_data)) {
   weights <- lapply(seq_len(terra::nlyr(weight_data)), function(i) {
     
-    i <- 1
+   # i <- 1
     
     #### prepare variable (if manual legend)
     if (identical(weight_legend[i], "manual")) {
@@ -694,6 +696,7 @@ if (!is.null(weight_data)) {
 if (!is.null(include_data)) {
   includes <- lapply(seq_len(terra::nlyr(include_data)), function(i) {
     
+    i <- 1
     ### build legend
     if (identical(include_legend[i], "null")) {
       legend <- wheretowork::new_null_legend()
@@ -772,6 +775,10 @@ if (!is.null(exclude_data)) {
   wtw_objects <- append(wtw_objects, excludes) # Themes, Weights Includes and Excludes
 } 
 
+
+PRJ_NAME = "skeena"
+PRJ_PATH = fs::path("outputs", "final", "sites")
+PRJ_FILE_NAME = "skeena"
 
 ## Save project to disk ---- 
 wheretowork::write_project(
