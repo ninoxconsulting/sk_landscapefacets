@@ -94,8 +94,12 @@ rb <- st_read(file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
 
 sp <- unique(rb$SCI_NAME)
 
+#sp[62]
+
 purrr::map(sp, function(x){
   print(x)
+  
+ # x <- sp[62]
   rbb <- rb |> filter(SCI_NAME == x)
   comm_name <- gsub(" ", "_", unique(rbb$ENG_NAME))
   comm_name <- gsub("/", "", comm_name)
@@ -106,10 +110,16 @@ purrr::map(sp, function(x){
   sciname <- gsub("/", "", sciname)
   sciname <- gsub("-", "", sciname)
   
-  rbb <- rasterize(rbb, srast)
+  rbb <- rasterize(rbb, srast, field = "SCI_NAME")
+  
+  if(all(values(is.na(rbb)))){
+    
+    cli::cli_alert("All values are NA, skipping sp")
+  } else {
+
   names(rbb) = paste0("bc_listed_", comm_name )
   writeRaster(rbb, file.path(outputs, "species", paste0("bc_listed_", sciname, ".tif")), overwrite = TRUE)
-  
+  }
 })
 
 
