@@ -203,7 +203,7 @@ df <- init_metadata()
 ## Loop over each tiff file:
 for (i in seq_along(file_list)) {
   
-  i <- 1
+  i <- 5
   
   rname <- file_list[i]
   
@@ -236,12 +236,10 @@ for (i in seq_along(file_list)) {
                     rname %in% excludes_list ~ "exclude",
                     rname %in% weights_list ~ "weight")
         
-  
-    
   ## TYPE ----------------------------------------------------------------------
-  type <- wtw_meta_row %>% 
-      {if ("Type" %in% colnames(wtw_meta)) pull(., Type) else "theme"} 
-    
+  # type <- wtw_meta_row %>% 
+  #     {if ("Type" %in% colnames(wtw_meta)) pull(., Type) else "theme"} 
+  #   
   ## NAME ----------------------------------------------------------------------
   name <- names(wtw_raster)
     
