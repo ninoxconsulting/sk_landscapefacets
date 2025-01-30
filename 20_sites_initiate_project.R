@@ -61,9 +61,8 @@ PROJECT_TYPE <- "REGIONAL" # NATIONAL or REGIONAL or BOTH
 
 
 # 3.0 Processing ----------------------------------------------------------------
-
 # create folder structure
-dir.create(fs::path(project_folder, "PU"), recursive = TRUE)
+#dir.create(fs::path(project_folder, "PU"), recursive = TRUE)
 dir.create(file.path(project_folder, "scripts"), recursive = TRUE)
 dir.create(file.path(project_folder, "Tiffs"), recursive = TRUE)
 dir.create(file.path(project_folder, "WTW/metadata"), recursive = TRUE)
@@ -103,6 +102,9 @@ if(PROJECT_TYPE == "REGIONAL"){
 final_data_dir <- fs::path("outputs","final")
 
 rr <- rast(fs::path(final_data_dir, "sk_rast_template.tif"))
+rr<- aggregate(rr, fact = 10)
+names(rr) <- "template"
+
 
 # Convert all cell values to 0
 rr[rr > 0] <- 0
@@ -116,56 +118,6 @@ rr1[rr1 == 0] <- 1
 terra::writeRaster(rr1, file.path(project_folder, "PU","PU.tif"), datatype = "INT1U", overwrite = TRUE)
 
 ## potentially need to add a grid vector? 
-
-
-
-# # 2.0 Set up -------------------------------------------------------------------
-# 
-# aoi_shp <- fs::path("outputs","final", "sites","PU", "aoi.gpkg") # <- CHANGE TO YOUR SHP PATH
-# grid_size <- 100 # <- CHANGE TO YOUR GRID SIZE IN UNITS MATCHING PROJECTION
-# 
-# 
-# out_dir <- fs::path("outputs","final", "sites","PU")
-# 
-# 
-# # 3.0 Create vector grid -------------------------------------------------------
-# 
-# # Read-in boundary shapefile
-# boundary <- read_sf(aoi_shp)
-# 
-# # Make grid
-# grid_sf <- sf::st_make_grid(boundary, cellsize = c(grid_size, grid_size), what = 'polygons')
-# 
-# # select cells intersecting boundary polygon
-# x <- st_intersects(grid_sf, boundary)
-# grid_sf_sub <- grid_sf[lengths(x) > 0]
-# grid_sf <- sf::st_sf(geometry = grid_sf_sub, data.frame('PUID' = 1:length(grid_sf_sub)))
-# 
-# # save shp
-# st_write(grid_sf, file.path(out_dir, "PU.gpkg"), append=FALSE)
-# 
-# 
-# # 4.0 Create raster grid -------------------------------------------------------
-# 
-# # Create raster template matching vector grid extent
-# r_pu_template <- terra::rast(terra::vect(grid_sf), res = grid_size)
-# 
-# # Rasterize vector grid, values are all 1
-# r_pu1 <- grid_sf %>%
-#   mutate(one = 1) %>%
-#   terra::vect() %>%
-#   terra::rasterize(r_pu_template, "one")
-# names(r_pu1) <- "pu"
-# 
-# # make a version where values are all zero
-# r_pu0 <- r_pu1
-# r_pu0[r_pu0 == 1] <- 0
-# 
-# # save
-# terra::writeRaster(r_pu1, file.path(out_dir, "PU.tif"), datatype = "INT1U", overwrite = TRUE)
-# terra::writeRaster(r_pu0, file.path(out_dir, "PU0.tif"), datatype = "INT1U", overwrite = TRUE)
-
-
 
 
 
@@ -207,19 +159,6 @@ library(readr)
 library(tools)
 source(fs::path("outputs/final/sites/scripts", "extra_sites_functions.r"))
 
-
-# Setup ------------------------------------------------------------------------
-
-## Create output folder directory ----
-#dir.create(file.path(PRJ_PATH))
-#dir.create(file.path(PRJ_PATH, "_Tables"))
-#dir.create(file.path(PRJ_PATH, "Excludes"))
-#dir.create(file.path(PRJ_PATH, "Includes"))
-#dir.create(file.path(PRJ_PATH, "Themes"))
-#dir.create(file.path(PRJ_PATH, "Weights"))
-
-
-
 project_name <- "nb" # <--- SET PROJECT NAME HERE FOR OUT FILE
 themes_dir <- fs::path(project_folder, "Regional", "Themes" )# <--- Themes data folder
 includes_dir <- fs::path(project_folder, "Regional","Includes") # <--- Includes data folder
@@ -227,8 +166,7 @@ excludes_dir <- fs::path(project_folder, "Regional","Excludes") # <--- Excludes 
 weights_dir <- fs::path(project_folder,"Regional","Weights") # <--- Weights data folder
 
 pu_units <- "m2" # <--- SET DESIRED UNITS
-pu_cell_area <- 100 # <--- SET PLANNING UNIT AREA IN units
-
+pu_cell_area <- 1000 # <--- SET PLANNING UNIT AREA IN units
 
 
 # Build vectors of data paths --------------------------------------------------
@@ -253,84 +191,302 @@ weights_list <- get_all_tifs_gdbs(weights_dir)
 
 # Fill table -------------------------------------------------------------------
 
-# make empty table
+
+file_list <- c(themes_list, includes_list, excludes_list, weights_list)
+
+## Build empty data.frame (template for metadata.csv) ----
 df <- init_metadata()
 
-# Add Regional specific columns
-df$unique_id <- as.character()
-df$threshold <- as.character()
-df$source <- as.character()
 
-for(x in c(themes_list, includes_list, excludes_list, weights_list)){
+
+# 5.0 Populate metadata --------------------------------------------------------
+## Loop over each tiff file:
+for (i in seq_along(file_list)) {
   
-  #x <- c(themes_list, includes_list, excludes_list, weights_list)[1]
+  i <- 1
   
-  # Get Type
-  type <- case_when(x %in% themes_list ~ "theme",
-                    x %in% includes_list ~ "include",
-                    x %in% excludes_list ~ "exclude",
-                    x %in% weights_list ~ "weight")
+  rname <- file_list[i]
   
-  # Get Theme
-  theme <- case_when(x %in% themes_list ~ basename(get_parent_dir(x)),
-                     .default = "")
+  ### Read-in raster
+  wtw_raster <- rast(file_list[i])
   
-  layer_name <- tools::file_path_sans_ext(basename(x))
+  ### Get raster stats
+  if (!is.factor(wtw_raster)) {
+    ## df
+    wtw_raster_df <- terra::as.data.frame(wtw_raster, na.rm=TRUE)
+    ## number of unique value
+    u_values <- nrow(unique(wtw_raster_df)) %>% as.numeric()
+    ## max raster value
+    max_value <- max(wtw_raster_df) %>% as.numeric() # <- CAN NOT GET MAX ON CATEGORICAL DATA
+  }
   
-  # Get final file name
-  file <- case_when(x %in% themes_list ~ paste0("T_", layer_name, ".tif"),
-                    x %in% includes_list ~ paste0("I_", layer_name, ".tif"),
-                    x %in% excludes_list ~ paste0("E_", layer_name, ".tif"),
-                    x %in% weights_list ~ paste0("W_", layer_name, ".tif"))
+  ## FILE ----------------------------------------------------------------------
+  file_no_ext <- paste0(tools::file_path_sans_ext(basename(file_list[i])))
+  file <-  paste0(file_no_ext, ".tif")
   
-  # Guess legend
-  legend <- case_when(x %in% themes_list ~ "continuous", # usually continuous
-                      x %in% includes_list ~ "manual", # usually binary data
-                      x %in% excludes_list ~ "manual", # usually binary data
-                      x %in% weights_list ~ "continuous", # usually continuous
-                      .default = "continuous")
+  #### message
+  print(paste0(file, " (", i, "/", length(file_list), ")"))
   
-  # Guess values
-  values <- case_when(legend == "manual" ~ paste0("0, ", pu_cell_area),
-                      .default = "")
+  #### get source
+  #source <- NULL?
   
-  # Guess colour
-  color <- case_when(legend == "manual" ~ "#00000000, #fb9a99",
-                     .default = "")
+  #Get Type
+  type <- case_when(rname %in% themes_list ~ "theme",
+                    rname %in% includes_list ~ "include",
+                    rname %in% excludes_list ~ "exclude",
+                    rname %in% weights_list ~ "weight")
+        
   
-  # Guess units
-  unit <- case_when(legend == "manual" ~ pu_units,
-                    .default = "")
+    
+  ## TYPE ----------------------------------------------------------------------
+  type <- wtw_meta_row %>% 
+      {if ("Type" %in% colnames(wtw_meta)) pull(., Type) else "theme"} 
+    
+  ## NAME ----------------------------------------------------------------------
+  name <- names(wtw_raster)
+    
+  ## THEME ---------------------------------------------------------------------
+  if (type == "theme") {
+    theme <- gsub("outputs/final/sites/Regional/Themes/", "", rname)
+    theme <- gsub(paste0("/", file), "", theme)
+     } else {
+    theme <- NULL
+  }
   
-  # Get name
-  name <- gsub("_", " ", layer_name)
+  theme <- theme
+    
+    ## LEGEND --------------------------------------------------------------------
+    legend <- if (u_values > 2) "continuous" else "manual"
+    
+    ## VALUES --------------------------------------------------------------------
+    if (identical(u_values, 2) && identical(max_value, 1)) {
+      values <- "0, 1" # IUCN, NSC, KBA, Includes 
+    } else if (identical(u_values, 2)) {
+      values <- paste0("0,", max_value) # ECCC: rare case if only 2 unique values
+    } else if (identical(u_values, 1)) {
+      values <- max_value # covers entire AOI
+    } else {
+      values <- "" # continuous data does not need values
+    }
+    
+    ## COLOR ---------------------------------------------------------------------
+    ## there is no "Color" column in species metadata 
+    color <- case_when(
+      identical(source, "ECCC_CH") && identical(u_values, 2) ~  "#00000000, #756bb1",
+      identical(source, "ECCC_CH") && identical(u_values, 1) ~  "#756bb1", 
+      identical(source, "ECCC_CH") && identical(legend, "continuous")  ~  "Purples",
+      identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "#00000000, #fb9a99",
+      identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "#fb9a99", 
+      identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "Reds",
+      identical(source, "IUCN_AMPH") && identical(u_values, 2) ~  "#00000000, #a6cee3",
+      identical(source, "IUCN_AMPH") && identical(u_values, 1) ~  "#a6cee3",
+      identical(source, "IUCN_BIRD") && identical(u_values, 2) ~  "#00000000, #ff7f00",
+      identical(source, "IUCN_BIRD") && identical(u_values, 1) ~  "#ff7f00",
+      identical(source, "IUCN_MAMM") && identical(u_values, 2) ~  "#00000000, #b15928",
+      identical(source, "IUCN_MAMM") && identical(u_values, 1) ~  "#b15928",
+      identical(source, "IUCN_REPT") && identical(u_values, 2) ~  "#00000000, #b2df8a",
+      identical(source, "IUCN_REPT") && identical(u_values, 1) ~  "#b2df8a",
+      identical(source, "NSC_END") && identical(u_values, 2) ~  "#00000000, #4575b4",
+      identical(source, "NSC_END") && identical(u_values, 1) ~  "#4575b4",
+      identical(source, "NSC_SAR") && identical(u_values, 2) ~  "#00000000, #d73027",
+      identical(source, "NSC_SAR") && identical(u_values, 1) ~  "#d73027",
+      identical(source, "NSC_SPP") && identical(u_values, 2) ~  "#00000000, #e6f598",
+      identical(source, "NSC_SPP") && identical(u_values, 1) ~  "#e6f598",
+      TRUE ~ {if ("Color" %in% colnames(wtw_meta)) pull(wtw_meta_row, Color) else "" }
+    )
+    
   
-  # Set theme goals
-  goal <- case_when(type == "theme" ~ "0.2",
-                    .default = "")
-  
-  provenance <- "regional"
-  order <- ""
-  labels <- ""
-  threshold <- ""
-  visible <- FALSE
-  hidden <- FALSE
-  source <- x
-  id <- ""
-  
-  ## DOWNLOADABLE ------------------------------------------------------------
- # file_no_ext <- paste0(tools::file_path_sans_ext(basename(file_list[i])))
-  downloadable <- "TRUE"  
   
   
-  # add row
-  new_row <- c(type, theme, file, name, legend, values, color, labels, unit, 
-               provenance, order, visible, hidden, goal, id, threshold, 
-               downloadable, source)
+    ## LABELS --------------------------------------------------------------------
+    ## there is no "Label" column in species metadata
+    labels <- case_when(
+      identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(source, "ECCC_CH") && identical(u_values, 1) ~  "Habitat",
+      identical(source, "ECCC_CH") && identical(legend, "continuous") ~  "",
+      identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "Non Range, Range",
+      identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "Range",
+      identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "",
+      identical(substring(source, 1, 4), "IUCN") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(substring(source, 1, 4), "IUCN") && identical(values, 1) ~  "Habitat",
+      identical(substring(source, 1, 3), "NSC") && identical(u_values, 2) ~  "Non Occurrence, Occurrence",
+      identical(substring(source, 1, 3), "NSC") && identical(values, 1) ~  "Occurrence",
+      TRUE ~ {if ("Labels" %in% colnames(wtw_meta)) pull(wtw_meta_row, Labels) else "" }
+    )
+    
+    ## UNITS ---------------------------------------------------------------------
+    ## there is no "Unit" column in species metadata
+    unit <- case_when(
+      (identical(source, "ECCC_CH")) ~ "ha",
+      (identical(source, "ECCC_SAR")) ~  "ha",
+      identical(source, "IUCN_AMPH") ~  "km2",
+      identical(source, "IUCN_BIRD") ~  "km2",
+      identical(source, "IUCN_MAMM") ~  "km2",
+      identical(source, "IUCN_REPT") ~  "km2",
+      identical(source, "NSC_END") ~  "km2",
+      identical(source, "NSC_SAR") ~  "km2",
+      identical(source, "NSC_SPP") ~  "km2",
+      TRUE ~ {if ("Unit" %in% colnames(wtw_meta)) pull(wtw_meta_row, Unit) else "" }
+    )   
+    
+    ## PROVENANCE ----------------------------------------------------------------
+    provenance <- "regional"
+    
+    ## ORDER ---------------------------------------------------------------------
+    order <- "" # manual assignment in csv
+    
+    ## VISIBLE -------------------------------------------------------------------
+    visible <- if (startsWith(file_no_ext, "I_NAT")) "TRUE" else "FALSE" 
+    
+    ## HIDDEN --------------------------------------------------------------------
+    hidden <- "FALSE"
+    
+    ## DOWNLOADABLE ------------------------------------------------------------
+    downloadable <- if (startsWith(file_no_ext, "T_NAT_NSC")) "FALSE" else "TRUE"     
+    
+    ## GOAL ----------------------------------------------------------------------
+    ## only set goals for themes
+    if (identical(type, "theme")) {
+      ## only set Rodrigues goals on species data
+      species_sources <- c(
+        "ECCC_CH", "ECCC_SAR", 
+        "IUCN_AMPH", "IUCN_BIRD", "IUCN_MAMM", "IUCN_REPT",
+        "NSC_END", "NSC_SAR", "NSC_SPP"
+      )
+      if (source %in% species_sources) {
+        goal <- wtw_meta_row$Goal # species
+      } else {
+        goal <- "0.2" # forest, wetland, rivers, lakes, shoreline
+      }
+    } else {
+      goal <- "" # weights, includes, excludes
+    }    
+    
+    ## Build new national row ----
+    new_row <- c(
+      type, theme, file, name, legend, 
+      values, color, labels, unit, provenance, 
+      order, visible, hidden, downloadable, goal
+    )
+    
+  } else {
+    
+    ## Build new regional row ----
+    new_row <- c(
+      "", "", file, "", "", 
+      "", "", "", "", "regional", 
+      "", "", "", "" , "0.2"
+    )
+  }
   
+  ## Append to DF
   df <- structure(rbind(df, new_row), .Names = names(df))
-}
+  
+} 
 
+# Write to csv ----
+write.csv(
+  df,
+  file.path(meta_path, paste0(META_NAME, "-metadata-NEEDS-QC.csv")),
+  row.names = FALSE
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 
+# 
+# 
+# # Add Regional specific columns
+# df$unique_id <- as.character()
+# df$threshold <- as.character()
+# df$source <- as.character()
+# 
+# for(x in c(themes_list, includes_list, excludes_list, weights_list)){
+#   
+#   #x <- c(themes_list, includes_list, excludes_list, weights_list)[1]
+#   
+#   # Get Type
+#   type <- case_when(x %in% themes_list ~ "theme",
+#                     x %in% includes_list ~ "include",
+#                     x %in% excludes_list ~ "exclude",
+#                     x %in% weights_list ~ "weight")
+#   
+#   # Get Theme
+#   theme <- case_when(x %in% themes_list ~ basename(get_parent_dir(x)),
+#                      .default = "")
+#   
+#   layer_name <- tools::file_path_sans_ext(basename(x))
+#   
+#   # Get final file name
+#   file <- case_when(x %in% themes_list ~ paste0("T_", layer_name, ".tif"),
+#                     x %in% includes_list ~ paste0("I_", layer_name, ".tif"),
+#                     x %in% excludes_list ~ paste0("E_", layer_name, ".tif"),
+#                     x %in% weights_list ~ paste0("W_", layer_name, ".tif"))
+#   
+#   # Guess legend
+#   legend <- case_when(x %in% themes_list ~ "continuous", # usually continuous
+#                       x %in% includes_list ~ "manual", # usually binary data
+#                       x %in% excludes_list ~ "manual", # usually binary data
+#                       x %in% weights_list ~ "continuous", # usually continuous
+#                       .default = "continuous")
+#   
+#   # Guess values
+#   values <- case_when(legend == "manual" ~ paste0("0, ", pu_cell_area),
+#                       .default = "")
+#   
+#   # Guess colour
+#   color <- case_when(legend == "manual" ~ "#00000000, #fb9a99",
+#                      .default = "")
+#   
+#   # Guess units
+#   unit <- case_when(legend == "manual" ~ pu_units,
+#                     .default = "")
+#   
+#   # Get name
+#   name <- gsub("_", " ", layer_name)
+#   
+#   # Set theme goals
+#   goal <- case_when(type == "theme" ~ "0.2",
+#                     .default = "")
+#   
+#   provenance <- "regional"
+#   order <- ""
+#   labels <- ""
+#   threshold <- ""
+#   visible <- FALSE
+#   hidden <- FALSE
+#   source <- x
+#   id <- ""
+#   
+#   ## DOWNLOADABLE ------------------------------------------------------------
+#  # file_no_ext <- paste0(tools::file_path_sans_ext(basename(file_list[i])))
+#   downloadable <- "TRUE"  
+#   
+#   
+#   # add row
+#   new_row <- c(type, theme, file, name, legend, values, color, labels, unit, 
+#                provenance, order, visible, hidden, goal, id, threshold, 
+#                downloadable, source)
+#   
+#   df <- structure(rbind(df, new_row), .Names = names(df))
+# }
+# 
 
 
 
