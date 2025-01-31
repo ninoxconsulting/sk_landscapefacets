@@ -17,16 +17,12 @@ outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
 #dim(srast)
 #ncell(srast)
 
-
-
-
 # read in the wilderness layer / human footprint layer
 
 w <- rast(file.path("outputs", "final", "sk_wilderness_2023.tif"))
 names(w)<- "humanfootprint"
-w  <- aggregate(w , fact=10, fun="mean")
+w  <- aggregate(w , fact=10, fun="max")
 writeRaster(w, file.path(outputs, "humanfootprint.tif"), overwrite=TRUE)
-
 
 
 
@@ -50,13 +46,11 @@ names(npp)<- "npp"
 npp <- project(npp,srast)
 writeRaster(npp, file.path(outputs, "npp.tif"), overwrite = TRUE)
 
-
 # resistence / connectivity 
 res <- rast(file.path("inputs", "pither_resistance.tif"))
 names(res) = "resistance"
 res <- aggregate(res , fact=10, fun="mean")
 writeRaster(res, file.path(outputs, "resistance_c.tif"), overwrite = TRUE)
-
 
 # microrefugia 
 mic <- rast(file.path("inputs", "microrefugia.tif"))
@@ -67,18 +61,20 @@ writeRaster(mic, file.path(outputs, "microrefugia.tif"), overwrite = TRUE)
 # macrorefugia
 mac <- rast(file.path("inputs", "2080s_macrorefugia.tif"))
 names(mac) = "macrorefugia"
-mac <- aggregate(res , fact=10, fun="mean")
+mac <- aggregate(mac , fact=10, fun="mean")
 writeRaster(mac, file.path(outputs, "macrorefugia.tif"), overwrite = TRUE)
-
-
-
-
 
 #protected _lands 
 pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
 pro <- rasterize(vect(pro), srast)
 names(pro) = "protected_lands"
+pro[is.na(pro)] <- 0 
+pro <- mask(pro,srast)
 writeRaster(pro, file.path(outputs, "protected_lands.tif"), overwrite = TRUE)
+
+
+
+
 
 
 
@@ -96,10 +92,10 @@ sp <- unique(rb$SCI_NAME)
 
 #sp[62]
 
-purrr::map(sp, function(x){
+xx <- purrr::map(sp, function(x){
   print(x)
   
- # x <- sp[62]
+ # x <- sp[63]
   rbb <- rb |> filter(SCI_NAME == x)
   comm_name <- gsub(" ", "_", unique(rbb$ENG_NAME))
   comm_name <- gsub("/", "", comm_name)
@@ -110,13 +106,13 @@ purrr::map(sp, function(x){
   sciname <- gsub("/", "", sciname)
   sciname <- gsub("-", "", sciname)
   
-  rbb <- rasterize(rbb, srast, field = "SCI_NAME")
+  rbb <- rasterize(rbb, srast)
   
   if(all(values(is.na(rbb)))){
-    
     cli::cli_alert("All values are NA, skipping sp")
   } else {
-
+    
+  rbb[is.na(rbb)] <- 0 
   names(rbb) = paste0("bc_listed_", comm_name )
   writeRaster(rbb, file.path(outputs, "species", paste0("bc_listed_", sciname, ".tif")), overwrite = TRUE)
   }
@@ -140,6 +136,8 @@ purrr::map(sp, function(x){
   sciname <- gsub(" ", "_", unique(rbb$SCIENTIFIC_NAME))
   rbb <- rasterize(rbb, srast)
   names(rbb) = paste0("fed_listed_", comm_name )
+  rbb[is.na(rbb)] <- 0 
+  rbb <- mask(rbb,srast)
   writeRaster(rbb, file.path(outputs, "species", paste0("fed_listed_", sciname, ".tif")), overwrite = TRUE)
   
 })
@@ -173,7 +171,16 @@ ib <- st_read(file.path("outputs", "final", "sk_important_bird_areas.gpkg"))
 ib <- st_transform(ib, crs=st_crs(srast))
 ib <- rasterize(ib, srast)
 names(ib) = "iba"
-writeRaster(ib, file.path(outputs, "iba.tif"))
+ib[is.na(ib)] <- 0 
+ib <- mask(ib,srast)
+
+writeRaster(ib, file.path(outputs, "iba.tif"), overwrite = TRUE)
+
+
+#stack ib + srast
+#xx <- stack(ib, srast)
+
+
 
 
 
@@ -185,24 +192,27 @@ writeRaster(ib, file.path(outputs, "iba.tif"))
 tap <- rast( file.path("inputs", "TAP_intact_watershed.tif"))
 names(tap) = "tap_intact_watershed"
 tap <- aggregate(tap , fact=10, fun="mean")
+tap <- project(tap, srast)
 writeRaster(tap, file.path(outputs, "TAP_intact_watershed.tif"), overwrite = T)
 
 # big trees 
 bt <- rast(file.path("inputs", "TAP_bigtrees_raw.tif"))
 names(bt) = "tap_bigtrees"
-bt<- aggregate(bt , fact=10, fun="mean")
+bt <- aggregate(bt , fact=10, fun="mean")
+bt <- project(bt, srast)
+crs(bt) <- crs(srast)
 writeRaster(bt, file.path(outputs, "TAP_bigtrees.tif"), overwrite = T)
+
+#bt + srast
 
 
 # ancient forests
 bt <- rast(file.path("inputs", "TAP_ancient_forest_raw.tif"))
 names(bt) = "tap_ancient_forest"
+bt <- aggregate(bt , fact=10, fun="mean")
+#bt <- project(bt, srast)
+crs(bt) <- crs(srast)
 writeRaster(bt, file.path(outputs, "TAP_ancient_forest.tif"), overwrite = T)
-
-
-
-
-
 
 
 
