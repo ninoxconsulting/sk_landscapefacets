@@ -87,7 +87,13 @@ rr1[rr1 == 0] <- 1
 
 terra::writeRaster(rr1, file.path(project_folder, "PU","PU.tif"), datatype = "INT1U", overwrite = TRUE)
 
-#
+
+
+
+
+
+
+
 #===============================================================================
 
 project_name <- "nb" # <--- SET PROJECT NAME HERE FOR OUT FILE
@@ -98,6 +104,11 @@ weights_dir <- fs::path(project_folder,"Regional","Weights") # <--- Weights data
 
 pu_units <- "m2" # <--- SET DESIRED UNITS
 pu_cell_area <- 1000 # <--- SET PLANNING UNIT AREA IN units
+
+
+
+
+
 
 
 # Build vectors of data paths --------------------------------------------------
@@ -133,7 +144,7 @@ df <- init_metadata()
 ## Loop over each tiff file:
 for (i in seq_along(file_list)) {
   
-  #i <- 14
+  #i <- 4
   
   rname <- file_list[i]
   
@@ -203,11 +214,13 @@ for (i in seq_along(file_list)) {
       # themes - fed species 
       identical(theme, "species_at_risk") && identical(u_values, 2) ~ "#00000000, #756bb1",
       # themes - bc species
-      
+      identical(theme, "critical_habitat_BC") && identical(u_values, 2) ~ "#00000000, #756bb1",
       
       # themes - terrestrial 
       identical(file_no_ext, "iba") && identical(u_values, 2) ~ "#00000000, #7fbc41",
-      identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous")  ~  "Purples",
+      identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous")  ~  "Greens",
+      identical(file_no_ext, "TAP_bigtrees") && identical(legend, "continuous")  ~  "Greens",
+      identical(file_no_ext, "TAP_ancient_forest") && identical(legend, "continuous")  ~  "Greens",
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "Purples",
       identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "Purples",
       
@@ -252,8 +265,11 @@ for (i in seq_along(file_list)) {
       identical(type, "include") && identical(u_values, 2) ~ "not included, included",
       identical(type, "exclude") && identical(u_values, 2) ~ "low footprint, human footrint",
       identical(theme, "species_at_risk") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "critical_habitat_BC") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       identical(file_no_ext, "iba") && identical(u_values, 2) ~ "Non Habitat, Habitat",
       identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous") ~  "",
+      identical(file_no_ext, "TAP_ancient_forest") && identical(legend, "continuous") ~  "",
+      identical(file_no_ext, "TAP_bigtrees") && identical(legend, "continuous") ~  "",
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "",
       #identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "",
@@ -279,12 +295,15 @@ for (i in seq_along(file_list)) {
       type == "include" ~ "km2",
       type == "exclude" ~ "km2",
       theme == "species_at_risk" ~ "km2",
+      theme == "critical_habitat_BC" ~ "km2",
+      theme == "aquatic" ~ "km2",
       file_no_ext == "iba" ~ "km2",
-      file_no_ext ==  "TAP_intact_watershed" ~ "km2",
       file_no_ext %in%  c("ter_diversity_c","ter_rarity_c") ~ "km2",
+      file_no_ext %in%  c("TAP_intact_watershed", "TAP_bigtrees", "TAP_ancient_forest") ~ "km2",
       file_no_ext %in%  c("macrorefugia", "microrefugia", "resistence") ~ "index",
       file_no_ext == "npp" ~ "kgC/m2/yr", # check this!
-      file_no_ext == "gdd" ~ "kgC/m2/yr", # check this!
+      file_no_ext == "gdd_c" ~ "kgC/m2/yr", # check this!
+      file_no_ext == "ndvi_c" ~ "kgC/m2/yr", # check this!
       # (identical(source, "ECCC_CH")) ~ "ha",
       # (identical(source, "ECCC_SAR")) ~  "ha",
       # identical(source, "IUCN_AMPH") ~  "km2",
@@ -519,7 +538,7 @@ dataset <- wheretowork::new_dataset_from_auto(
 themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
   # start test lin
-  #i <- 1
+  #i <- 3
   # end test line 
   
   #### store temp variables associated with group (i)
