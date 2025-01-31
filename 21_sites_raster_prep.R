@@ -95,7 +95,7 @@ sp <- unique(rb$SCI_NAME)
 xx <- purrr::map(sp, function(x){
   print(x)
   
- # x <- sp[63]
+  #x <- sp[63]
   rbb <- rb |> filter(SCI_NAME == x)
   comm_name <- gsub(" ", "_", unique(rbb$ENG_NAME))
   comm_name <- gsub("/", "", comm_name)
@@ -114,6 +114,7 @@ xx <- purrr::map(sp, function(x){
     
   rbb[is.na(rbb)] <- 0 
   names(rbb) = paste0("bc_listed_", comm_name )
+  rbb <- mask(rbb,srast)
   writeRaster(rbb, file.path(outputs, "species", paste0("bc_listed_", sciname, ".tif")), overwrite = TRUE)
   }
 })
@@ -199,7 +200,7 @@ writeRaster(tap, file.path(outputs, "TAP_intact_watershed.tif"), overwrite = T)
 bt <- rast(file.path("inputs", "TAP_bigtrees_raw.tif"))
 names(bt) = "tap_bigtrees"
 bt <- aggregate(bt , fact=10, fun="mean")
-bt <- project(bt, srast)
+#bt <- project(bt, srast)
 crs(bt) <- crs(srast)
 writeRaster(bt, file.path(outputs, "TAP_bigtrees.tif"), overwrite = T)
 
@@ -306,6 +307,7 @@ writeRaster(div, file.path(outputs, "aq_lakes_diversity_class.tif"), overwrite =
 # wetland density 
 wet <-  rast(file.path("inputs", "sk_wetland_density_1km.tif"))
 names(wet) = "aq_wetland_density"
+
 writeRaster(wet, file.path(outputs, "aq_wetland_density.tif"))
 
 
