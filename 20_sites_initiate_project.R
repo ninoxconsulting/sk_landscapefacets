@@ -87,31 +87,6 @@ rr1[rr1 == 0] <- 1
 
 terra::writeRaster(rr1, file.path(project_folder, "PU","PU.tif"), datatype = "INT1U", overwrite = TRUE)
 
-
-
-
-# 3.0 Set up metadata ------------------------------------------------------------
-
-# Authors: Marc Edwards
-#
-# Date: April 24th, 2023
-#
-# Description: Initialize the meta data table using all tifs and .gdb feature 
-# classes in the root folder. Attempts to guess the metadata values where
-# possible. User needs to QC and complete the metadata table manually before
-# proceeding.
-#
-# Inputs:  1. project name for output csv
-#          2. file paths to themes, includes, excludes and weights data
-#             all input data should be placed in the correct folder and be in
-#             .tif format for rasters, or as feature classes within a .gdb for
-#             vectors. For theme data, all data for a given theme should be in
-#             a subfolder where the subfolder name is the Theme name (e.g. 
-#             Regional/Themes/Forest)
-#          3. The areal units and area value for planning units 
-#             (e.g. for a 10 km x 10 km grid we would use 'km2' and '10')
-#
-# Outputs: 1. Meta data csv
 #
 #===============================================================================
 
@@ -158,7 +133,7 @@ df <- init_metadata()
 ## Loop over each tiff file:
 for (i in seq_along(file_list)) {
   
-  #i <- 15
+  #i <- 14
   
   rname <- file_list[i]
   
@@ -183,19 +158,12 @@ for (i in seq_along(file_list)) {
   #### message
   print(paste0(file, " (", i, "/", length(file_list), ")"))
   
-  #### get source
-  #source <- NULL?
-  
   #Get Type
   type <- case_when(rname %in% themes_list ~ "theme",
                     rname %in% includes_list ~ "include",
                     rname %in% excludes_list ~ "exclude",
                     rname %in% weights_list ~ "weight")
         
-  ## TYPE ----------------------------------------------------------------------
-  # type <- wtw_meta_row %>% 
-  #     {if ("Type" %in% colnames(wtw_meta)) pull(., Type) else "theme"} 
-  #   
   ## NAME ----------------------------------------------------------------------
   name <- names(wtw_raster)
     
@@ -211,8 +179,6 @@ for (i in seq_along(file_list)) {
     
   ## LEGEND --------------------------------------------------------------------
   legend <- if (u_values > 2) "continuous" else "manual"
-    
-    
   
   ## VALUES --------------------------------------------------------------------
     if (identical(u_values, 2) && identical(max_value, 1)) {
@@ -228,18 +194,31 @@ for (i in seq_along(file_list)) {
     ## COLOR ---------------------------------------------------------------------
     ## there is no "Color" column in species metadata 
     color <- case_when(
-      identical(theme, "aquatic") && identical(legend, "continuous")  ~  "Purples",
-      identical(type, "include") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      # includes
+      identical(type, "include") && identical(u_values, 2) ~ "#00000000, #7fbc41",
+      #excludes 
       identical(type, "exclude") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      #themes - aquatic
+      identical(theme, "aquatic") && identical(legend, "continuous")  ~  "Blues",   # theme
+      # themes - fed species 
       identical(theme, "species_at_risk") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(file_no_ext, "iba") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      # themes - bc species
+      
+      
+      # themes - terrestrial 
+      identical(file_no_ext, "iba") && identical(u_values, 2) ~ "#00000000, #7fbc41",
       identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous")  ~  "Purples",
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "Purples",
       identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "Purples",
-      identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "Purples",
       
-      identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "Purples",
-      
+      # weight 
+      identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "magma",
+      identical(file_no_ext, "microrefugia") && identical(legend, "continuous")  ~  "magma",
+      identical(file_no_ext, "resistance_c") && identical(legend, "continuous")  ~  "magma",
+      identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "YlOrBr",
+      identical(file_no_ext, "gdd_c") && identical(legend, "continuous")  ~  "YlOrBr",
+      identical(file_no_ext, "ndvi_c") && identical(legend, "continuous")  ~  "YlOrBr",
+       
       # identical(theme, "ECCC_CH") && identical(u_values, 2) ~  "#00000000, #756bb1",
       # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "#756bb1", 
       # identical(source, "ECCC_CH") && identical(legend, "continuous")  ~  "Purples",
@@ -277,9 +256,10 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous") ~  "",
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "",
-      identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "",
-      identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "",
-      
+      #identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "",
+      #identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "",
+      #identical(file_no_ext, "gdd") && identical(legend, "continuous")  ~  "",
+      identical(type, "weight") && identical(legend, "continuous")  ~  "",
       # identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "Habitat",
       # identical(source, "ECCC_CH") && identical(legend, "continuous") ~  "",
@@ -301,8 +281,10 @@ for (i in seq_along(file_list)) {
       theme == "species_at_risk" ~ "km2",
       file_no_ext == "iba" ~ "km2",
       file_no_ext ==  "TAP_intact_watershed" ~ "km2",
-      file_no_ext %in%  c("ter_diversity_c","ter_rarity_c", "macrorefugia") ~ "km2",
+      file_no_ext %in%  c("ter_diversity_c","ter_rarity_c") ~ "km2",
+      file_no_ext %in%  c("macrorefugia", "microrefugia", "resistence") ~ "index",
       file_no_ext == "npp" ~ "kgC/m2/yr", # check this!
+      file_no_ext == "gdd" ~ "kgC/m2/yr", # check this!
       # (identical(source, "ECCC_CH")) ~ "ha",
       # (identical(source, "ECCC_SAR")) ~  "ha",
       # identical(source, "IUCN_AMPH") ~  "km2",
@@ -370,120 +352,12 @@ for (i in seq_along(file_list)) {
   
 } 
 
-# populate unique ID
-#df$unique_id <- paste0("ID_", seq(1:nrow(df)))
-
 # Write to csv ----
 write.csv(
   df,
   fs::path(project_folder, "WTW", "metadata", "_metadata.csv"),
   row.names = FALSE
 )
-
-
-
-
-
-
-
-# 
-# 
-# 
-# # Add Regional specific columns
-# df$unique_id <- as.character()
-# df$threshold <- as.character()
-# df$source <- as.character()
-# 
-# for(x in c(themes_list, includes_list, excludes_list, weights_list)){
-#   
-#   #x <- c(themes_list, includes_list, excludes_list, weights_list)[1]
-#   
-#   # Get Type
-#   type <- case_when(x %in% themes_list ~ "theme",
-#                     x %in% includes_list ~ "include",
-#                     x %in% excludes_list ~ "exclude",
-#                     x %in% weights_list ~ "weight")
-#   
-#   # Get Theme
-#   theme <- case_when(x %in% themes_list ~ basename(get_parent_dir(x)),
-#                      .default = "")
-#   
-#   layer_name <- tools::file_path_sans_ext(basename(x))
-#   
-#   # Get final file name
-#   file <- case_when(x %in% themes_list ~ paste0("T_", layer_name, ".tif"),
-#                     x %in% includes_list ~ paste0("I_", layer_name, ".tif"),
-#                     x %in% excludes_list ~ paste0("E_", layer_name, ".tif"),
-#                     x %in% weights_list ~ paste0("W_", layer_name, ".tif"))
-#   
-#   # Guess legend
-#   legend <- case_when(x %in% themes_list ~ "continuous", # usually continuous
-#                       x %in% includes_list ~ "manual", # usually binary data
-#                       x %in% excludes_list ~ "manual", # usually binary data
-#                       x %in% weights_list ~ "continuous", # usually continuous
-#                       .default = "continuous")
-#   
-#   # Guess values
-#   values <- case_when(legend == "manual" ~ paste0("0, ", pu_cell_area),
-#                       .default = "")
-#   
-#   # Guess colour
-#   color <- case_when(legend == "manual" ~ "#00000000, #fb9a99",
-#                      .default = "")
-#   
-#   # Guess units
-#   unit <- case_when(legend == "manual" ~ pu_units,
-#                     .default = "")
-#   
-#   # Get name
-#   name <- gsub("_", " ", layer_name)
-#   
-#   # Set theme goals
-#   goal <- case_when(type == "theme" ~ "0.2",
-#                     .default = "")
-#   
-#   provenance <- "regional"
-#   order <- ""
-#   labels <- ""
-#   threshold <- ""
-#   visible <- FALSE
-#   hidden <- FALSE
-#   source <- x
-#   id <- ""
-#   
-#   ## DOWNLOADABLE ------------------------------------------------------------
-#  # file_no_ext <- paste0(tools::file_path_sans_ext(basename(file_list[i])))
-#   downloadable <- "TRUE"  
-#   
-#   
-#   # add row
-#   new_row <- c(type, theme, file, name, legend, values, color, labels, unit, 
-#                provenance, order, visible, hidden, goal, id, threshold, 
-#                downloadable, source)
-#   
-#   df <- structure(rbind(df, new_row), .Names = names(df))
-# }
-# 
-
-
-# 
-# 
-# 
-# # populate continuous colors, same color for each theme
-# themes <- unique(df$Theme)
-# theme_colours <- sample(c("Greens", "Reds", "viridis", "YlOrBr", "Blues", "mako", "PuBuGn", "rocket"), length(themes), replace = TRUE)
-# for(i in 1:nrow(df)){
-#   if(df$Legend[i] == "continuous"){
-#     df$Color[i] <- theme_colours[which(themes == df$Theme[i])]
-#   }
-# }
-# 
-# # populate unique ID
-# df$unique_id <- paste0("ID_", seq(1:nrow(df)))
-# 
-# # save
-# write.csv(df, fs::path(project_folder, "WTW", "metadata", "_metadata.csv"), row.names = FALSE)
-
 
 ## review the metadata table and update as needed. 
 
@@ -492,38 +366,27 @@ write.csv(
 # 2.0 Set up -------------------------------------------------------------------
 
 ## Set path where a QC'd metadata.csv version is located
-#PRJ_PATH <- "C:/Data/PRZ/WTW/CONSTECH/SW_ONTARIO_V3" # <--- CHANGE TO YOUR LOCAL WTW PROJECT FOLDER
-#META_NAME <- "_metadata.csv" # <--- CHANGE TO NAME OF YOUR metadata.csv. NEED TO ADD ".csv" extension
 meta_path <- fs::path(project_folder, "WTW", "metadata")
 
-PRJ_PATH  <- fs::path("outputs", "final", "sites") # <--- CHANGE TO YOUR ROOT PROJECT FOLDER
-META_NAME <- "_metadata.csv" # <--- CHANGE TO NAME OF YOUR metadata.csv. NEED TO ADD ".csv" extension
+PRJ_PATH  <- fs::path("outputs", "final", "sites") 
+META_NAME <- "_metadata.csv" 
 
-
-# ## Set output variables for WTW file names
-# ### What regional operating or business unit?
-# OU <- "IT"  # <--- REG_BC, REG_AB, REG SK, REG MB, REG ON, REG QC, REG AT, IT, CPP, SOS, MD etc.
-# ### Planning unit scale
-# SCALE <- "1km2" # <--- Set scale in ha or km2
-# ### Unique name that describes the WTW project
-# NAME <- "South Western Ontario Example" # <--- give a unique name
-# 
-# PRJ_NAME <- paste0(OU, ": ", NAME, ", ", SCALE)
-# PRJ_FILE_NAME <- gsub(" ", "_", gsub("[[:punct:]]", "", PRJ_NAME))
-
-
-AUTHOR <- "Gen Perkins" # <----- your name
-EMAIL <- "gperkins@ninoxconsulting.ca" # <----- your email
-GROUPS <- "private" # <---- options: public or private  
+AUTHOR <- "Gen Perkins" 
+EMAIL <- "gperkins@ninoxconsulting.ca" 
+GROUPS <- "private" 
 
 meta_path <- file.path(PRJ_PATH, paste0("WTW/metadata/", META_NAME)) 
 tiffs_path <- file.path(PRJ_PATH,"Tiffs")
 pu_path <- file.path(PRJ_PATH,"PU/PU.tif")
 
-
 # shift files to tiffs folder - currently manual transfer
-
-
+list.files(tiffs_path)
+allfiles<- list.files(fs::path(project_folder, "Regional"), recursive = TRUE)
+# copy all files to tiff folder
+for (i in 1:length(allfiles)){
+  #i <- 1
+  file.copy(fs::path(project_folder, "Regional", allfiles[i]), fs::path(tiffs_path , basename(allfiles[i])))
+}
 
 
 # 3.0 Import meta data and PUs -------------------------------------------------
@@ -875,7 +738,6 @@ if (!is.null(exclude_data)) {
   wtw_objects <- append(wtw_objects, excludes) # Themes, Weights Includes and Excludes
 } 
 
-
 PRJ_NAME = "skeena"
 PRJ_PATH = fs::path("outputs", "final", "sites")
 PRJ_FILE_NAME = "skeena"
@@ -895,13 +757,3 @@ wheretowork::write_project(
   author_email = EMAIL 
 )
 
-
-# 7.0 Clear R environment ------------------------------------------------------ 
-
-## End timer
-end_time <- Sys.time()
-end_time - start_time
-
-## Comment these lines below to keep all the objects in the R session
-rm(list=ls())
-gc()
