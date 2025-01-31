@@ -22,89 +22,60 @@
 #
 #===============================================================================
 
-
 # See https://github.com/NCC-CNC/wtw-data-prep for an explanation of the
 # various workflows
-
-# 1.0 Install and load required packages ---------------------------------------
-# 
-# ## Package names
-# packages <- c(
-#   "dplyr", 
-#   "gdalUtilities",
-#   "prioritizr",
-#   "sf",
-#   "stringr", 
-#   "terra", 
-#   "tibble", 
-#   "readr", 
-#   "readxl"
-# )
-# 
-# ## Install packages not yet installed
-# installed_packages <- packages %in% rownames(installed.packages())
-# if (any(installed_packages == FALSE)) {
-#   install.packages(packages[!installed_packages])
-# }
 
 ## load packages
 library(sf)
 library(terra)
 library(dplyr)
+library(readr)
+library(tools)
+source(fs::path("outputs/final/sites/scripts", "extra_sites_functions.r"))
+
+# ## Install wheretowork if not yet installed or is not updated to current version (HARD CODED FOR NOW)
+# if (!require(wheretowork) || packageVersion("wheretowork") != "1.2.3") { 
+#   if (!require(remotes)) install.packages("remotes")
+#   remotes::install_github("NCC-CNC/wheretowork", ref = "master")  
+# }
+
+# If WTW fails to install, follow these steps ----
+## 1. Create Github account
+## 2. Generate a personal access token (classic) PAT
+## 3. Create a .Renviron file in your Documents directory
+## 4. Paste your PAT in your .Renviron file
+
+# If rcbc fails to install, be sure to have Rtools44 installed
+## https://cran.r-project.org/bin/windows/Rtools/
+
+library(wheretowork)
 
 
 # 2.0 Set up -------------------------------------------------------------------
 
 # Set project parameters
 project_folder <- fs::path("outputs", "final", "sites") # <--- CHANGE TO YOUR ROOT PROJECT FOLDER
-PROJECT_TYPE <- "REGIONAL" # NATIONAL or REGIONAL or BOTH
+PROJECT_TYPE <- "REGIONAL" 
 
 
 # 3.0 Processing ----------------------------------------------------------------
 # create folder structure
-#dir.create(fs::path(project_folder, "PU"), recursive = TRUE)
+
+dir.create(fs::path(project_folder, "PU"), recursive = TRUE)
 dir.create(file.path(project_folder, "scripts"), recursive = TRUE)
 dir.create(file.path(project_folder, "Tiffs"), recursive = TRUE)
 dir.create(file.path(project_folder, "WTW/metadata"), recursive = TRUE)
 
 if(PROJECT_TYPE == "REGIONAL"){
   dir.create(file.path(project_folder, "Regional"), recursive = TRUE)
-
 }
 
-# Skeena note - manually copied aoi over to PU folder. 
+# 2.0 Set up AOI -------------------------------------------------------------------
 
-
-
-
-# Step 2: Convert vector to grid  
-
-# Description: Generates vector and raster 1km PU's from a aoi shapefile. 
-#              Outputs take the extent of the input shapefile aoi.
-#
-# Inputs:  1. NAT_1KM data
-#          2. Input shapefile aoi
-#          3. Output folder
-#
-# Outputs: 1. 1km vector grid with NCCID and PUID 
-#          2. 1km raster grid (values are all 1)
-#          3. 1km raster grid (values are all 0)
-#
-
-
-
-
-#
-# Skeena Note: note as we already have a raster and aoi gpkg generated we will use these. 
-#
-
-# 2.0 Set up -------------------------------------------------------------------
 final_data_dir <- fs::path("outputs","final")
-
 rr <- rast(fs::path(final_data_dir, "sk_rast_template.tif"))
 rr<- aggregate(rr, fact = 10)
 names(rr) <- "template"
-
 
 # Convert all cell values to 0
 rr[rr > 0] <- 0
@@ -114,17 +85,12 @@ writeRaster(rr, file.path(project_folder, "PU", "PU0.tif"), datatype = "INT1U", 
 rr1 <- rr
 rr1[rr1 == 0] <- 1
 
-# save
 terra::writeRaster(rr1, file.path(project_folder, "PU","PU.tif"), datatype = "INT1U", overwrite = TRUE)
 
-## potentially need to add a grid vector? 
 
 
 
-
-
-
-# Step 3: Create a metatable 
+# 3.0 Set up metadata ------------------------------------------------------------
 
 # Authors: Marc Edwards
 #
@@ -148,16 +114,6 @@ terra::writeRaster(rr1, file.path(project_folder, "PU","PU.tif"), datatype = "IN
 # Outputs: 1. Meta data csv
 #
 #===============================================================================
-
-
-
-# ONCE INITIALIZED, MANUALLY COMPLETE THE METADATA TABLE
-
-library(sf)
-library(dplyr)
-library(readr)
-library(tools)
-source(fs::path("outputs/final/sites/scripts", "extra_sites_functions.r"))
 
 project_name <- "nb" # <--- SET PROJECT NAME HERE FOR OUT FILE
 themes_dir <- fs::path(project_folder, "Regional", "Themes" )# <--- Themes data folder
@@ -189,21 +145,20 @@ includes_list <- get_all_tifs_gdbs(includes_dir)
 excludes_list <- get_all_tifs_gdbs(excludes_dir)
 weights_list <- get_all_tifs_gdbs(weights_dir)
 
-# Fill table -------------------------------------------------------------------
 
+
+# Fill table -------------------------------------------------------------------
 
 file_list <- c(themes_list, includes_list, excludes_list, weights_list)
 
 ## Build empty data.frame (template for metadata.csv) ----
 df <- init_metadata()
 
-
-
 # 5.0 Populate metadata --------------------------------------------------------
 ## Loop over each tiff file:
 for (i in seq_along(file_list)) {
   
-  i <- 5
+  #i <- 15
   
   rname <- file_list[i]
   
@@ -216,6 +171,7 @@ for (i in seq_along(file_list)) {
     wtw_raster_df <- terra::as.data.frame(wtw_raster, na.rm=TRUE)
     ## number of unique value
     u_values <- nrow(unique(wtw_raster_df)) %>% as.numeric()
+    
     ## max raster value
     max_value <- max(wtw_raster_df) %>% as.numeric() # <- CAN NOT GET MAX ON CATEGORICAL DATA
   }
@@ -248,15 +204,17 @@ for (i in seq_along(file_list)) {
     theme <- gsub("outputs/final/sites/Regional/Themes/", "", rname)
     theme <- gsub(paste0("/", file), "", theme)
      } else {
-    theme <- NULL
+    theme <- ""
   }
   
   theme <- theme
     
-    ## LEGEND --------------------------------------------------------------------
-    legend <- if (u_values > 2) "continuous" else "manual"
+  ## LEGEND --------------------------------------------------------------------
+  legend <- if (u_values > 2) "continuous" else "manual"
     
-    ## VALUES --------------------------------------------------------------------
+    
+  
+  ## VALUES --------------------------------------------------------------------
     if (identical(u_values, 2) && identical(max_value, 1)) {
       values <- "0, 1" # IUCN, NSC, KBA, Includes 
     } else if (identical(u_values, 2)) {
@@ -270,27 +228,39 @@ for (i in seq_along(file_list)) {
     ## COLOR ---------------------------------------------------------------------
     ## there is no "Color" column in species metadata 
     color <- case_when(
-      identical(source, "ECCC_CH") && identical(u_values, 2) ~  "#00000000, #756bb1",
-      identical(source, "ECCC_CH") && identical(u_values, 1) ~  "#756bb1", 
-      identical(source, "ECCC_CH") && identical(legend, "continuous")  ~  "Purples",
-      identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "#00000000, #fb9a99",
-      identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "#fb9a99", 
-      identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "Reds",
-      identical(source, "IUCN_AMPH") && identical(u_values, 2) ~  "#00000000, #a6cee3",
-      identical(source, "IUCN_AMPH") && identical(u_values, 1) ~  "#a6cee3",
-      identical(source, "IUCN_BIRD") && identical(u_values, 2) ~  "#00000000, #ff7f00",
-      identical(source, "IUCN_BIRD") && identical(u_values, 1) ~  "#ff7f00",
-      identical(source, "IUCN_MAMM") && identical(u_values, 2) ~  "#00000000, #b15928",
-      identical(source, "IUCN_MAMM") && identical(u_values, 1) ~  "#b15928",
-      identical(source, "IUCN_REPT") && identical(u_values, 2) ~  "#00000000, #b2df8a",
-      identical(source, "IUCN_REPT") && identical(u_values, 1) ~  "#b2df8a",
-      identical(source, "NSC_END") && identical(u_values, 2) ~  "#00000000, #4575b4",
-      identical(source, "NSC_END") && identical(u_values, 1) ~  "#4575b4",
-      identical(source, "NSC_SAR") && identical(u_values, 2) ~  "#00000000, #d73027",
-      identical(source, "NSC_SAR") && identical(u_values, 1) ~  "#d73027",
-      identical(source, "NSC_SPP") && identical(u_values, 2) ~  "#00000000, #e6f598",
-      identical(source, "NSC_SPP") && identical(u_values, 1) ~  "#e6f598",
-      TRUE ~ {if ("Color" %in% colnames(wtw_meta)) pull(wtw_meta_row, Color) else "" }
+      identical(theme, "aquatic") && identical(legend, "continuous")  ~  "Purples",
+      identical(type, "include") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(type, "exclude") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(theme, "species_at_risk") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(file_no_ext, "iba") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous")  ~  "Purples",
+      identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "Purples",
+      identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "Purples",
+      identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "Purples",
+      
+      identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "Purples",
+      
+      # identical(theme, "ECCC_CH") && identical(u_values, 2) ~  "#00000000, #756bb1",
+      # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "#756bb1", 
+      # identical(source, "ECCC_CH") && identical(legend, "continuous")  ~  "Purples",
+      # identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "#00000000, #fb9a99",
+      # identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "#fb9a99", 
+      # identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "Reds",
+      # identical(source, "IUCN_AMPH") && identical(u_values, 2) ~  "#00000000, #a6cee3",
+      # identical(source, "IUCN_AMPH") && identical(u_values, 1) ~  "#a6cee3",
+      # identical(source, "IUCN_BIRD") && identical(u_values, 2) ~  "#00000000, #ff7f00",
+      # identical(source, "IUCN_BIRD") && identical(u_values, 1) ~  "#ff7f00",
+      # identical(source, "IUCN_MAMM") && identical(u_values, 2) ~  "#00000000, #b15928",
+      # identical(source, "IUCN_MAMM") && identical(u_values, 1) ~  "#b15928",
+      # identical(source, "IUCN_REPT") && identical(u_values, 2) ~  "#00000000, #b2df8a",
+      # identical(source, "IUCN_REPT") && identical(u_values, 1) ~  "#b2df8a",
+      # identical(source, "NSC_END") && identical(u_values, 2) ~  "#00000000, #4575b4",
+      # identical(source, "NSC_END") && identical(u_values, 1) ~  "#4575b4",
+      # identical(source, "NSC_SAR") && identical(u_values, 2) ~  "#00000000, #d73027",
+      # identical(source, "NSC_SAR") && identical(u_values, 1) ~  "#d73027",
+      # identical(source, "NSC_SPP") && identical(u_values, 2) ~  "#00000000, #e6f598",
+      # identical(source, "NSC_SPP") && identical(u_values, 1) ~  "#e6f598",
+      TRUE ~ "" 
     )
     
   
@@ -299,32 +269,50 @@ for (i in seq_along(file_list)) {
     ## LABELS --------------------------------------------------------------------
     ## there is no "Label" column in species metadata
     labels <- case_when(
-      identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(source, "ECCC_CH") && identical(u_values, 1) ~  "Habitat",
-      identical(source, "ECCC_CH") && identical(legend, "continuous") ~  "",
-      identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "Non Range, Range",
-      identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "Range",
-      identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "",
-      identical(substring(source, 1, 4), "IUCN") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(substring(source, 1, 4), "IUCN") && identical(values, 1) ~  "Habitat",
-      identical(substring(source, 1, 3), "NSC") && identical(u_values, 2) ~  "Non Occurrence, Occurrence",
-      identical(substring(source, 1, 3), "NSC") && identical(values, 1) ~  "Occurrence",
-      TRUE ~ {if ("Labels" %in% colnames(wtw_meta)) pull(wtw_meta_row, Labels) else "" }
+      identical(theme, "aquatic") && identical(legend, "continuous") ~  "",
+      identical(type, "include") && identical(u_values, 2) ~ "not included, included",
+      identical(type, "exclude") && identical(u_values, 2) ~ "low footprint, human footrint",
+      identical(theme, "species_at_risk") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(file_no_ext, "iba") && identical(u_values, 2) ~ "Non Habitat, Habitat",
+      identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous") ~  "",
+      identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "",
+      identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "",
+      identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "",
+      identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "",
+      
+      # identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "Habitat",
+      # identical(source, "ECCC_CH") && identical(legend, "continuous") ~  "",
+      # identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "Non Range, Range",
+      # identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "Range",
+      # identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "",
+      # #identical(substring(source, 1, 4), "IUCN") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      #identical(substring(source, 1, 4), "IUCN") && identical(values, 1) ~  "Habitat",
+      #identical(substring(source, 1, 3), "NSC") && identical(u_values, 2) ~  "Non Occurrence, Occurrence",
+      #identical(substring(source, 1, 3), "NSC") && identical(values, 1) ~  "Occurrence",
+      TRUE ~ ""
     )
     
     ## UNITS ---------------------------------------------------------------------
     ## there is no "Unit" column in species metadata
     unit <- case_when(
-      (identical(source, "ECCC_CH")) ~ "ha",
-      (identical(source, "ECCC_SAR")) ~  "ha",
-      identical(source, "IUCN_AMPH") ~  "km2",
-      identical(source, "IUCN_BIRD") ~  "km2",
-      identical(source, "IUCN_MAMM") ~  "km2",
-      identical(source, "IUCN_REPT") ~  "km2",
-      identical(source, "NSC_END") ~  "km2",
-      identical(source, "NSC_SAR") ~  "km2",
-      identical(source, "NSC_SPP") ~  "km2",
-      TRUE ~ {if ("Unit" %in% colnames(wtw_meta)) pull(wtw_meta_row, Unit) else "" }
+      type == "include" ~ "km2",
+      type == "exclude" ~ "km2",
+      theme == "species_at_risk" ~ "km2",
+      file_no_ext == "iba" ~ "km2",
+      file_no_ext ==  "TAP_intact_watershed" ~ "km2",
+      file_no_ext %in%  c("ter_diversity_c","ter_rarity_c", "macrorefugia") ~ "km2",
+      file_no_ext == "npp" ~ "kgC/m2/yr", # check this!
+      # (identical(source, "ECCC_CH")) ~ "ha",
+      # (identical(source, "ECCC_SAR")) ~  "ha",
+      # identical(source, "IUCN_AMPH") ~  "km2",
+      # identical(source, "IUCN_BIRD") ~  "km2",
+      # identical(source, "IUCN_MAMM") ~  "km2",
+      # identical(source, "IUCN_REPT") ~  "km2",
+      # identical(source, "NSC_END") ~  "km2",
+      # identical(source, "NSC_SAR") ~  "km2",
+      # identical(source, "NSC_SPP") ~  "km2",
+      TRUE ~ ""
     )   
     
     ## PROVENANCE ----------------------------------------------------------------
@@ -346,16 +334,16 @@ for (i in seq_along(file_list)) {
     ## only set goals for themes
     if (identical(type, "theme")) {
       ## only set Rodrigues goals on species data
-      species_sources <- c(
-        "ECCC_CH", "ECCC_SAR", 
-        "IUCN_AMPH", "IUCN_BIRD", "IUCN_MAMM", "IUCN_REPT",
-        "NSC_END", "NSC_SAR", "NSC_SPP"
-      )
-      if (source %in% species_sources) {
-        goal <- wtw_meta_row$Goal # species
-      } else {
-        goal <- "0.2" # forest, wetland, rivers, lakes, shoreline
-      }
+      # species_sources <- c(
+      #   "ECCC_CH", "ECCC_SAR", 
+      #   "IUCN_AMPH", "IUCN_BIRD", "IUCN_MAMM", "IUCN_REPT",
+      #   "NSC_END", "NSC_SAR", "NSC_SPP"
+      # )
+      # # if (source %in% species_sources) {
+         goal <- 0.2 #wtw_meta_row$Goal # species
+      # } else {
+      #   goal <- "0.2" # forest, wetland, rivers, lakes, shoreline
+      # }
     } else {
       goal <- "" # weights, includes, excludes
     }    
@@ -367,39 +355,30 @@ for (i in seq_along(file_list)) {
       order, visible, hidden, downloadable, goal
     )
     
-  } else {
-    
-    ## Build new regional row ----
-    new_row <- c(
-      "", "", file, "", "", 
-      "", "", "", "", "regional", 
-      "", "", "", "" , "0.2"
-    )
-  }
+  # } else {
+  #   
+  #   ## Build new regional row ----
+  #   new_row <- c(
+  #     "", "", file, "", "", 
+  #     "", "", "", "", "regional", 
+  #     "", "", "", "" , "0.2"
+  #   )
+  # }
   
   ## Append to DF
   df <- structure(rbind(df, new_row), .Names = names(df))
   
 } 
 
+# populate unique ID
+#df$unique_id <- paste0("ID_", seq(1:nrow(df)))
+
 # Write to csv ----
 write.csv(
   df,
-  file.path(meta_path, paste0(META_NAME, "-metadata-NEEDS-QC.csv")),
+  fs::path(project_folder, "WTW", "metadata", "_metadata.csv"),
   row.names = FALSE
 )
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -487,66 +466,27 @@ write.csv(
 # 
 
 
-
-
-
-# populate continuous colors, same color for each theme
-themes <- unique(df$Theme)
-theme_colours <- sample(c("Greens", "Reds", "viridis", "YlOrBr", "Blues", "mako", "PuBuGn", "rocket"), length(themes), replace = TRUE)
-for(i in 1:nrow(df)){
-  if(df$Legend[i] == "continuous"){
-    df$Color[i] <- theme_colours[which(themes == df$Theme[i])]
-  }
-}
-
-# populate unique ID
-df$unique_id <- paste0("ID_", seq(1:nrow(df)))
-
-# save
-write.csv(df, fs::path(project_folder, "WTW", "metadata", "_metadata.csv"), row.names = FALSE)
-
-
-
-## GP :note this seems to miss the downloadable column
-
-
-
-
-
+# 
+# 
+# 
+# # populate continuous colors, same color for each theme
+# themes <- unique(df$Theme)
+# theme_colours <- sample(c("Greens", "Reds", "viridis", "YlOrBr", "Blues", "mako", "PuBuGn", "rocket"), length(themes), replace = TRUE)
+# for(i in 1:nrow(df)){
+#   if(df$Legend[i] == "continuous"){
+#     df$Color[i] <- theme_colours[which(themes == df$Theme[i])]
+#   }
+# }
+# 
+# # populate unique ID
+# df$unique_id <- paste0("ID_", seq(1:nrow(df)))
+# 
+# # save
+# write.csv(df, fs::path(project_folder, "WTW", "metadata", "_metadata.csv"), row.names = FALSE)
 
 
 ## review the metadata table and update as needed. 
 
-
-
-
-
-# Convert to WTW objects 
-
-# 
-# ## Install wheretowork if not yet installed or is not updated to current version (HARD CODED FOR NOW)
-# if (!require(wheretowork) || packageVersion("wheretowork") != "1.2.3") { 
-#   if (!require(remotes)) install.packages("remotes")
-#   remotes::install_github("NCC-CNC/wheretowork", ref = "master")  
-# }
-
-
-
-
-# If WTW fails to install, follow these steps ----
-## 1. Create Github account
-## 2. Generate a personal access token (classic) PAT
-## 3. Create a .Renviron file in your Documents directory
-## 4. Paste your PAT in your .Renviron file
-
-# If rcbc fails to install, be sure to have Rtools44 installed
-## https://cran.r-project.org/bin/windows/Rtools/
-
-
-## Load packages
-library(terra)
-library(dplyr)
-library(wheretowork)
 
 
 # 2.0 Set up -------------------------------------------------------------------
@@ -559,10 +499,7 @@ meta_path <- fs::path(project_folder, "WTW", "metadata")
 PRJ_PATH  <- fs::path("outputs", "final", "sites") # <--- CHANGE TO YOUR ROOT PROJECT FOLDER
 META_NAME <- "_metadata.csv" # <--- CHANGE TO NAME OF YOUR metadata.csv. NEED TO ADD ".csv" extension
 
-#write.csv(df, fs::path(project_folder, "WTW", "metadata", project_name, "_metadata.csv"), row.names = FALSE)
 
-# 
-# 
 # ## Set output variables for WTW file names
 # ### What regional operating or business unit?
 # OU <- "IT"  # <--- REG_BC, REG_AB, REG SK, REG MB, REG ON, REG QC, REG AT, IT, CPP, SOS, MD etc.
@@ -575,13 +512,19 @@ META_NAME <- "_metadata.csv" # <--- CHANGE TO NAME OF YOUR metadata.csv. NEED TO
 # PRJ_FILE_NAME <- gsub(" ", "_", gsub("[[:punct:]]", "", PRJ_NAME))
 
 
-AUTHOR<- "Gen Perkins" # <----- your name
+AUTHOR <- "Gen Perkins" # <----- your name
 EMAIL <- "gperkins@ninoxconsulting.ca" # <----- your email
 GROUPS <- "private" # <---- options: public or private  
 
 meta_path <- file.path(PRJ_PATH, paste0("WTW/metadata/", META_NAME)) 
 tiffs_path <- file.path(PRJ_PATH,"Tiffs")
 pu_path <- file.path(PRJ_PATH,"PU/PU.tif")
+
+
+# shift files to tiffs folder - currently manual transfer
+
+
+
 
 # 3.0 Import meta data and PUs -------------------------------------------------
 
@@ -612,8 +555,7 @@ pu <- terra::rast(pu_path)
 ## objects. If raster variable does not compare to study area, re-project raster 
 ## variable so it aligns to the study area.
 raster_data <- lapply(file.path(tiffs_path, metadata$File), function(x) {
- # x <- file.path(tiffs_path, metadata$File)[1]
-  
+  #x <- file.path(tiffs_path, metadata$File)[1]
   raster_x <- terra::rast(x)
   names(raster_x) <- tools::file_path_sans_ext(basename(x)) # file name
   if (terra::compareGeom(pu, raster_x, stopOnError=FALSE)) {
@@ -713,8 +655,8 @@ dataset <- wheretowork::new_dataset_from_auto(
 ### loop over unique theme groups (ex. Endemic Species, Species at Risk, etc.)
 themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
-  # start test line
-  #i <- "Themes"
+  # start test lin
+  #i <- 1
   # end test line 
   
   #### store temp variables associated with group (i)
@@ -735,6 +677,7 @@ themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
   #### create list of features (j) associated with group
   curr_features <- lapply(seq_along(curr_theme_names), function(j) {
+   # j = 3
     
     #### create variable (if manual legend)
     if (identical(curr_theme_legend[j], "manual")) {
@@ -850,7 +793,8 @@ if (!is.null(weight_data)) {
 if (!is.null(include_data)) {
   includes <- lapply(seq_len(terra::nlyr(include_data)), function(i) {
     
-    i <- 1
+   # i <- 1
+    
     ### build legend
     if (identical(include_legend[i], "null")) {
       legend <- wheretowork::new_null_legend()
@@ -884,6 +828,8 @@ if (!is.null(include_data)) {
 if (!is.null(exclude_data)){
   excludes <- lapply(seq_len(terra::nlyr(exclude_data)), function(i) {
     
+   # i <- 1
+    
     ### build legend
     if (identical(exclude_legend[i], "null")) {
       legend <- wheretowork::new_null_legend()
@@ -904,7 +850,7 @@ if (!is.null(exclude_data)){
       variable = wheretowork::new_variable(
         dataset = dataset,
         index = names(exclude_data)[i],
-        units = exclude_units[i],,
+        units = exclude_units[i],
         total = terra::global(exclude_data[[i]], fun = "sum", na.rm = TRUE)$sum,
         legend = legend,
         provenance = wheretowork::new_provenance_from_source(exclude_provenance[i])
