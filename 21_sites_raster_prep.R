@@ -25,6 +25,58 @@ w  <- aggregate(w , fact=10, fun="max")
 writeRaster(w, file.path(outputs, "humanfootprint.tif"), overwrite=TRUE)
 
 
+# get the CEP dataset 
+dis <- st_read(file.path("inputs", "skeena_clip_ce_2023.gpkg" )) |> 
+  filter(CEF_HUMAN_DISTURB_FLAG =="Human Disturb Current 20yr") 
+
+# split out the urban areas 
+private <- st_read(file.path("inputs",  "sk_privateland_raw.gpkg")) |> 
+  filter(OWNER_TYPE == "Private") |> 
+  mutate(type = 1) |> 
+  select(type)
+
+urban <- dis |> 
+  filter(CEF_DISTURB_GROUP == "Urban") |> 
+  st_transform(crs = crs(srast)) |> 
+  mutate(type = 1) |> 
+  select(type)
+
+urban <- bind_rows(private, urban)
+urbanr <- terra::rasterize(urban, srast)
+urbanr[is.na(urbanr)] <- 0 
+urbanr <- mask(urbanr,srast)
+names(urbanr) <- "urban"
+writeRaster(urbanr, file.path(outputs, "urban.tif"), overwrite = TRUE)
+
+
+## mining and OGC 
+
+mining <- dis |> 
+  filter(CEF_DISTURB_GROUP %in% c("OGC_Infrastructure", "Mining_and_Extraction")) |> 
+  st_transform(crs = crs(srast)) |> 
+  mutate(type = 1) |> 
+  select(type)
+mine <- terra::rasterize(mining, srast)
+mine[is.na(mine)] <- 0 
+mine <- mask(mine,srast)
+names(mine) <- "mining_oilgas"
+writeRaster(mine, file.path(outputs, "mining_OG.tif"), overwrite = TRUE)
+
+
+## roads and Rail and infrastructure 
+## this is already merged so cant distinguis road types from this layer need to re-exctract info
+
+roads <- st_read(file.path("inputs", "skeena_clippoly_roads_2023_1000buf.gpkg" )) |> 
+  select(DRA_ROAD_CLASS, DRA_ROAD_SURFACE) |> 
+  mutate(type = 1) |> 
+  select(type)
+
+rd<- terra::rasterize(roads , srast)
+rd[is.na(rd)] <- 0 
+rd <- mask(rd,srast)
+names(rd) <- "roads"
+writeRaster(rd, file.path(outputs, "roads.tif"), overwrite = TRUE)
+
 
 # productivity 
 gdd <- rast(file.path("inputs", "gdd_sk.tif"))
@@ -234,9 +286,31 @@ writeRaster(con_rarec, file.path(outputs, "ter_rarity_c.tif"), overwrite = T)
 
 # classed version
 con_rareclass <- rast(file.path("outputs", "sk_rarity_conc.tif"))
-con_rareclass <-aggregate(con_rareclass , fact=10, fun="mean")
-names(con_rareclass)= "ter_rarity_class"
+con_rareclass <-aggregate(con_rareclass , fact=10, fun="max")
+names(con_rareclass)= "ter_highveryhigh_rarity"
+
+
+
+
+con_rareclass[is.na(con_rareclass)] <- 0 
+
+
+# this is not working corectly yet - need to assign everything above 4 = 1 and below = 0
+
+
+# select only class 4 and 5 and convert to binary layer 
+m <- c(0, 3.9, 0, # lowest diversity 
+       4, 5, 1) # highest diversity 
+
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+
+rar_vh <- classify(con_rareclass, rclmat, include.lowest=TRUE)
+
 writeRaster(con_rareclass, file.path(outputs, "ter_rarity_class.tif"), overwrite = T)
+
+
+
+
 
 
 # diversity - terrestrial 
