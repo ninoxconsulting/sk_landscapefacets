@@ -22,6 +22,8 @@ outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
 w <- rast(file.path("outputs", "final", "sk_wilderness_2023.tif"))
 names(w)<- "humanfootprint"
 w  <- aggregate(w , fact=10, fun="max")
+w[is.na(w)] <- 0 
+w <- mask(w,srast)
 writeRaster(w, file.path(outputs, "humanfootprint.tif"), overwrite=TRUE)
 
 
@@ -142,9 +144,10 @@ rb <- st_read(file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
 
 sp <- unique(rb$SCI_NAME)
 
-#sp[62]
+sp[62]
 
 xx <- purrr::map(sp, function(x){
+  #x <- sp[63]
   print(x)
   
   #x <- sp[63]
@@ -167,9 +170,29 @@ xx <- purrr::map(sp, function(x){
   rbb[is.na(rbb)] <- 0 
   names(rbb) = paste0("bc_listed_", comm_name )
   rbb <- mask(rbb,srast)
+  print(length(unique(values(rbb))))
   writeRaster(rbb, file.path(outputs, "species", paste0("bc_listed_", sciname, ".tif")), overwrite = TRUE)
   }
 })
+
+
+# check that there are only 2 values in the raster
+"Ptychoramphus aleuticus"
+"Arctopoa eminens"
+"Melanitta perspicillata"
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # rb <- rasterize(rb, srast)
@@ -288,28 +311,17 @@ writeRaster(con_rarec, file.path(outputs, "ter_rarity_c.tif"), overwrite = T)
 con_rareclass <- rast(file.path("outputs", "sk_rarity_conc.tif"))
 con_rareclass <-aggregate(con_rareclass , fact=10, fun="max")
 names(con_rareclass)= "ter_highveryhigh_rarity"
-
-
-
-
 con_rareclass[is.na(con_rareclass)] <- 0 
 
-
-# this is not working corectly yet - need to assign everything above 4 = 1 and below = 0
-
-
 # select only class 4 and 5 and convert to binary layer 
-m <- c(0, 3.9, 0, # lowest diversity 
-       4, 5, 1) # highest diversity 
+m <- c(0, 3, 0, # lowest diversity 
+       3, 5, 1) # highest diversity 
 
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 
 rar_vh <- classify(con_rareclass, rclmat, include.lowest=TRUE)
-
-writeRaster(con_rareclass, file.path(outputs, "ter_rarity_class.tif"), overwrite = T)
-
-
-
+names(rar_vh) = "ter_rare_hig_vhigh"
+writeRaster(rar_vh, file.path(outputs, "ter_rarity45_class.tif"), overwrite = T)
 
 
 
@@ -322,8 +334,24 @@ writeRaster(div, file.path(outputs, "ter_diversity_c.tif"), overwrite = T)
 # classed version 
 divc <- rast(file.path("outputs", "sk_diversity_conc.tif"))
 divc<- aggregate(divc , fact=10, fun="mean")
-names(divc)= "ter_diversity_class"
-writeRaster(divc, file.path(outputs, "ter_diversity_class.tif"), overwrite = T)
+#names(divc)= "ter_diversity_class"
+#writeRaster(divc, file.path(outputs, "ter_diversity_class.tif"), overwrite = T)
+
+
+# select only class 4 and 5 and convert to binary layer 
+m <- c(0, 3, 0, # lowest diversity 
+       3, 5, 1) # highest diversity 
+
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+
+div_vh <- classify(divc, rclmat, include.lowest=TRUE)
+
+#plot(div_vh)
+#plot(divc)
+names(div_vh) = "ter_div_high_vhigh"
+div_vh[is.na(div_vh)] <- 0 
+div_vh <- mask(div_vh,srast)
+writeRaster(div_vh, file.path(outputs, "ter_div45_class.tif"), overwrite = T)
 
 
 
