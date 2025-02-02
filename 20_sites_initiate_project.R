@@ -144,7 +144,7 @@ df <- init_metadata()
 ## Loop over each tiff file:
 for (i in seq_along(file_list)) {
   
-  #i <- 4
+  #i <- 68 #71
   
   rname <- file_list[i]
   
@@ -223,6 +223,8 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "TAP_ancient_forest") && identical(legend, "continuous")  ~  "Greens",
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "Purples",
       identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "Purples",
+      identical(file_no_ext, "ter_div45_class") && identical(u_values, 2) ~ "#00000000, #7fbc41",
+      identical(file_no_ext, "ter_rarity45_class") && identical(u_values, 2) ~ "#00000000, #7fbc41",
       
       # weight 
       identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "magma",
@@ -231,7 +233,7 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "YlOrBr",
       identical(file_no_ext, "gdd_c") && identical(legend, "continuous")  ~  "YlOrBr",
       identical(file_no_ext, "ndvi_c") && identical(legend, "continuous")  ~  "YlOrBr",
-       
+      identical(file_no_ext, "humanfootprint") && identical(u_values, 2) ~"#00000000, #756bb1",
       # identical(theme, "ECCC_CH") && identical(u_values, 2) ~  "#00000000, #756bb1",
       # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "#756bb1", 
       # identical(source, "ECCC_CH") && identical(legend, "continuous")  ~  "Purples",
@@ -254,16 +256,13 @@ for (i in seq_along(file_list)) {
       # identical(source, "NSC_SPP") && identical(u_values, 1) ~  "#e6f598",
       TRUE ~ "" 
     )
-    
-  
-  
   
     ## LABELS --------------------------------------------------------------------
     ## there is no "Label" column in species metadata
     labels <- case_when(
       identical(theme, "aquatic") && identical(legend, "continuous") ~  "",
       identical(type, "include") && identical(u_values, 2) ~ "not included, included",
-      identical(type, "exclude") && identical(u_values, 2) ~ "low footprint, human footrint",
+      identical(type, "exclude") && identical(u_values, 2) ~ "not altered, permanently altered",
       identical(theme, "species_at_risk") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       identical(theme, "critical_habitat_BC") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       identical(file_no_ext, "iba") && identical(u_values, 2) ~ "Non Habitat, Habitat",
@@ -272,10 +271,13 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "TAP_bigtrees") && identical(legend, "continuous") ~  "",
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "",
+      identical(file_no_ext, "ter_rarity45_class") && identical(u_values, 2) ~ "not rare, very rare",
+      identical(file_no_ext, "ter_div45_class") && identical(u_values, 2) ~ "not diverse, very diverse",
       #identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "",
       #identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "",
       #identical(file_no_ext, "gdd") && identical(legend, "continuous")  ~  "",
       identical(type, "weight") && identical(legend, "continuous")  ~  "",
+      identical(type, "weight") && identical(u_values, 2)  ~  "not altered, altered",
       # identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "Habitat",
       # identical(source, "ECCC_CH") && identical(legend, "continuous") ~  "",
@@ -300,10 +302,13 @@ for (i in seq_along(file_list)) {
       file_no_ext == "iba" ~ "km2",
       file_no_ext %in%  c("ter_diversity_c","ter_rarity_c") ~ "km2",
       file_no_ext %in%  c("TAP_intact_watershed", "TAP_bigtrees", "TAP_ancient_forest") ~ "km2",
-      file_no_ext %in%  c("macrorefugia", "microrefugia", "resistence") ~ "index",
+      file_no_ext %in%  c("macrorefugia", "microrefugia", "resistence_c") ~ "index",
       file_no_ext == "npp" ~ "kgC/m2/yr", # check this!
       file_no_ext == "gdd_c" ~ "kgC/m2/yr", # check this!
       file_no_ext == "ndvi_c" ~ "kgC/m2/yr", # check this!
+      file_no_ext == "ter_rarity45_class" ~ "km2",
+      file_no_ext == "ter_div45_class" ~ "km2",
+      file_no_ext == "humanfootprint" ~ "km2",
       # (identical(source, "ECCC_CH")) ~ "ha",
       # (identical(source, "ECCC_SAR")) ~  "ha",
       # identical(source, "IUCN_AMPH") ~  "km2",
@@ -505,7 +510,6 @@ if ("include" %in% unique(metadata$Type)) {
   include_data <- c() # no includes in project
 }
 
-
 ## Prepare exclude inputs (if there are any) ----
 if ("exclude" %in% unique(metadata$Type)) {
   exclude_data <- raster_data[[which(metadata$Type == "exclude")]]
@@ -538,7 +542,7 @@ dataset <- wheretowork::new_dataset_from_auto(
 themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
   # start test lin
-  #i <- 3
+ # i <- 2
   # end test line 
   
   #### store temp variables associated with group (i)
@@ -559,7 +563,9 @@ themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
   #### create list of features (j) associated with group
   curr_features <- lapply(seq_along(curr_theme_names), function(j) {
-   # j = 3
+    
+    #j = 5
+    #print(j)
     
     #### create variable (if manual legend)
     if (identical(curr_theme_legend[j], "manual")) {
@@ -625,7 +631,7 @@ themes <- lapply(seq_along(unique(theme_groups)), function(i) {
 if (!is.null(weight_data)) {
   weights <- lapply(seq_len(terra::nlyr(weight_data)), function(i) {
     
-   # i <- 1
+    #i <- 5
     
     #### prepare variable (if manual legend)
     if (identical(weight_legend[i], "manual")) {
