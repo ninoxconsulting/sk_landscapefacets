@@ -410,14 +410,14 @@ writeRaster(div, file.path(outputs, "aq_lakes_diversity_class.tif"), overwrite =
 wet <-  rast(file.path("inputs", "sk_wetland_density_1km.tif"))
 names(wet) = "aq_wetland_density"
 
-writeRaster(wet, file.path(outputs, "aq_wetland_density.tif"))
+writeRaster(wet, file.path(outputs, "aq_wetland_density.tif"), overwrite = T)
 
 
 # lake density
 
 lak <- rast(file.path("inputs", "sk_lake_density_1km.tif"))
 names(lak) = "aq_lake_density"
-writeRaster(lak, file.path(outputs, "aq_lake_density.tif"))
+writeRaster(lak, file.path(outputs, "aq_lake_density.tif"), overwrite = T)
 
 
 
