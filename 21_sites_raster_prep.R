@@ -6,7 +6,7 @@ library(sf)
 library(raster)
 
 # read in templates 
-srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+
 outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
 # create a raster with the same extent and resolution as the template
 # see here for Terra option: https://github.com/rspatial/terra/issues/142
@@ -31,56 +31,39 @@ SpP_ras[SpP_ras==0] <- NA # convert 0  to NA
 SpP_ras1 <- rast(SpP_ras)
 writeRaster(SpP_ras1, file.path(outputs, "template_cover.tif"), overwrite=TRUE)
 
-# generate binary based 1km template. 
-SpP_ras1[SpP_ras1>0] <- 1
-names(SpP_ras1) <- "template"
-writeRaster(SpP_ras1, file.path(outputs, "template_1km.tif"), overwrite=TRUE)
-srast <- SpP_ras1
+# read in template_cover.tif
+srastc <- rast(file.path(outputs, "template_cover.tif"))
 
-#in_aoi <- read_sf(file.path("inputs", "sk_poly_template.gpkg"))
-#outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
+# generate binary based 1km template usign 0.5 as threshold
+srastc[srastc >= 0.5] <- 1
+srastc[srastc < 0.5] <- NA
+names(srastc) <- "template"
+writeRaster(srastc, file.path(outputs, "template_1km.tif"), overwrite=TRUE)
+srast <- srastc
 
-#dim(srast)
-#ncell(srast)
 
-# read in the wilderness layer / human footprint layer
+
+#srast is the base template for all datset extents
+#########################################################################
+
+
+
+# 1) read in the wilderness layer / human footprint layer
 
 w <- rast(file.path("outputs", "final", "sk_wilderness_2023.tif"))
 names(w)<- "humanfootprint"
-w  <- aggregate(w , fact=10, fun="max")
-w[is.na(w)] <- 0 
-w <- mask(w,srast)
-writeRaster(w, file.path(outputs, "humanfootprint1.tif"), overwrite=TRUE)
-
-# second version of the human footprint layer
-# w <- rast(file.path("outputs", "final", "sk_wilderness_2023.tif"))
-# names(w)<- "humanfootprint"
-# wv <- as.polygons(w)
-# 
-# wwv <- rasterize(wv, srast , "humanfootprint")
-# writeRaster(wwv , file.path(outputs, "humanfootprint2.tif"), overwrite=TRUE)
 inw <- read_sf(file.path("outputs", "sk_wilderness.gpkg"))
-wwwv <- rasterize(inw, srast , "type")
 wwwvc <- rasterize(inw, srast, "type",touches = TRUE, cover = TRUE)
 
-writeRaster(wwwv  , file.path(outputs, "humanfootprint3_base.tif"), overwrite=TRUE)
-writeRaster(wwwvc  , file.path(outputs, "humanfootprint4_touches.tif"), overwrite=TRUE)
+writeRaster(wwwvc  , file.path(outputs, "humanfootprint_cover.tif"), overwrite=TRUE)
 
+# generate binary based 1km template usign 0.5 as threshold
+wwwvc[wwwvc >= 0.5] <- 1
+wwwvc[wwwvc < 0.5] <- NA
+names(wwwvc) <- "wilderness"
+writeRaster(wwwvc  , file.path(outputs, "humanfootprint.tif"), overwrite=TRUE)
 
-
-
-
-
-
-w  <- aggregate(w , fact=10, fun="max")
-w[is.na(w)] <- 0 
-w <- mask(w,srast)
-writeRaster(w, file.path(outputs, "humanfootprint1.tif"), overwrite=TRUE)
-
-
-
-
-
+#############################################################################
 
 
 # get the CEP dataset 
