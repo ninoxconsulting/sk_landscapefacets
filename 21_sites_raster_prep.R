@@ -4,7 +4,7 @@ library(dplyr)
 library(terra)
 library(sf)
 library(raster)
-
+library(dplyr)
 # read in templates 
 
 outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
@@ -42,6 +42,8 @@ writeRaster(srastc, file.path(outputs, "template_1km.tif"), overwrite=TRUE)
 srast <- srastc
 
 
+srast <- rast(file.path(outputs, "template_1km.tif"))
+
 
 #srast is the base template for all datset extents
 #########################################################################
@@ -74,20 +76,24 @@ dis <- st_read(file.path("inputs", "skeena_clip_ce_2023.gpkg" )) |>
 private <- st_read(file.path("inputs",  "sk_privateland_raw.gpkg")) |> 
   filter(OWNER_TYPE == "Private") |> 
   mutate(type = 1) |> 
-  select(type)
+  dplyr::select(type)
 
 urban <- dis |> 
   filter(CEF_DISTURB_GROUP == "Urban") |> 
   st_transform(crs = crs(srast)) |> 
   mutate(type = 1) |> 
-  select(type)
+  dplyr::select(type)
 
 urban <- bind_rows(private, urban)
-urbanr <- terra::rasterize(urban, srast)
-urbanr[is.na(urbanr)] <- 0 
-urbanr <- mask(urbanr,srast)
+urbanr <- terra::rasterize(urban, srast,touches = TRUE, cover = TRUE)
+writeRaster(urbanr, file.path(outputs, "urban_cover.tif"), overwrite = TRUE)
+
+urbanr[urbanr >= 0.5] <- 1
+urbanr[urbanr < 0.5] <- NA
+#urbanr <- mask(urbanr,srast)
 names(urbanr) <- "urban"
 writeRaster(urbanr, file.path(outputs, "urban.tif"), overwrite = TRUE)
+
 
 
 ## mining and OGC 
@@ -96,34 +102,71 @@ mining <- dis |>
   filter(CEF_DISTURB_GROUP %in% c("OGC_Infrastructure", "Mining_and_Extraction")) |> 
   st_transform(crs = crs(srast)) |> 
   mutate(type = 1) |> 
-  select(type)
-mine <- terra::rasterize(mining, srast)
-mine[is.na(mine)] <- 0 
+  dplyr::select(type)
+
+mine <- terra::rasterize(mining, srast,touches = TRUE, cover = TRUE)
+names(mine) <- "mining_oilgas"
+writeRaster(mine, file.path(outputs, "mining_OG_cover.tif"), overwrite = TRUE)
+
+mine[mine >= 0.5] <- 1
+mine[mine < 0.5] <- NA
+
 mine <- mask(mine,srast)
 names(mine) <- "mining_oilgas"
 writeRaster(mine, file.path(outputs, "mining_OG.tif"), overwrite = TRUE)
+
+
 
 
 ## roads and Rail and infrastructure 
 ## this is already merged so cant distinguis road types from this layer need to re-exctract info
 
 roads <- st_read(file.path("inputs", "skeena_clippoly_roads_2023_1000buf.gpkg" )) |> 
-  select(DRA_ROAD_CLASS, DRA_ROAD_SURFACE) |> 
+  dplyr::select(DRA_ROAD_CLASS, DRA_ROAD_SURFACE) |> 
   mutate(type = 1) |> 
-  select(type)
+  dplyr::select(type)
 
-rd<- terra::rasterize(roads , srast)
+rd<- terra::rasterize(roads , srast,touches = TRUE, cover = TRUE)
 rd[is.na(rd)] <- 0 
 rd <- mask(rd,srast)
 names(rd) <- "roads"
+writeRaster(rd, file.path(outputs, "roads_cover.tif"), overwrite = TRUE)
+rd[rd >= 0.5] <- 1
+rd[rd < 0.5] <- NA
 writeRaster(rd, file.path(outputs, "roads.tif"), overwrite = TRUE)
+
+
 
 
 # productivity 
 gdd <- rast(file.path("inputs", "gdd_sk.tif"))
 names(gdd)<- "gdd"
-gdd  <- aggregate(gdd , fact=10, fun="mean")
+
+gdd_v <- as.polygons(gdd)
+
+gddr_cover <- terra::rasterize(gdd_v , srast,touches = TRUE, cover = TRUE)
+
+
+
+#gdd_mean  <- aggregate(gdd , fact=10, fun="mean") This does not work very well as it misses the edges. 
+#gdd_max  <- aggregate(gdd , fact=10, fun="max")
+#gdd_min
+
+gdd_mean <- mask(gdd_mean,srast)
+
+writeRaster(gdd_mean, file.path(outputs, "gdd_mean_c.tif"), overwrite=TRUE)
+
+
+
+
+
+
 writeRaster(gdd, file.path(outputs, "gdd_c.tif"), overwrite=TRUE)
+
+
+
+
+
 
 # ndvi
 ndvi <- rast(file.path("outputs", "ndvi_2019_2023_mean_101c.tif"))
@@ -144,6 +187,8 @@ res <- rast(file.path("inputs", "pither_resistance.tif"))
 names(res) = "resistance"
 res <- aggregate(res , fact=10, fun="mean")
 writeRaster(res, file.path(outputs, "resistance_c.tif"), overwrite = TRUE)
+
+
 
 # microrefugia 
 mic <- rast(file.path("inputs", "microrefugia.tif"))
