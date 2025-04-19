@@ -205,6 +205,12 @@ st_write(ecc , file.path("inputs", "sk_ecoreg_reduced.gpkg"), append = FALSE)
 ## intact watersheds - From TAP old growth 
 #https://catalogue.data.gov.bc.ca/dataset/b684bdbf-8824-4bc6-8d22-329d9b97c043
 
+
+
+# TAP Old growth 
+## intact watersheds - From TAP old growth 
+#https://catalogue.data.gov.bc.ca/dataset/b684bdbf-8824-4bc6-8d22-329d9b97c043
+
 list.files(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/'))
 
 iw <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map6_IntactWS_2021_08_08.tif"))
@@ -216,25 +222,251 @@ iw_sk <- mask(iw, template)
 writeRaster(iw_sk, file.path("inputs", "TAP_intact_watershed.tif"), overwrite = TRUE)
 
 
+# new updates
+iw <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map6_IntactWS_2021_08_08.tif"))
+names(iw)<- "ws"
 
-# BIG TREES 
+y8 <- ifel(iw == 8, 1, NA)
+y9 <- ifel(iw == 9, 1, NA )
+y10 <- ifel(iw ==10, 1, NA)
+y0 <- ifel(iw == 0, 1, NA)
+
+plot(y0)
+plot(y8)
+plot(y9)
+plot(y10)
+
+# 0, 8, 9, 10
+
+outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
+srast <- rast(file.path(outputs, "template_1km.tif"))
+
+common <- y0
+
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
+names(iww)<- "ws"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "ws0"
+writeRaster(iww, file.path(outputs, "intactwatershed_0.tif"), overwrite = TRUE)
+
+
+common <- y8
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
+names(iww)<- "ws"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "ws8"
+writeRaster(iww, file.path(outputs, "intactwatershed_8.tif"), overwrite = TRUE)
+
+common <- y9
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
+names(iww)<- "ws"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "ws9"
+writeRaster(iww, file.path(outputs, "intactwatershed_9.tif"), overwrite = TRUE)
+
+
+common <- y10
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
+names(iww)<- "ws"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "ws10"
+writeRaster(iww, file.path(outputs, "intactwatershed_10.tif"), overwrite = TRUE)
+
+
+
+
+# BIG TREES ###############################################
+outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
+srast <- rast(file.path(outputs, "template_1km.tif"))
+
 bt<- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map2_BigTreeOG_2021_10_24.tif"))
-#bt <- project(bt, template)
-#template <-rast(file.path("inputs", "sk_rast_template.tif"))
-bt <- resample(bt, template)
-bt_sk <- mask(bt, template)
+bt1 <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map3_PriorityBigTreeOG_2021_10_24.tif"))
+##bt <- project(bt, template)
+##template <-rast(file.path("inputs", "sk_rast_template.tif"))
+#bt <- resample(bt, template)
+#bt_sk <- mask(bt, template)
 
-writeRaster(bt_sk , file.path("inputs", "TAP_bigtrees_raw.tif"), overwrite = TRUE)
+#writeRaster(bt_sk , file.path("inputs", "TAP_bigtrees_raw.tif"), overwrite = TRUE)
+
+names(bt)<- "bt"
+unique(values(bt))
+
+y3 <- ifel(bt == 3, 1, NA)
+y4 <- ifel(bt == 4, 1, NA )
+y0 <- ifel(bt == 0, 1, NA)
+#y2<- ifel(bt == 2,1 , NA)
+
+plot(y0)
+plot(y3)
+plot(y4)
+
+# 
+# common <- y0
+# # convert to poly and back to raster at 1km grid - using cover
+# common <- as.polygons(common, digits = 2)
+# iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
+# names(iww)<- "bt"
+# iww <- mask(iww ,srast)
+# plot(iww)
+# iww[iww >= 0.5] <- 1
+# iww[iww < 0.5] <- NA
+# iww <- mask(iww ,srast)
+# names(iww)<- "bt0"
+# writeRaster(iww, file.path(outputs, "bigtree_0.tif"), overwrite = TRUE)
+
+common <- y3
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
+names(iww)<- "bt"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "bt1"
+writeRaster(iww, file.path(outputs, "bigtree_1.tif"), overwrite = TRUE)
+
+common <- y4
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
+names(iww)<- "bt"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "bt2"
+writeRaster(iww, file.path(outputs, "bigtree_2.tif"), overwrite = TRUE)
+
+
+# Priority old growth 
+
+bt1 <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map3_PriorityBigTreeOG_2021_10_24.tif"))
+names(bt1)<- "bt"
+unique(values(bt1))
+
+y3 <- ifel(bt1 == 3, 1, NA)
+y4 <- ifel(bt1 == 4, 1, NA )
+y0 <- ifel(bt1 == 0, 1, NA)
+#y2<- ifel(bt == 2,1 , NA)
+
+plot(y0)
+plot(y3)
+plot(y4)
+
+common <- y3
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
+names(iww)<- "bt"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "bt3"
+writeRaster(iww, file.path(outputs, "bigtree_3.tif"), overwrite = TRUE)
+
+common <- y4
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
+names(iww)<- "bt"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "bt4"
+writeRaster(iww, file.path(outputs, "bigtree_4.tif"), overwrite = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # ancient forests
 bt <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map4_Ancient_forest_2021_07_22.tif"))
 #bt <- project(bt, template)
 #template <-rast(file.path("inputs", "sk_rast_template.tif"))
-bt <- resample(bt, template)
-bt_sk <- mask(bt, template)
+#bt <- resample(bt, template)
+#bt_sk <- mask(bt, template)
+#writeRaster(bt_sk , file.path("inputs", "TAP_ancient_forest_raw.tif"), overwrite = TRUE)
 
-writeRaster(bt_sk , file.path("inputs", "TAP_ancient_forest_raw.tif"), overwrite = TRUE)
+names(bt)<- "af"
+unique(values(bt))
+
+y2 <- ifel(bt == 2, 1, NA)
+y1 <- ifel(bt == 1, 1, NA )
+
+plot(y2)
+plot(y1)
+
+common <- y2
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "af", touches = TRUE, cover = TRUE)
+names(iww)<- "af"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "af2"
+writeRaster(iww, file.path(outputs, "ancientforest_2.tif"), overwrite = TRUE)
+
+common <- y1
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+iww <- terra::rasterize(common, srast, "af", touches = TRUE, cover = TRUE)
+names(iww)<- "af"
+iww <- mask(iww ,srast)
+plot(iww)
+iww[iww >= 0.5] <- 1
+iww[iww < 0.5] <- NA
+iww <- mask(iww ,srast)
+names(iww)<- "af1"
+writeRaster(iww, file.path(outputs, "ancientforest_1.tif"), overwrite = TRUE)
 
 
 
