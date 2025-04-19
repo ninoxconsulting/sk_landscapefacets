@@ -17,17 +17,17 @@ srast <- aggregate(srast, fun = "any", na.rm = FALSE, fact = 10)
 # create a new raster will all values set to 1
 srast <- rast(nrows = nrow(srast), ncols = ncol(srast), xmin = ext(srast)[1], xmax = ext(srast)[2], ymin = ext(srast)[3], ymax = ext(srast)[4], crs = crs(srast))
 srast[] <- 1 # convert entire raster to 1
-srast <- raster(srast) # convert to raster 
+srast <- raster(srast) # convert to raster
 
-# overlay 
+# overlay
 in_aoi <- read_sf(file.path("inputs", "sk_poly_template.gpkg"))
 insp <- as(in_aoi, "Spatial")
 
-# convert the spatial poly to a raster based on cover 
+# convert the spatial poly to a raster based on cover
 SpP_ras <- raster::rasterize(insp , srast , getCover=TRUE)
 SpP_ras[SpP_ras==0] <- NA # convert 0  to NA
 
-# convert back to terra object # this is the percent coverage layer for reference 
+# convert back to terra object # this is the percent coverage layer for reference
 SpP_ras1 <- rast(SpP_ras)
 writeRaster(SpP_ras1, file.path(outputs, "template_cover.tif"), overwrite=TRUE)
 
@@ -68,20 +68,20 @@ writeRaster(wwwvc  , file.path(outputs, "humanfootprint.tif"), overwrite=TRUE)
 #############################################################################
 
 
-# get the CEP dataset 
-dis <- st_read(file.path("inputs", "skeena_clip_ce_2023.gpkg" )) |> 
-  filter(CEF_HUMAN_DISTURB_FLAG =="Human Disturb Current 20yr") 
+# get the CEP dataset
+dis <- st_read(file.path("inputs", "skeena_clip_ce_2023.gpkg" )) |>
+  filter(CEF_HUMAN_DISTURB_FLAG =="Human Disturb Current 20yr")
 
-# split out the urban areas 
-private <- st_read(file.path("inputs",  "sk_privateland_raw.gpkg")) |> 
-  filter(OWNER_TYPE == "Private") |> 
-  mutate(type = 1) |> 
+# split out the urban areas
+private <- st_read(file.path("inputs",  "sk_privateland_raw.gpkg")) |>
+  filter(OWNER_TYPE == "Private") |>
+  mutate(type = 1) |>
   dplyr::select(type)
 
-urban <- dis |> 
-  filter(CEF_DISTURB_GROUP == "Urban") |> 
-  st_transform(crs = crs(srast)) |> 
-  mutate(type = 1) |> 
+urban <- dis |>
+  filter(CEF_DISTURB_GROUP == "Urban") |>
+  st_transform(crs = crs(srast)) |>
+  mutate(type = 1) |>
   dplyr::select(type)
 
 urban <- bind_rows(private, urban)
@@ -96,12 +96,12 @@ writeRaster(urbanr, file.path(outputs, "urban.tif"), overwrite = TRUE)
 
 
 
-## mining and OGC 
+## mining and OGC
 
-mining <- dis |> 
-  filter(CEF_DISTURB_GROUP %in% c("OGC_Infrastructure", "Mining_and_Extraction")) |> 
-  st_transform(crs = crs(srast)) |> 
-  mutate(type = 1) |> 
+mining <- dis |>
+  filter(CEF_DISTURB_GROUP %in% c("OGC_Infrastructure", "Mining_and_Extraction")) |>
+  st_transform(crs = crs(srast)) |>
+  mutate(type = 1) |>
   dplyr::select(type)
 
 mine <- terra::rasterize(mining, srast,touches = TRUE, cover = TRUE)
@@ -118,16 +118,16 @@ writeRaster(mine, file.path(outputs, "mining_OG.tif"), overwrite = TRUE)
 
 
 
-## roads and Rail and infrastructure 
+## roads and Rail and infrastructure
 ## this is already merged so cant distinguis road types from this layer need to re-exctract info
 
-roads <- st_read(file.path("inputs", "skeena_clippoly_roads_2023_1000buf.gpkg" )) |> 
-  dplyr::select(DRA_ROAD_CLASS, DRA_ROAD_SURFACE) |> 
-  mutate(type = 1) |> 
+roads <- st_read(file.path("inputs", "skeena_clippoly_roads_2023_1000buf.gpkg" )) |>
+  dplyr::select(DRA_ROAD_CLASS, DRA_ROAD_SURFACE) |>
+  mutate(type = 1) |>
   dplyr::select(type)
 
 rd<- terra::rasterize(roads , srast,touches = TRUE, cover = TRUE)
-rd[is.na(rd)] <- 0 
+rd[is.na(rd)] <- 0
 rd <- mask(rd,srast)
 names(rd) <- "roads"
 writeRaster(rd, file.path(outputs, "roads_cover.tif"), overwrite = TRUE)
@@ -137,79 +137,169 @@ writeRaster(rd, file.path(outputs, "roads.tif"), overwrite = TRUE)
 
 
 
+# productivity - complete
 
-# productivity 
 gdd <- rast(file.path("inputs", "gdd_sk.tif"))
 names(gdd)<- "gdd"
-
 gdd_v <- as.polygons(gdd)
-
-gddr_cover <- terra::rasterize(gdd_v , srast,touches = TRUE, cover = TRUE)
-
-
-
-#gdd_mean  <- aggregate(gdd , fact=10, fun="mean") This does not work very well as it misses the edges. 
-#gdd_max  <- aggregate(gdd , fact=10, fun="max")
-#gdd_min
-
-gdd_mean <- mask(gdd_mean,srast)
-
-writeRaster(gdd_mean, file.path(outputs, "gdd_mean_c.tif"), overwrite=TRUE)
+gddr_cover <- terra::rasterize(gdd_v , srast, "gdd", fun = "mean", na.rm = TRUE)
+names(gddr_cover)<- "gdd"
+gddr_cover <- mask(gddr_cover ,srast)
+writeRaster(gddr_cover, file.path(outputs, "gdd_mean.tif"), overwrite=TRUE)
 
 
 
-
-
-
-writeRaster(gdd, file.path(outputs, "gdd_c.tif"), overwrite=TRUE)
-
-
-
-
-
-
-# ndvi
+# ndvi - complete
 ndvi <- rast(file.path("outputs", "ndvi_2019_2023_mean_101c.tif"))
 names(ndvi)<- "ndvi"
-ndvi  <- aggregate(ndvi , fact=10, fun="mean")
-# might need to stack? 
-writeRaster(ndvi, file.path(outputs, "ndvi_c.tif"), overwrite = TRUE)
+ndviv <- as.polygons(ndvi, digits= 4)
+ndvir <- terra::rasterize(ndviv  , srast, "ndvi", fun = "mean", na.rm = TRUE)
+names(ndvir)<- "ndvi"
+ndvir <- mask(ndvir ,srast)
+writeRaster(ndvir, file.path(outputs, "ndvi_mean.tif"), overwrite=TRUE)
+#range(values(ndvir), na.rm = TRUE)
 
 
-#npp 
+#npp - complete
 npp <- rast(file.path("inputs", "npp_skeena_2019_2023.tif"))
 names(npp)<- "npp"
-npp <- project(npp,srast)
-writeRaster(npp, file.path(outputs, "npp.tif"), overwrite = TRUE)
+npp <- project(npp,srast, method = "average")
+nppv_cover<- mask(npp , srast)
+writeRaster(nppv_cover, file.path(outputs, "npp.tif"), overwrite = TRUE)
 
-# resistence / connectivity 
+range(values(nppv_cover), na.rm = T)
+
+
+# resistence / connectivity - complete
 res <- rast(file.path("inputs", "pither_resistance.tif"))
 names(res) = "resistance"
-res <- aggregate(res , fact=10, fun="mean")
-writeRaster(res, file.path(outputs, "resistance_c.tif"), overwrite = TRUE)
+res <- as.polygons(res, digits = 4)
+res <- terra::rasterize(res , srast, "resistance", fun = "mean", na.rm = TRUE)
+res <- mask(res,srast)
+writeRaster(res, file.path(outputs, "res_mean.tif"), overwrite=TRUE)
+range(values(res), na.rm = TRUE)
 
 
+# microrefugia - complete
 
-# microrefugia 
+# microrefugia - probability so converting to binary and selecting threshold 
 mic <- rast(file.path("inputs", "microrefugia.tif"))
 names(mic) = "microrefugia"
-mic <- aggregate(mic  , fact=10, fun="mean")
-writeRaster(mic, file.path(outputs, "microrefugia.tif"), overwrite = TRUE)
 
-# macrorefugia
-mac <- rast(file.path("inputs", "2080s_macrorefugia.tif"))
-names(mac) = "macrorefugia"
-mac <- aggregate(mac , fact=10, fun="mean")
-writeRaster(mac, file.path(outputs, "macrorefugia.tif"), overwrite = TRUE)
+# conver to binary (based on 0.5)
+m <- c(0, .7, NA,
+       .7, 999999, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+common <- classify(mic, rclmat, include.lowest=TRUE)
+# convert to poly and back to raster at 1km grid - using cover
 
-#protected _lands 
+common <- as.polygons(common, digits = 2)
+mic <- terra::rasterize(common, srast, "microrefugia", touches = TRUE, cover = TRUE)
+
+# threshold at 0.5 and convert to binary
+names(mic)<- "microrefugia"
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "microrefugia_0.7_cover.tif"), overwrite = TRUE)
+mic[mic >= 0.5] <- 1
+mic[mic < 0.5] <- NA
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "microrefugia_0.7.tif"), overwrite = TRUE)
+
+
+
+# microrefugia - probability so converting to binary and selecting threshold 
+mic <- rast(file.path("inputs", "microrefugia.tif"))
+names(mic) = "microrefugia"
+
+# conver to binary (based on 0.75)
+m <- c(0, .75, NA,
+       .75, 999999, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+common <- classify(mic, rclmat, include.lowest=TRUE)
+# convert to poly and back to raster at 1km grid - using cover
+
+common <- as.polygons(common, digits = 2)
+mic <- terra::rasterize(common, srast, "microrefugia", touches = TRUE, cover = TRUE)
+
+# threshold at 0.5 and convert to binary
+names(mic)<- "microrefugia"
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "microrefugia_0.75_cover.tif"), overwrite = TRUE)
+mic[mic >= 0.5] <- 1
+mic[mic < 0.5] <- NA
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "microrefugia_0.75.tif"), overwrite = TRUE)
+
+
+
+
+# macrorefugia - complete
+
+# macrorefugia - probability so converting to binary and selecting threshold 
+mic <- rast(file.path("inputs", "2080s_macrorefugia.tif"))
+names(mic)<- "macrorefugia"
+
+# convert to binary (based on 0.5)
+m <- c(0, .7, NA,
+       .7, 999999, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+common <- classify(mic, rclmat, include.lowest=TRUE)
+
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+mic <- terra::rasterize(common, srast, "macrorefugia", touches = TRUE, cover = TRUE)
+
+# threshold at 0.5 and convert to binary
+names(mic)<- "macrorefugia"
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "macrorefugia_0.7_cover.tif"), overwrite = TRUE)
+mic[mic >= 0.5] <- 1
+mic[mic < 0.5] <- NA
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "macrorefugia_0.7.tif"), overwrite = TRUE)
+
+
+
+# 75% threshold
+mic <- rast(file.path("inputs", "2080s_macrorefugia.tif"))
+names(mic)<- "macrorefugia"
+
+# convert to binary (based on 0.5)
+m <- c(0, .75, NA,
+       .75, 999999, 1)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+common <- classify(mic, rclmat, include.lowest=TRUE)
+
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(common, digits = 2)
+mic <- terra::rasterize(common, srast, "macrorefugia", touches = TRUE, cover = TRUE)
+
+# threshold at 0.5 and convert to binary
+names(mic)<- "macrorefugia"
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "macrorefugia_0.75_cover.tif"), overwrite = TRUE)
+mic[mic >= 0.5] <- 1
+mic[mic < 0.5] <- NA
+mic <- mask(mic ,srast)
+writeRaster(mic, file.path(outputs, "macrorefugia_0.75.tif"), overwrite = TRUE)
+
+
+
+# #protected _lands = completed
+
 pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
-pro <- rasterize(vect(pro), srast)
+#pro <- rasterize(vect(pro), srast)
+pro <- rasterize(pro, srast,touches = TRUE, cover = TRUE)
 names(pro) = "protected_lands"
-pro[is.na(pro)] <- 0 
+pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
-writeRaster(pro, file.path(outputs, "protected_lands.tif"), overwrite = TRUE)
+writeRaster(pro, file.path(outputs, "protected_lands_cover.tif"), overwrite = TRUE)
 
+# generate binary based 1km template usign 0.5 as threshold
+pro[pro >= 0.5] <- 1
+pro[pro < 0.5] <- NA
+names(pro) <- "wilderness"
+writeRaster(pro  , file.path(outputs, "protected_lands.tif"), overwrite=TRUE)
 
 
 
@@ -267,18 +357,6 @@ xx <- purrr::map(sp, function(x){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 # rb <- rasterize(rb, srast)
 # names(rb) = "red_blue_sp"
 # writeRaster(rb, file.path(outputs, "red_blue_sp.tif"), overwrite = TRUE)
@@ -305,7 +383,13 @@ purrr::map(sp, function(x){
 
 
 
-# KBAs & IBAs
+
+
+
+
+
+
+# KBAs & IBAs - complete
 #kbam <- st_read(file.path("outputs", "final", "KBA_marine.gpkg"))
 #pro <- rasterize(kbam, srast)
 #names(pro) = "kba_marine"
@@ -313,68 +397,35 @@ purrr::map(sp, function(x){
 
 kbat <- st_read(file.path("outputs", "final", "KBA_terrestrial.gpkg"))
 kbat <- st_transform(kbat, crs=st_crs(srast))
-pro <- rasterize(vect(kbat), srast)
+pro <- rasterize(vect(kbat), srast, touches = TRUE, cover = TRUE)
 names(pro) = "ter_kba"
 writeRaster(pro, file.path(outputs, "kba_terrestrial.tif"), overwrite = TRUE)
-# not included as so small 
+# not included as so small and the highest value is 0.33
 
 
-
+# complete
 j <- st_read(file.path("outputs", "final", "Jokulhaups_sk.gpkg"))
 j <- st_transform(j, crs=st_crs(srast))
-pro <- rasterize(j, srast)
+pro <- rasterize(j, srast, touches = TRUE, cover = TRUE)
 names(pro) = "jokulhaups"
 writeRaster(pro, file.path(outputs, "jokulhaups.tif"), overwrite = TRUE)
 
 #IBA 
 ib <- st_read(file.path("outputs", "final", "sk_important_bird_areas.gpkg"))
 ib <- st_transform(ib, crs=st_crs(srast))
-ib <- rasterize(ib, srast)
+ib <- rasterize(ib, srast,touches = TRUE, cover = TRUE)
 names(ib) = "iba"
-ib[is.na(ib)] <- 0 
-ib <- mask(ib,srast)
-
+ib[ib >= 0.5] <- 1
+ib[ib < 0.5] <- NA
+ib <- mask(ib ,srast)
 writeRaster(ib, file.path(outputs, "iba.tif"), overwrite = TRUE)
 
 
 #stack ib + srast
-#xx <- stack(ib, srast)
+#xx <- ib + srast
 
 
-
-
-
-
-# TAP Old growth 
-## intact watersheds - From TAP old growth 
-#https://catalogue.data.gov.bc.ca/dataset/b684bdbf-8824-4bc6-8d22-329d9b97c043
-
-tap <- rast( file.path("inputs", "TAP_intact_watershed.tif"))
-names(tap) = "tap_intact_watershed"
-tap <- aggregate(tap , fact=10, fun="mean")
-tap <- project(tap, srast)
-writeRaster(tap, file.path(outputs, "TAP_intact_watershed.tif"), overwrite = T)
-
-# big trees 
-bt <- rast(file.path("inputs", "TAP_bigtrees_raw.tif"))
-names(bt) = "tap_bigtrees"
-bt <- aggregate(bt , fact=10, fun="mean")
-#bt <- project(bt, srast)
-crs(bt) <- crs(srast)
-writeRaster(bt, file.path(outputs, "TAP_bigtrees.tif"), overwrite = T)
-
-#bt + srast
-
-
-# ancient forests
-bt <- rast(file.path("inputs", "TAP_ancient_forest_raw.tif"))
-names(bt) = "tap_ancient_forest"
-bt <- aggregate(bt , fact=10, fun="mean")
-#bt <- project(bt, srast)
-crs(bt) <- crs(srast)
-writeRaster(bt, file.path(outputs, "TAP_ancient_forest.tif"), overwrite = T)
-
-
+# # TAP Old growth - see the download as need to go back to the raw data
 
 
 
@@ -387,9 +438,32 @@ writeRaster(bt, file.path(outputs, "TAP_ancient_forest.tif"), overwrite = T)
 
 # continuous measure of rarity
 con_rarec <- rast(file.path("outputs","sk_lf_rdc_rarity_101c.tif"))
-con_rarec<- aggregate(con_rarec , fact=10, fun="mean")
 names(con_rarec)= "ter_rarity"
-writeRaster(con_rarec, file.path(outputs, "ter_rarity_c.tif"), overwrite = T)
+con_rarec <- as.polygons(con_rarec, digits = 2)
+# option 1
+con_rarecm <- terra::rasterize(con_rarec, srast, "ter_rarity", fun = "mean", na.rm = TRUE)
+names(con_rarecm)= "ter_rarity_mean"
+con_rarecm <- mask(con_rarecm, srast)
+writeRaster(con_rarecm, file.path(outputs, "ter_rarity_c_mean.tif"), overwrite = T)
+
+
+#option 2
+con_rarech <- terra::rasterize(con_rarec, srast, "ter_rarity", fun = "max", na.rm = TRUE)
+names(con_rarech)= "ter_rarity_max"
+con_rarech <- mask(con_rarech, srast)
+writeRaster(con_rarech, file.path(outputs, "ter_rarity_c_max.tif"), overwrite = T)
+
+
+
+
+
+
+
+
+
+#con_rarec<- aggregate(con_rarec , fact=10, fun="mean")
+#names(con_rarec)= "ter_rarity"
+#writeRaster(con_rarec, file.path(outputs, "ter_rarity_c.tif"), overwrite = T)
 
 # classed version
 con_rareclass <- rast(file.path("outputs", "sk_rarity_conc.tif"))
@@ -491,17 +565,26 @@ writeRaster(div, file.path(outputs, "aq_lakes_diversity_class.tif"), overwrite =
 
 
 # wetland density 
-wet <-  rast(file.path("inputs", "sk_wetland_density_1km.tif"))
-names(wet) = "aq_wetland_density"
+wet <-  rast(file.path("inputs", "sk_wetland_density.tif"))
+names(wet)<- "wetden"
+wet <- as.polygons(wet, digits = 2)
 
-writeRaster(wet, file.path(outputs, "aq_wetland_density.tif"), overwrite = T)
+wet <- terra::rasterize(wet, srast, "wetden", fun = "mean", na.rm = TRUE)
+names(wet) = "aq_wetland_density"
+wet <- mask(wet, srast)
+writeRaster(wet, file.path(outputs, "aq_wetland_density_mean.tif"), overwrite=TRUE)
 
 
 # lake density
 
-lak <- rast(file.path("inputs", "sk_lake_density_1km.tif"))
+lak <- rast(file.path("inputs", "sk_lake_density.tif"))
+names(lak)<- "lakeden"
+lak <- as.polygons(lak, digits = 2)
+
+lak <- terra::rasterize(lak, srast, "lakeden", fun = "mean", na.rm = TRUE)
 names(lak) = "aq_lake_density"
-writeRaster(lak, file.path(outputs, "aq_lake_density.tif"), overwrite = T)
+lak <- mask(lak, srast)
+writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
 
 
 
