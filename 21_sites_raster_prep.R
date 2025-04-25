@@ -305,61 +305,62 @@ writeRaster(pro  , file.path(outputs, "protected_lands.tif"), overwrite=TRUE)
 
 
 
+## Species - these have been grouped and updateded within the 10_species_analysis.R script. 
 
 
 
-# break this into species Presence/absence
-
-# red and blue sp and federal listed species. 
-rb <- st_read(file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
-
-#unique(rb$SCI_NAME)
-#unique(rb$EL_TYPE)
-
-sp <- unique(rb$SCI_NAME)
-
-sp[62]
-
-xx <- purrr::map(sp, function(x){
-  #x <- sp[63]
-  print(x)
-  
-  #x <- sp[63]
-  rbb <- rb |> filter(SCI_NAME == x)
-  comm_name <- gsub(" ", "_", unique(rbb$ENG_NAME))
-  comm_name <- gsub("/", "", comm_name)
-  comm_name <- gsub("-", "", comm_name)
-  
-  
-  sciname <- gsub(" ", "_", unique(rbb$SCI_NAME))
-  sciname <- gsub("/", "", sciname)
-  sciname <- gsub("-", "", sciname)
-  
-  rbb <- rasterize(rbb, srast)
-  
-  if(all(values(is.na(rbb)))){
-    cli::cli_alert("All values are NA, skipping sp")
-  } else {
-    
-  rbb[is.na(rbb)] <- 0 
-  names(rbb) = paste0("bc_listed_", comm_name )
-  rbb <- mask(rbb,srast)
-  print(length(unique(values(rbb))))
-  writeRaster(rbb, file.path(outputs, "species", paste0("bc_listed_", sciname, ".tif")), overwrite = TRUE)
-  }
-})
 
 
-# check that there are only 2 values in the raster
-"Ptychoramphus aleuticus"
-"Arctopoa eminens"
-"Melanitta perspicillata"
-
-
-
-# rb <- rasterize(rb, srast)
-# names(rb) = "red_blue_sp"
-# writeRaster(rb, file.path(outputs, "red_blue_sp.tif"), overwrite = TRUE)
+# # break this into species Presence/absence
+# 
+# # red and blue sp and federal listed species. 
+# rb <- st_read(file.path("inputs", "bc_red_blue_sp_raw.gpkg"))
+# 
+# #unique(rb$SCI_NAME)
+# #unique(rb$EL_TYPE)
+# 
+# sp <- unique(rb$SCI_NAME)
+# 
+# sp[62]
+# 
+# xx <- purrr::map(sp, function(x){
+#   #x <- sp[63]
+#   print(x)
+#   
+#   #x <- sp[63]
+#   rbb <- rb |> filter(SCI_NAME == x)
+#   comm_name <- gsub(" ", "_", unique(rbb$ENG_NAME))
+#   comm_name <- gsub("/", "", comm_name)
+#   comm_name <- gsub("-", "", comm_name)
+#   
+#   
+#   sciname <- gsub(" ", "_", unique(rbb$SCI_NAME))
+#   sciname <- gsub("/", "", sciname)
+#   sciname <- gsub("-", "", sciname)
+#   
+#   rbb <- rasterize(rbb, srast)
+#   
+#   if(all(values(is.na(rbb)))){
+#     cli::cli_alert("All values are NA, skipping sp")
+#   } else {
+#     
+#   rbb[is.na(rbb)] <- 0 
+#   names(rbb) = paste0("bc_listed_", comm_name )
+#   rbb <- mask(rbb,srast)
+#   print(length(unique(values(rbb))))
+#   writeRaster(rbb, file.path(outputs, "species", paste0("bc_listed_", sciname, ".tif")), overwrite = TRUE)
+#   }
+# })
+# 
+# 
+# # check that there are only 2 values in the raster
+# "Ptychoramphus aleuticus"
+# "Arctopoa eminens"
+# "Melanitta perspicillata"
+# 
+# # rb <- rasterize(rb, srast)
+# # names(rb) = "red_blue_sp"
+# # writeRaster(rb, file.path(outputs, "red_blue_sp.tif"), overwrite = TRUE)
 
 
 # fed listed species
@@ -369,19 +370,17 @@ sp <- unique(rb$SCIENTIFIC_NAME)
 
 purrr::map(sp, function(x){
   print(x)
+ # x <- sp[1]
   rbb <- rb |> filter(SCIENTIFIC_NAME == x)
   comm_name <- gsub(" ", "_", unique(rbb$COMMON_NAME_ENGLISH))
   sciname <- gsub(" ", "_", unique(rbb$SCIENTIFIC_NAME))
-  rbb <- rasterize(rbb, srast)
+  rbb <- rasterize(rbb, srast, cover = TRUE, touches = TRUE)
   names(rbb) = paste0("fed_listed_", comm_name )
-  rbb[is.na(rbb)] <- 0 
+  rbb[rbb >= 0.5] <- 1
+  rbb[rbb < 0.5] <- NA
   rbb <- mask(rbb,srast)
-  writeRaster(rbb, file.path(outputs, "species", paste0("fed_listed_", sciname, ".tif")), overwrite = TRUE)
-  
+  writeRaster(rbb, file.path(outputs, paste0("fed_listed_", sciname, ".tif")), overwrite = TRUE)
 })
-
-
-
 
 
 
