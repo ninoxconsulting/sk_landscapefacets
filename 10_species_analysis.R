@@ -3,14 +3,18 @@
 # generate 100m x 100m grid for analysis 
 
 ## Set up 
-
-library(dplyr)
 library(terra)
 library(sf)
 library(readr)
 library(tidyr)
+library(dplyr)
 
-srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+# for 100x 100 measure
+#srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+
+# for 1000m x 1000m measure
+outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
+srast <- rast(file.path(outputs, "template_1km.tif"))
 
 in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 
@@ -19,31 +23,593 @@ ter <- rast(file.path("inputs", "sk_lf_barcode.tif"))
 #terpt <- as.points(ter)
 
 
+
+# 1) SAR species - see the 21_sites_raster_prep script
+
+
+# 2) BC species - cdc dataset
+
+wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg")) |>  
+  dplyr::select(ENG_NAME, SCI_NAME, EL_TYPE,BC_LIST) |> 
+  rename("SPECIES_ENGLISH_NAME" = ENG_NAME,
+         "SCIENTIFIC_NAME" = SCI_NAME,
+         "NAME_TYPE_SUB" = EL_TYPE,
+         "BCLIST" = BC_LIST)
+
+
+# Groups - vertebrate Animals 
+
+#sort(unique(wcdc$SPECIES_ENGLISH_NAME))
+
+
+# 1) blue listed birds 
+
+bb <- c("American Bittern", 
+        "Great Blue Heron, fannini subspecies",
+        "Short-eared Owl" ,
+        "Surf Scoter",
+        "Tufted Puffin") 
+
+
+bb <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% bb) |> 
+  dplyr::mutate(area = as.numeric(st_area(geom))) |> 
+  dplyr::filter(area < 1667611)
+#st_write(bb1, file.path("outputs", "bc_blue_bird.gpkg"), append = FALSE)
+
+bb1 <- rasterize(bb, srast, cover = TRUE, touches = TRUE)
+bb2 <- rasterize(bb, srast, touches = TRUE)
+names(bb1) = "bluelisted_birds"
+names(bb2) = "bluelisted_birds"
+bb1<- mask(bb1,srast)
+bb2<- mask(bb2,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_birds_cover.tif"), overwrite = TRUE)
+writeRaster(bb2, file.path(outputs, "bc_cdc_bluelisted_birds.tif"), overwrite = TRUE)
+
+
+# 2) blues listed mammals (cdc). these are mostly small polygons buffered so dropped to one pt
+# conterved to a singel polygons, then centroid, then buffer to 1km (500m)
+
+bm <- c("Collared Pika",
+        "Meadow Jumping Mouse, alascensis subspecies",
+        "Steller Sea Lion" )
+
+bm <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% bm) |> 
+  sf::st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom))) |>
+  st_centroid() |> 
+  st_buffer(dist = 500) 
+
+#st_write(bm, file.path("outputs", "bc_blue_mammals.gpkg"), append = FALSE)
+
+bb1 <- rasterize(bm, srast, cover = TRUE, touches = TRUE)
+bb2 <- rasterize(bb, srast, touches = TRUE)
+names(bb1) = names(bb2) = "bluelisted_mammals"
+bb1<- mask(bb1,srast)
+bb2<- mask(bb2,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_mammals_cover.tif"), overwrite = TRUE)
+writeRaster(bb2, file.path(outputs, "bc_cdc_bluelisted_mammals.tif"), overwrite = TRUE)
+
+
+
+# 3) blue listed fish (cdc)  - DID NOT REDUCE TO CENTROID AS WATERBUDY 
+# filtered by 0.5% cover threshold 
+
+bf <- "Least Cisco" 
+
+bf <- wcdc %>% filter(SPECIES_ENGLISH_NAME == bf)
+#st_write(bf, file.path("outputs", "bc_blue_fish.gpkg"), append = FALSE)
+
+bb1 <- rasterize(bf, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "bluelisted_fish"
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_fish.tif"), overwrite = TRUE)
+
+
+
+# 4) red listed fisfh (cdc) - DID NOT REDUCE TO CENTROID AS WATERBUDY
+# filtered by 0.5% cover threshold 
+
+
+rf <- c("Broad Whitefish",
+        "Lake Chub - Atlin Warm Springs Populations" )
+
+rf <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% rf) 
+#st_write(rf, file.path("outputs", "bc_red_fish.gpkg"), append = FALSE)
+bb1 <- rasterize(rf, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "redlisted_fish"
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_fish.tif"), overwrite = TRUE)
+
+
+
+
+# 5) red listed birds (cdc) -keep cover amount 
+  
+rb <- c("Cassin's Auklet",
+       # "Hudsonian Godwit",
+        "Parasitic Jaeger",
+        "Short-billed Dowitcher")
+  
+rb <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% rb) 
+
+rbs <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Hudsonian Godwit") |>
+  st_centroid() |> 
+  st_buffer(dist = 500) 
+
+rb <- rbind(rb, rbs)
+#st_write(rb, file.path("outputs", "bc_cdc_red_birds1.gpkg"), append = FALSE)
+
+bb1 <- rasterize(rb, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "redlisted_birds"
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_birds.tif"), overwrite = TRUE)
+
+
+
+# 6) red listed mammals (cdc)
+rm <- "Tundra Shrew" 
+
+rm <- wcdc %>% filter(SPECIES_ENGLISH_NAME == rm) |> 
+  sf::st_cast("POLYGON") |> 
+  st_centroid() |> 
+  st_buffer(dist = 500)
+
+st_write(rm, file.path("outputs", "bc_red_mammals.gpkg"), append = FALSE)
+bb1 <- rasterize(rm, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "redlisted_mammals"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_mammals.tif"), overwrite = TRUE)
+
+
+
+
+# 7) blue vegetation (cdc)
+
+bvv <- c("abbreviated bluegrass",
+        "Alaska holly fern",
+        "Alaska knotweed",
+        "Alaskan sagebrush",
+        "American sweet-flag",
+        "Arctic sandwort",
+        "beach groundsel",
+        "Bostock's montia",
+        "diapensia",
+        "dwarf bog bunchberry",
+        "elegant cinquefoil",
+        "eminent bluegrass" ,
+        "Frankton's draba",
+        "goosegrass sedge",
+        "Gorman's douglasia",
+        "Gorman's penstemon" ,
+        "Jordal's locoweed" ,
+        "large-petalled saxifrage" ,
+        "Mackenzie's sedge",
+        "marsh fleabane",
+        "mountain moonwort",
+        "northern groundsel",
+        "northern paintbrush",
+        "pale greenish paintbrush" ,
+        "pendantgrass",
+        "polar bluegrass" ,
+        "purple-haired groundsel" ,
+        "Ross' avens" ,
+        "Scamman's locoweed",
+        "Setchell's willow",
+        "three-forked mugwort" ,
+        "two-coloured sedge" ,
+        "two-flowered cinquefoil",
+        "wedge-leaf primrose",
+        "Wind River draba" ,
+        "Wright's golden-saxifrage" ,
+        "Yukon groundsel",
+        "Yukon sawwort" )
+
+bv <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% bvv) |> 
+  sf::st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom))) 
+
+# shrink the large uncertainty polys and add back to list
+bv_centroids <- bv |> 
+  filter(area > 30000000)|>
+  st_centroid() |> 
+ st_buffer(dist = 500)
+  
+bv_poly <- bv |> 
+  filter(area < 30000000) 
+
+bv<- rbind(bv_poly, bv_centroids) 
+#st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
+
+bb1 <- rasterize(bv, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "bluelisted_vegetation"
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_vegetation.tif"), overwrite = TRUE)
+
+
+# 8) red listed vegetation (cdc)
+
+rvv <- c("smooth draba",
+        "Ogotoruk Creek butterweed",
+        "northern swamp willowherb",
+        "northern sawwort" ,
+        "northern parrya",
+        "northern daisy" ,
+        "arctic daisy")
+        
+        
+
+rv <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% rvv) |>
+  sf::st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom)))
+
+st_write(rv, file.path("outputs", "bc_red_vegetation.gpkg"), append = FALSE)
+
+# shrink the large uncertainty polys and add back to list
+rv_centroids <- rv |> 
+  filter(area > 12000000)|>
+  st_centroid() |> 
+  st_buffer(dist = 500)
+
+rv_poly <- rv |> 
+  filter(area < 12000000) 
+
+length(rv_poly$SPECIES_ENGLISH_NAME)
+
+rv<- rbind(rv_poly, rv_centroids) 
+#st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
+
+bb1 <- rasterize(rv, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "redlisted_vegetation"
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_vegetation.tif"), overwrite = TRUE)
+
+
+## map the uniques groupings 
+
+# Ecosystem / community types 
+
+
+# 9) Cottonwood floodplain forests (BC CDC - group black cottonwood	-red alder salmonberry & black cottonwood - hybrid spruce -redosier)
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "black cottonwood - hybrid white spruce / red-osier dogwood" )
+el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "black cottonwood - red alder / salmonberry"  )
+
+el <- bind_rows(el, el2) |> 
+  st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom))) 
+
+#st_write(el, file.path("outputs", "cottonwood_poly_raw.gpkg"), append = FALSE)
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "cottonwood_floodplain"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_cottonwood_floodplain_cover.tif"), overwrite = TRUE)
+
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_cottonwood_floodplain.tif"), overwrite = TRUE)
+
+
+#10 Pacific willow 
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Pacific willow / red-osier dogwood / horsetails" ) #|> 
+  #st_cast("POLYGON") |> 
+  #dplyr::mutate(area = as.numeric(st_area(geom)))
+st_write(el, file.path("outputs", "pacific_willow_poly_raw1.gpkg"), append = FALSE)
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "pacific_willow"
+bb1[bb1 >= 0.001] <- 1
+bb1[bb1 < 0.001] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_pacific_willow.tif"), overwrite = TRUE)
+
+
+
+
+#Sitka spruce / salmonberry high bench floodplain
+
+sss <- c( "Sitka spruce / salmonberry Very Wet Maritime" ,              
+         "Sitka spruce / salmonberry Wet Submaritime 1"  ,             
+         "Sitka spruce / salmonberry Wet Submaritime 2" )
+
+ss <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% sss) |>
+  sf::st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom)))
+
+st_write(ss, file.path("outputs", "Sitkaspruce_salmonberry_high_bench_floodplain.gpkg"), append = FALSE)
+bb1 <- rasterize(ss, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "Sitkaspruce_salmonberry_high_bench_floodplain"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain_cover.tif"), overwrite = TRUE)
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain.tif"), overwrite = TRUE)
+
+
+
+#10 "western hemlock - Sitka spruce / lanky moss"
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "western hemlock - Sitka spruce / lanky moss" ) #|> 
+#st_write(el, file.path("outputs", "westhemlock_sitkasp_lankymoss.gpkg"), append = FALSE)
+
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "westhemlock_sitkasp_lankymoss"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_westhemlock_sitkasp_lankymoss_cover.tif"), overwrite = TRUE)
+bb1[bb1 >= 0.5] <- 1
+bb1[bb1 < 0.5] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_westhemlock_sitkasp_lankymoss.tif"), overwrite = TRUE)
+
+
+#11 western redcedar - Sitka spruce / sword fern - threshold 0.01 as very small isolated areas, 0.5 woudl exclude all pixals. 
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "western redcedar - Sitka spruce / sword fern" ) #|>
+#st_write(el, file.path("outputs", "westredcedar_sitkasp_swordfern.gpkg"), append = FALSE)
+
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "westcedar_sitkasp_swordfern"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_westcedar_sitkasp_swordfern_cover.tif"), overwrite = TRUE)
+bb1[bb1 >= 0.01] <- 1
+bb1[bb1 < 0.01] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_westcedar_sitkasp_swordfern.tif"), overwrite = TRUE)
+
+
+#12 Endemic grasslands:  Saskatoon - slender wheatgrass and Sandbergs bluegrass - slender wheatgrass
+# threshold = 0.5
+
+#grasslands bulkley (BC CDC - group  Saskatoon/slender wheatgrass and Sandbergs bluegrass - slender wheatgrass
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "saskatoon / slender wheatgrass" )
+el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Sandberg's bluegrass - slender wheatgrass" )
+el <- bind_rows(el, el2)%>%
+  st_cast("POLYGON") 
+
+st_write(el, file.path("outputs", "grasslands_poly_raw.gpkg"), append = FALSE)
+
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "endemic_grasslands"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_endemic_grasslands_cover.tif"), overwrite = TRUE)
+bb1[bb1 >= 0.05] <- 1
+bb1[bb1 < 0.05] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_endemic_grasslands.tif"), overwrite = TRUE)
+
+
+#13 Name is Sitka spruce / false lily of the valley,  Sitka spruce / tall trisetum floodplain forest
+
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Sitka spruce / false lily-of-the-valley Wet Hypermaritime 1" )
+el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Sitka spruce / tall trisetum" )
+el <- bind_rows(el, el2)%>%
+  st_cast("POLYGON") 
+#st_write(el, file.path("outputs", "Sitka_spruce_lily_trisetum_raw.gpkg"), append = FALSE)
+
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "Sitka_spruce_lily_trisetum"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_Sitka_spruce_lily_trisetum_cover.tif"), overwrite = TRUE)
+
+bb1[bb1 >= 0.1] <- 1
+bb1[bb1 < 0.1] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_Sitka_spruce_lily_trisetum.tif"), overwrite = TRUE)
+
+
+
+
+#15: epiphytic lichens (BC CDC - group cryptic paw, smoker’s lung combined)
+
+sss <- c( "cryptic paw" ,              
+          "smoker's lung"  ,             
+          "oldgrowth specklebelly" )
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% sss) |>
+  sf::st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom)))
+
+#st_write(el, file.path("outputs", "epiphyticlichen_poly_raw.gpkg"), append = FALSE)
+
+# shrink the large uncertainty polys and add back to list
+rv_centroids <- el |> 
+  filter(area > 3121400)|>
+  st_centroid() |> 
+  st_buffer(dist = 500)
+
+rv_poly <- el |> 
+  filter(area < 3121400)
+
+#length(rv_poly$SPECIES_ENGLISH_NAME)
+
+el <- rbind(rv_poly, rv_centroids) 
+#st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "epithetic_lichens"
+writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens_cover.tif"), overwrite = TRUE)
+
+bb1[bb1 >= 0.3] <- 1
+bb1[bb1 < 0.3] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens.tif"), overwrite = TRUE)
+
+
+
+
+
+
+# 16: Group purple - BC red-listed  lichens (mountain crab-eye and northwest waterfan)
+# threshold = 0.1
+
+sss <- c( "mountain crab-eye" , "northwest waterfan" )
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% sss) |>
+  sf::st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom)))
+
+st_write(el, file.path("outputs", "redlisted_lichen_poly_raw.gpkg"), append = FALSE)
+
+# shrink the large uncertainty polys and add back to list
+rv_centroids <- el |> 
+  filter(area > 3121400)|>
+  st_centroid() |> 
+  st_buffer(dist = 500)
+
+rv_poly <- el |> 
+  filter(area < 3121400)
+
+#length(rv_poly$SPECIES_ENGLISH_NAME)
+
+el <- rbind(rv_poly, rv_centroids) 
+#st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "redlisted_lichen"
+writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_lichen_cover.tif"), overwrite = TRUE)
+
+bb1[bb1 >= 0.01] <- 1
+bb1[bb1 < 0.01] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_lichen.tif"), overwrite = TRUE)
+
+
+
+#17 Group red. Name is BC listed bumblebees (McKay's, yellow-banded and gypsy cuckoo)
+
+sss <- c( "McKay's Bumble Bee" , "Yellow-banded Bumble Bee", "Gypsy Cuckoo Bumble Bee" )
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% sss) |>
+  sf::st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom)))
+
+st_write(el, file.path("outputs", "bc_cdc_listed_bumblebees_poly_raw.gpkg"), append = FALSE)
+
+# shrink the large uncertainty polys and add back to list
+rv_centroids <- el |> 
+  filter(area > 78036000)|>
+  st_centroid() |> 
+  st_buffer(dist = 500)
+
+rv_poly <- el |> 
+  filter(area < 78036000)
+
+#length(rv_poly$SPECIES_ENGLISH_NAME)
+
+el <- rbind(rv_poly, rv_centroids) 
+#st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "bclisted_bumblebees"
+writeRaster(bb1, file.path(outputs, "bc_cdc_bclisted_bumblebees_cover.tif"), overwrite = TRUE)
+bb1[bb1 >= 0.01] <- 1
+bb1[bb1 < 0.01] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bclisted_bumblebees.tif"), overwrite = TRUE)
+
+
+#18 BC blue-listed dragonfly
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Plains Forktail" ) |> 
+  st_cast("POLYGON") |> 
+  dplyr::mutate(area = as.numeric(st_area(geom))) |> 
+  st_centroid() |> 
+  st_buffer(dist = 500)
+
+st_write(el, file.path("outputs", "bc_blue_listeddragonfly_poly_raw1.gpkg"), append = FALSE)
+bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "bluelisted_dragonfly"
+bb1[bb1 >= 0.001] <- 1
+bb1[bb1 < 0.001] <- NA
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_dragonfly.tif"), overwrite = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Ecosystem / community types 
+
+# rare epiphytic lichens (BC CDC - group cryptic paw, smoker’s lung combined)
+
+
+#grasslands bulkley (BC CDC - group  Saskatoon/slender wheatgrass and Sandbergs bluegrass - slender wheatgrass
+
+el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "saskatoon / slender wheatgrass" )
+el2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Sandberg's bluegrass - slender wheatgrass" )
+el <- bind_rows(el, el2)%>%
+  st_cast("POLYGON") 
+
+st_write(el, file.path("outputs", "grasslands_poly_raw.gpkg"), append = FALSE)
+
+
+el <- bind_rows(el, el2)%>%
+  st_cast("POLYGON") 
+st_write(el, file.path("outputs", "cottonwood_poly_raw.gpkg"), append = FALSE)
+#st_write(el, file.path("outputs", "grasslands_poly_raw.gpkg"), append = FALSE)
+
+
+# el <- el %>%
+#   distinct()%>%
+#   mutate(area_m = st_area(.))%>%
+#   mutate(area = as.numeric(area_m))%>%
+#   filter(area < 100000)
+# 
+# el <- st_centroid(el)%>% select(-area_m, -area)
+# st_write(el, file.path("outputs", "cottonwood_pt.gpkg"), append = FALSE)
+# 
+
 # read in species dataset 
-
-# 1) fish observations
-fi <- st_read(file.path("inputs", "sk_known_fish_pts.gpkg"))
-
-# 2) wildlife obs
-wa <- st_read(file.path("inputs", "wildlife_obs_all.gpkg")) %>%
-  select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATETIME,
-         OBSERVATION_YEAR,LATITUDE, LONGITUDE,
-         NAME_TYPE,  NAME_TYPE_SUB,TAXONOMIC_LEVEL,
-         PHYLUM_NAME, CLASS_NAME, CLASS_ENGLISH, ORDER_NAME)
-
-# 3) wildlife inc
-wi <- st_read(file.path("inputs", "wildlife_incident_obs.gpkg")) %>% 
-  select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATE,
-         OBSERVATION_YEAR,LATITUDE, LONGITUDE,
-         NAME_TYPE,  NAME_TYPE_SUB,TAXONOMIC_LEVEL,
-         PHYLUM_NAME, CLASS_NAME, CLASS_ENGLISH, ORDER_NAME)
-
-ww <- bind_rows(wa, wi)
-
-
-# 4) wildlife telem
-wwt <- st_read(file.path("inputs", "wildlife_telemetry_pts.gpkg")) %>% 
-  select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATE)
+# 
+# # 1) fish observations
+# fi <- st_read(file.path("inputs", "sk_known_fish_pts.gpkg"))
+# 
+# # 2) wildlife obs
+# wa <- st_read(file.path("inputs", "wildlife_obs_all.gpkg")) %>%
+#   select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATETIME,
+#          OBSERVATION_YEAR,LATITUDE, LONGITUDE,
+#          NAME_TYPE,  NAME_TYPE_SUB,TAXONOMIC_LEVEL,
+#          PHYLUM_NAME, CLASS_NAME, CLASS_ENGLISH, ORDER_NAME)
+# 
+# # 3) wildlife inc
+# wi <- st_read(file.path("inputs", "wildlife_incident_obs.gpkg")) %>% 
+#   select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATE,
+#          OBSERVATION_YEAR,LATITUDE, LONGITUDE,
+#          NAME_TYPE,  NAME_TYPE_SUB,TAXONOMIC_LEVEL,
+#          PHYLUM_NAME, CLASS_NAME, CLASS_ENGLISH, ORDER_NAME)
+# 
+# ww <- bind_rows(wa, wi)
+# 
+# 
+# # 4) wildlife telem
+# wwt <- st_read(file.path("inputs", "wildlife_telemetry_pts.gpkg")) %>% 
+#   select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATE)
 
 #[1] "Northern Goshawk"    "Grizzly Bear"        "American Black Bear"
 #[4] "Grey Wolf" 
