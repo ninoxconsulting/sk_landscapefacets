@@ -303,6 +303,10 @@ writeRaster(iww, file.path(outputs, "intactwatershed_10.tif"), overwrite = TRUE)
 outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
 srast <- rast(file.path(outputs, "template_1km.tif"))
 
+# note data is in two files (Map2 and Map 3), these are combined to give the catergories of 1-4 in the report. 
+# I separated these out into single layers, although they largely overlap so we might not need both sets?
+
+
 bt<- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map2_BigTreeOG_2021_10_24.tif"))
 bt1 <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map3_PriorityBigTreeOG_2021_10_24.tif"))
 ##bt <- project(bt, template)
