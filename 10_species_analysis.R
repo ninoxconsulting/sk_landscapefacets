@@ -229,6 +229,9 @@ bv<- rbind(bv_poly, bv_centroids)
 
 bb1 <- rasterize(bv, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "bluelisted_vegetation"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_vegetation_cover.tif"), overwrite = TRUE)
+
 bb1[bb1 >= 0.5] <- 1
 bb1[bb1 < 0.5] <- NA
 bb1<- mask(bb1,srast)
@@ -332,10 +335,10 @@ bb1 <- rasterize(ss, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "Sitkaspruce_salmonberry_high_bench_floodplain"
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain_cover.tif"), overwrite = TRUE)
-bb1[bb1 >= 0.5] <- 1
-bb1[bb1 < 0.5] <- NA
+bb1[bb1 >= 0.05] <- 1
+bb1[bb1 < 0.05] <- NA
 bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain.tif"), overwrite = TRUE)
+writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain0.05.tif"), overwrite = TRUE)
 
 
 
@@ -534,6 +537,328 @@ bb1[bb1 >= 0.001] <- 1
 bb1[bb1 < 0.001] <- NA
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_dragonfly.tif"), overwrite = TRUE)
+
+
+
+
+
+#############################################################################
+## Focal species of interest 
+################################################################################
+# 
+# 2) wildlife obs
+wa <- st_read(file.path("inputs", "wildlife_obs_all.gpkg")) %>%
+  dplyr::select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATETIME,
+         OBSERVATION_YEAR,LATITUDE, LONGITUDE,
+         NAME_TYPE,  NAME_TYPE_SUB,TAXONOMIC_LEVEL,
+         PHYLUM_NAME, CLASS_NAME, CLASS_ENGLISH, ORDER_NAME)
+
+# 3) wildlife inc
+wi <- st_read(file.path("inputs", "wildlife_incident_obs.gpkg")) %>%
+  dplyr::select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATE,
+         OBSERVATION_YEAR,LATITUDE, LONGITUDE,
+         NAME_TYPE,  NAME_TYPE_SUB,TAXONOMIC_LEVEL,
+         PHYLUM_NAME, CLASS_NAME, CLASS_ENGLISH, ORDER_NAME)
+
+ww <- bind_rows(wa, wi)
+
+# 4) wildlife telem
+ wwt <- st_read(file.path("inputs", "wildlife_telemetry_pts.gpkg")) %>% 
+   dplyr::select(SPECIES_ENGLISH_NAME, SCIENTIFIC_NAME,OBSERVATION_DATE)
+
+
+# 5) cdc dataset
+wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg")) %>% 
+  select(ENG_NAME, SCI_NAME, EL_TYPE)%>%
+  rename("SPECIES_ENGLISH_NAME" = ENG_NAME,
+         "SCIENTIFIC_NAME" = SCI_NAME,
+         "NAME_TYPE_SUB" = EL_TYPE)
+
+
+
+##################
+# Amphibians 
+
+wwa <- ww %>% filter(CLASS_NAME == "Amphibia")
+
+#-western toad #6670 all records #5219 unique
+
+wt <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Western Toad")%>%
+  distinct()
+st_write(wt, file.path("outputs", "western_toad_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(wt, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "Western_Toad"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_westerntoad_cover.tif"), overwrite = TRUE)
+
+
+
+#-northwest salamander #7087 #3938
+nwsal <- wwa %>% filter(SPECIES_ENGLISH_NAME == "Northwestern Salamander")%>%
+  distinct()
+st_write(nwsal, file.path("outputs", "northwestsal_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(nwsal, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "northwestsal"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_northwestsal_cover.tif"), overwrite = TRUE)
+
+
+
+
+#-rough-skinned newt #1535  #1111
+srn <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Roughskin Newt")%>%
+  distinct()
+st_write(srn, file.path("outputs", "roughskinnewt_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(srn, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "roughskinnewt"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_roughskinnewt_cover.tif"), overwrite = TRUE)
+
+
+
+#-wood frog #188 # 166
+wf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Wood Frog")%>%
+  distinct()
+st_write(wf, file.path("outputs", "woodfrog_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(wf, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "woodfrog"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_woodfrog_cover.tif"), overwrite = TRUE)
+
+
+
+# coastal tailed frog (and bc cdc too) #973  #897
+ctf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Coastal Tailed Frog")%>%
+  distinct()
+
+# all the wcdc locations are already captured with the pt data 
+
+##ctf2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Coastal Tailed Frog") 
+#  mutate(area_m = st_area(.))%>%
+#  mutate(area = as.numeric(area_m))%>%
+#  filter(area < 100000)
+
+# ctf22 <- st_centroid(ctf2)%>% select(-area_m, -area)
+# 
+#ctf <- bind_rows(ctf, ctf2) 
+
+st_write(ctf, file.path("outputs", "coastaltail_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(ctf, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "coastaltail"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_coastaltail_cover.tif"), overwrite = TRUE)
+
+
+
+#-Columbia spotted frog #2346 
+csf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Columbia Spotted Frog")%>%
+  distinct()
+st_write(csf, file.path("outputs", "columbiaspotfrog_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(csf, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "columbiaspotfrog"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_columbiaspotfrog_cover.tif"), overwrite = TRUE)
+
+
+
+# Fish species
+
+# 1) fish observations
+fi <- st_read(file.path("inputs", "sk_known_fish_pts.gpkg"))
+
+sort(unique(fi$SPECIES_NAME))
+
+soi <- c("Eulachon", "Bull Trout", 
+         "Chum Salmon", "Sockeye Salmon" ,"Pink Salmon","Coho Salmon",
+         "Chinook Salmon", "All Salmon" ,
+         "Steelhead",  "Steelhead (Summer-run)", "Steelhead (Winter-run)")
+
+fii <- fi %>% filter(SPECIES_NAME %in% soi)
+
+
+# Eulachon #63
+ee <- fii %>% filter(SPECIES_NAME =="Eulachon") 
+st_write(ee, file.path("outputs", "eulachon_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "eulachon"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_eulachon_cover.tif"), overwrite = TRUE)
+
+
+# bulltrout # 992
+ee <- fii %>% filter(SPECIES_NAME =="Bull Trout")#%>%
+#distinct()
+st_write(ee, file.path("outputs", "bulltrout_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "bulltrout"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_bulltrout_cover.tif"), overwrite = TRUE)
+
+
+
+# salmon #13452
+ee <- fii %>% filter(SPECIES_NAME %in% c(
+  "Chum Salmon", "Sockeye Salmon" ,"Pink Salmon","Coho Salmon",
+  "Chinook Salmon", "All Salmon"))
+st_write(ee, file.path("outputs", "salmon_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "salmon"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_salmon_cover.tif"), overwrite = TRUE)
+
+
+
+
+# steel head  #2940
+ee <- fii %>% filter(SPECIES_NAME %in% c(
+  "Steelhead",  "Steelhead (Summer-run)", "Steelhead (Winter-run)"))
+
+st_write(ee, file.path("outputs", "steelhead_pt.gpkg"),append = FALSE)
+bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "steelhead"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_steelhead_cover.tif"), overwrite = TRUE)
+
+
+## Osprey #413 # 304
+
+os <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Osprey")%>%distinct()
+st_write(os, file.path("outputs", "osprey_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(os, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "osprey"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_osprey_cover.tif"), overwrite = TRUE)
+
+
+# dragon flies #3340 # 1521
+
+dra <- ww %>% filter(ORDER_NAME == "Odonata")%>% distinct()
+st_write(dra, file.path("outputs", "odonata_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(dra, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "odonata"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_odonata_cover.tif"), overwrite = TRUE)
+
+
+### terrestrial 
+
+# whitebark pine (also in bc cdc) #1299 
+#wbp <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Whitebark Pine")
+
+#wbp2 <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "whitebark pine")
+#wbp2 <- st_centroid(wbp2)
+#wbp <- bind_rows(wbp, wbp2) %>%
+#  distinct()
+#
+#st_write(wbp, file.path("outputs", "whitebarkpine_pt.gpkg"), append = FALSE)
+
+
+# Pacific marten #136 # 72
+ee <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Pacific Marten")%>%
+  distinct()
+st_write(ee, file.path("outputs", "pacificmarten_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "pacificmarten"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_pacificmarten_cover.tif"), overwrite = TRUE)
+
+
+
+
+
+
+# northern flying squirrel #135 #81 
+ee <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Northern Flying Squirrel")%>%
+  distinct()
+st_write(ee, file.path("outputs", "nthfylingsq_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "nthfylingsq"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_nthfylingsq_cover.tif"), overwrite = TRUE)
+
+
+# bats #34704 # 505
+#-bats (all species and “bats” (unidentified bats group in data set)
+
+bb <- ww %>% filter(ORDER_NAME =="Chiroptera")  
+bb <- bb %>% distinct()                 
+st_write(bb, file.path("outputs", "bat_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(bb, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "bat"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_bat_cover.tif"), overwrite = TRUE)
+
+
+
+# -red-backed vole # 290
+ee <- ww %>% filter(SPECIES_ENGLISH_NAME == "Southern Red-backed Vole") %>% distinct()  
+st_write(ee , file.path("outputs", "sthredbackedvole_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "sthredbackedvole"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_sthredbackedvole_cover.tif"), overwrite = TRUE)
+
+
+#black bear #518
+nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "American Black Bear")      
+nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "American Black Bear") 
+nn <- bind_rows(nn, nn2)%>% distinct()  
+st_write(nn , file.path("outputs", "blackbear_pt.gpkg"), append = FALSE)
+bb1 <- rasterize(nn, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "blackbear"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_blackbear_cover.tif"), overwrite = TRUE)
+
+# grizz # 6825
+nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "Grizzly Bear")      
+nn2 <- wwt %>% filter(SPECIES_ENGLISH_NAME == "Grizzly Bear") 
+nn <- bind_rows(nn, nn2)%>% distinct()  
+st_write(nn , file.path("outputs", "grizbear_pt.gpkg"), append = FALSE)
+
+bb1 <- rasterize(nn, srast, cover = TRUE, touches = TRUE)
+names(bb1) = "grizbear"
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_grizbear_cover.tif"), overwrite = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
