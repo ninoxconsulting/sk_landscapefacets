@@ -376,10 +376,10 @@ purrr::map(sp, function(x){
   sciname <- gsub(" ", "_", unique(rbb$SCIENTIFIC_NAME))
   rbb <- rasterize(rbb, srast, cover = TRUE, touches = TRUE)
   names(rbb) = paste0("fed_listed_", comm_name )
-  rbb[rbb >= 0.5] <- 1
-  rbb[rbb < 0.5] <- NA
+  #rbb[rbb >= 0.5] <- 1
+  #rbb[rbb < 0.5] <- NA
   rbb <- mask(rbb,srast)
-  writeRaster(rbb, file.path(outputs, paste0("fed_listed_", sciname, ".tif")), overwrite = TRUE)
+  writeRaster(rbb, file.path(outputs, paste0("fed_listed_", sciname, "_cover.tif")), overwrite = TRUE)
 })
 
 
