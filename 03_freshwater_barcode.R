@@ -294,7 +294,6 @@ t = data.frame(t)
 names(rar)= "rarity"
 #reclass the valyers to a conccentration 
 
-## still to do = august 16th 
 
 ## still to decide on these values 
 
@@ -1129,11 +1128,21 @@ writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"), overwrite = T
 
 div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
 div <- mask(div, srast)
-
 #hist(div)
 #aa <- values(div, na.rm = T)
 #quantile(aa, seq(0,1, 0.1))
 writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
+
+# new version - 1km
+div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
+divp <- as.polygons(div, digits = 2)
+divp <- terra::rasterize(divp, srast, "sk_rivers_diversity_101", fun = "mean", na.rm = TRUE)
+names(divp) <- "rivers_diversity_101"
+divp <- mask(divp, srast)
+writeRaster(divp, file.path(outputs, "rivers_diversity_101_c.tif"), overwrite=TRUE)
+
+
+
 
 # set thresholds 
 names(div)= "diversity"
@@ -1365,15 +1374,14 @@ rc <- classify(avrare , rclmat, include.lowest=TRUE)
 writeRaster(rc, file.path("outputs", "sk_rivers_rarity_mean_conc.tif"), overwrite = TRUE)
 
 
-
-
-
-
-
-
-
-
-
+# new version - 1km
+avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
+avrarep <- as.polygons(avrare, digits = 2)
+avrarep
+avrarep <- terra::rasterize(avrarep, srast, "sk_rivers_rarity_mean_101c", fun = "mean", na.rm = TRUE)
+names(avrarep) <- "rivers_rarity_mean_101c"
+avrarep<- mask(avrarep, srast)
+writeRaster(avrarep, file.path(outputs, "rivers_rarity_mean_101c.tif"), overwrite=TRUE)
 
 
 
