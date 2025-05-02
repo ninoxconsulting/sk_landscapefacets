@@ -7,9 +7,10 @@ library(sf)
 
 ## note templates are generated in scripr : 01_prep..
 
-srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+#srast <- rast(file.path("inputs", "sk_rast_template.tif"))
+srast <- srast <- rast(file.path(outputs, "template_1km.tif")) # new 1km raster with coastline updata
 
-srast1km <- aggregate(srast, fact = 10)
+#srast1km <- aggregate(srast, fact = 10)
 
 in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
 
@@ -298,17 +299,12 @@ writeRaster(iww, file.path(outputs, "intactwatershed_10.tif"), overwrite = TRUE)
 
 
 
-
 # BIG TREES ###############################################
 outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
 srast <- rast(file.path(outputs, "template_1km.tif"))
 
-# note data is in two files (Map2 and Map 3), these are combined to give the catergories of 1-4 in the report. 
-# I separated these out into single layers, although they largely overlap so we might not need both sets?
-
-
 bt<- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map2_BigTreeOG_2021_10_24.tif"))
-bt1 <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map3_PriorityBigTreeOG_2021_10_24.tif"))
+#bt1 <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map3_PriorityBigTreeOG_2021_10_24.tif"))
 ##bt <- project(bt, template)
 ##template <-rast(file.path("inputs", "sk_rast_template.tif"))
 #bt <- resample(bt, template)
@@ -349,6 +345,7 @@ iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
 names(iww)<- "bt"
 iww <- mask(iww ,srast)
 plot(iww)
+writeRaster(iww, file.path(outputs, "bigtree_1_cover.tif"), overwrite = TRUE)
 iww[iww >= 0.5] <- 1
 iww[iww < 0.5] <- NA
 iww <- mask(iww ,srast)
@@ -361,6 +358,8 @@ common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
 names(iww)<- "bt"
 iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "bigtree_2_cover.tif"), overwrite = TRUE)
+
 plot(iww)
 iww[iww >= 0.5] <- 1
 iww[iww < 0.5] <- NA
@@ -390,6 +389,7 @@ common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
 names(iww)<- "bt"
 iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "bigtree_3_cover.tif"), overwrite = TRUE)
 plot(iww)
 iww[iww >= 0.5] <- 1
 iww[iww < 0.5] <- NA
@@ -403,13 +403,13 @@ common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
 names(iww)<- "bt"
 iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "bigtree_4_cover.tif"), overwrite = TRUE)
 plot(iww)
 iww[iww >= 0.5] <- 1
 iww[iww < 0.5] <- NA
 iww <- mask(iww ,srast)
 names(iww)<- "bt4"
 writeRaster(iww, file.path(outputs, "bigtree_4.tif"), overwrite = TRUE)
-
 
 
 
@@ -504,6 +504,18 @@ mcc <- mask(cc, srast)
 writeRaster(mcc, file.path("inputs", "2080s_macrorefugia.tif"), overwrite = TRUE)
 plot(mcc)
 #rast(c(mcc, base_raster))
+
+
+
+reff <- ref5 
+
+cc <- resample(reff, srast)
+mcc <- mask(cc, srast)
+writeRaster(mcc, file.path("inputs", "microrefugia.tif"), overwrite = TRUE)
+plot(mcc)
+#rast(c(mcc, base_raster))
+
+
 
 
 
@@ -669,12 +681,44 @@ st_write(priv, file.path("inputs", "sk_privateland_raw.gpkg"))
 
 
 
+
+##########################################################
+# crown lands file 
+#crown_lands <- st_read(file.path('/home/user/Documents/r_repo/2024_landscape_facets/sk_landscapefacets/inputs/cancelled_lands/BCGW_02001F02_1746208971632_11044/TA_CROWN_TENURES_SVW.gpkg'))
+
+#crown_lands <-st_read(file.path('/home/user/Documents/r_repo/2024_landscape_facets/sk_landscapefacets/inputs/cancelled_lands/BCGW_02001F02_1746208971632_11044/TA_CROWN_INVENTORY_SVW.gpkg'))
+crown_lands <-st_read(file.path('/home/user/Documents/r_repo/2024_landscape_facets/sk_landscapefacets/inputs/cancelled_lands/TA_CROWN_RSRV_NOTATIONS_SVW.gpkg'))
+
+head(crown_lands)
+
+library(readr)
+library(openxlsx)
+cdf <- read.xlsx(file.path("inputs", "List of potential conservation lands - active crownland tenures.xlsx"), 
+                 sheet = 2) |> 
+  filter(Map.reserve == 'yes')
+
+crown_lands <- crown_lands |> 
+  dplyr::filter(CROWN_LANDS_FILE %in% cdf$CROWN_LANDS_FILE) |> 
+  dplyr::select( CROWN_LANDS_FILE,INTRID_SID) |> 
+  dplyr::mutate(desc = "crown_lands")
+
+crown_lands <- rasterize(crown_lands , srast, "desc", touches = TRUE, cover = TRUE)
+names(crown_lands)<- "desc"
+cl <- mask(crown_lands ,srast)
+writeRaster(cl, file.path(outputs, "crown_lands.tif"), overwrite = TRUE)
+
+
+
+
+
+
+
 ## fine scale intact 
 
 # critcal habitat - federal 
 #https://catalogue.data.gov.bc.ca/dataset/critical-habitat-for-federally-listed-species-at-risk-posted-
 
-cri <- bcdc_query_geodata("076b8c98-a3f1-429b-9dae-03faed0c6aef") |>
+cri <- bcdc_query_geodata("076b8c98-a3f1-429b-9dae-03faed0c6aef") #|>
   select(SCIENTIFIC_NAME, COMMON_NAME_ENGLISH, CRITICAL_HABITAT_STATUS, LAND_TENURE)
   collect()
   
@@ -689,13 +733,6 @@ st_write(cri, file.path("inputs", "fed_listed_sp_raw.gpkg"))
 # wetland density layer 
 
 wl <- st_read("inputs")
-
-
-
-
-
-
-
 
 
 
@@ -917,6 +954,12 @@ writeRaster(costt , file.path("inputs", "pither_move_cost.tif"), overwrite = TRU
 
 tele <- bcdc_query_geodata("6d48657f-ab33-43c5-ad40-09bd56140845") |>
   collect()
+
+
+
+##########################################################################
+
+# Michel et al dataset 
 
 
 
