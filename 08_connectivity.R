@@ -177,47 +177,38 @@ write_csv(eco_pro_rardiv_output, file.path("outputs", "resistence_per_ecoregion_
 
 ### Jessica macro refugia and macrorefugia 2080
 
-template <- rast(file.path("inputs", "sk_rast_template.tif"))
+#template <- rast(file.path("inputs", "sk_rast_template.tif"))
 
 # microrefugia 
 mic <- rast(file.path("inputs", "microrefugia.tif"))
+rc1 <- mask(mic, srast )
+terra::writeRaster(rc1,file.path(outputs, "microrefugia_c.tif"), overwrite = TRUE)
 
-hist(mic)
-aa <- sort(values(mic, na.rm = T))
-quantile(aa, probs = seq(0, 1, 0.1), na.rm = TRUE)
-
-aq <- as.data.frame(quantile(aa, probs = seq(0, 1, 0.05), na.rm = TRUE))
-names(aq) = "value"
-
-m <- c(0, 7.362020e-01, 0,
-       7.362020e-01, 999999, 1)
+# threshold values of 0.7
+m <- c(0, 0.7, 0,
+       0.7, 999999, 1)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 common <- classify(mic, rclmat, include.lowest=TRUE)
 
-unique(values(common))
-rc1 <- mask(common, template )
-terra::writeRaster(rc1,file.path("outputs", "sk_microrefugia_70threshold.tif"), overwrite = TRUE)
+#unique(values(common))
+rc1 <- mask(common, srast )
+terra::writeRaster(rc1,file.path(outputs, "microrefugia_70threshold.tif"), overwrite = TRUE)
 
 
 
 # macrorefugia
 mic <- rast(file.path("inputs", "2080s_macrorefugia.tif"))
+rc1 <- mask(mic, srast )
+terra::writeRaster(rc1,file.path(outputs, "macrorefugia_c.tif"), overwrite = TRUE)
 
-hist(mic)
-aa <- sort(values(mic, na.rm = T))
-quantile(aa, probs = seq(0, 1, 0.1), na.rm = TRUE)
-
-aq <- as.data.frame(quantile(aa, probs = seq(0, 1, 0.05), na.rm = TRUE))
-names(aq) = "value"
-
-m <- c(0, 5.944142e-01, 0,
-       5.944142e-01, 999999, 1)
+m <- c(0, 0.7, 0,
+       0.7, 999999, 1)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 common <- classify(mic, rclmat, include.lowest=TRUE)
 
-unique(values(common))
-rc1 <- mask(common, template )
-terra::writeRaster(rc1,file.path("outputs", "sk_2080macrorefugia_70threshold.tif"), overwrite = TRUE)
+#unique(values(common))
+rc1 <- mask(common, srast )
+terra::writeRaster(rc1,file.path(outputs, "macrorefugia_70threshold.tif"), overwrite = TRUE)
 
 
 
