@@ -73,6 +73,43 @@ in_aoi <- read_sf(file.path("inputs", "sk_poly_template.gpkg"))
 
 
 
+# 100 sites using information from Paula and 
+
+list.files(file.path("inputs", "cancelled_lands"))
+
+ff <- "List_of_potential_conservation lands_active_crownland_tenures.csv" 
+
+#Also, here is the file with 100+/- unclaimed map reserves that Christina thought 
+#we should assess for Conservation Lands. 
+#The data rows of interest are green and have yes in column L.
+
+#It would be good to keep the Crown Lands file name with the polygons = Column G. 
+#Christina downloaded this from Tantalis so I could cross-check status of 
+#conservation lands etc.
+
+
+fff <- read_csv(file.path("inputs", "cancelled_lands", ff)) |> 
+  dplyr::filter()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ################################################################################
 # Gap analysis for the layers using the conservation lands as the protected "layer" grouped into cancelled and not cancelled. 
 library(readr)
