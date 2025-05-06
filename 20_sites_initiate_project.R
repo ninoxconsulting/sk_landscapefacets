@@ -54,7 +54,7 @@ library(wheretowork)
 # 2.0 Set up -------------------------------------------------------------------
 
 # Set project parameters
-project_folder <- fs::path("outputs", "final", "sites") # <--- CHANGE TO YOUR ROOT PROJECT FOLDER
+project_folder <- fs::path("outputs", "final", "sites_202505") # <--- CHANGE TO YOUR ROOT PROJECT FOLDER
 PROJECT_TYPE <- "REGIONAL" 
 
 
@@ -72,9 +72,10 @@ if(PROJECT_TYPE == "REGIONAL"){
 
 # 2.0 Set up AOI -------------------------------------------------------------------
 
-final_data_dir <- fs::path("outputs","final")
-rr <- rast(fs::path(final_data_dir, "sk_rast_template.tif"))
-rr<- aggregate(rr, fact = 10)
+final_data_dir <- fs::path(project_folder ,"raw_tiffs")
+
+#final_data_dir <- fs::path("outputs","final")
+rr <- rast(fs::path(final_data_dir, "template_1km.tif"))
 names(rr) <- "template"
 
 # Convert all cell values to 0
@@ -96,7 +97,7 @@ terra::writeRaster(rr1, file.path(project_folder, "PU","PU.tif"), datatype = "IN
 
 #===============================================================================
 
-project_name <- "nb" # <--- SET PROJECT NAME HERE FOR OUT FILE
+project_name <- "skeena" # <--- SET PROJECT NAME HERE FOR OUT FILE
 themes_dir <- fs::path(project_folder, "Regional", "Themes" )# <--- Themes data folder
 includes_dir <- fs::path(project_folder, "Regional","Includes") # <--- Includes data folder
 excludes_dir <- fs::path(project_folder, "Regional","Excludes") # <--- Excludes data folder
@@ -107,6 +108,8 @@ pu_cell_area <- 1000 # <--- SET PLANNING UNIT AREA IN units
 
 
 
+
+# put the relevant files in the folders as specified above 
 
 
 
@@ -392,7 +395,7 @@ write.csv(
 ## Set path where a QC'd metadata.csv version is located
 meta_path <- fs::path(project_folder, "WTW", "metadata")
 
-PRJ_PATH  <- fs::path("outputs", "final", "sites") 
+PRJ_PATH  <- fs::path("outputs", "final", "sites_202505") # <--- CHANGE TO YOUR ROOT PROJECT FOLDER
 META_NAME <- "_metadata.csv" 
 
 AUTHOR <- "Gen Perkins" 
@@ -400,10 +403,11 @@ EMAIL <- "gperkins@ninoxconsulting.ca"
 GROUPS <- "private" 
 
 meta_path <- file.path(PRJ_PATH, paste0("WTW/metadata/", META_NAME)) 
-tiffs_path <- file.path(PRJ_PATH,"Tiffs")
+tiffs_path <- file.path(PRJ_PATH,"raw_tiffs")
 pu_path <- file.path(PRJ_PATH,"PU/PU.tif")
 
 # shift files to tiffs folder - currently manual transfer
+
 list.files(tiffs_path)
 allfiles<- list.files(fs::path(project_folder, "Regional"), recursive = TRUE)
 # copy all files to tiff folder
