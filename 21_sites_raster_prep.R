@@ -438,6 +438,10 @@ ib <- st_read(file.path("outputs", "final", "sk_important_bird_areas.gpkg"))
 ib <- st_transform(ib, crs=st_crs(srast))
 ib <- rasterize(ib, srast,touches = TRUE, cover = TRUE)
 names(ib) = "iba"
+ib <- mask(ib ,srast)
+writeRaster(ib, file.path(outputs, "iba_cover.tif"), overwrite = TRUE)
+
+
 ib[ib >= 0.5] <- 1
 ib[ib < 0.5] <- NA
 ib <- mask(ib ,srast)

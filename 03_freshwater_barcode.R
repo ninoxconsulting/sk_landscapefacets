@@ -107,8 +107,9 @@ summ <- read_csv(file.path("inputs", "fw_lakes_summary.csv"))
 
 
 
+library(dplyr)
 
-
+lac_sf <- st_read( file.path("inputs", "sk_lakes_barcode_poly.gpkg"))
 
 
 #hist(summ$count)
@@ -134,12 +135,13 @@ rare <- ids %>%
 
 # re join the rarity code back with the lake id and then group with the rivers polygon. 
 
+
 rlac_sf <- lac_sf %>%
   left_join(rare) %>% 
-  select("WSA_LAKE_ID", "lake_code", "rare_id") 
+  dplyr::select("WSA_LAKE_ID", "lake_code", "rare_id") 
 
 ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg")) %>% 
-  select(RIVER_ID)
+  dplyr::select(RIVER_ID)
 
 # intersect the watershed
 lac_river_poly <- st_intersection(rlac_sf, ri)
@@ -149,103 +151,160 @@ lac_river_poly <- st_intersection(rlac_sf, ri)
 
 sum_df <- lac_river_poly %>%
   st_drop_geometry()%>%
-  select(-WSA_LAKE_ID)
+  dplyr::select(-WSA_LAKE_ID)
 
 
-# # OPTION 1: MEAN RARITY 
-# #select the mean rarity code per polygon and convert to a sparial output 
+## Format the data accorrding to Peter Otts updated review #######################################
+
+#Lake rarity - he suggested a weighted average of rarity in a polygon. Using our raw codes 1 to 6 then multiplying size of lake/total lake area. 
+#Only two lakes in a polygon. Lake 1. 90 ha rank 6 (very rare). Lake 2. 10 ha rank 1 (most common). if straight up average then 3.5 (6+1/2).
+#If weighted by area then 90/100 x 6 = 5.4 + 10/100 x 1 = 0.1 with total rarity of 5.5
+
+lac_river_poly <- lac_river_poly |> 
+  mutate(area = as.numeric(st_area(geom)))|> 
+  filter(area > 1) 
+
+st_write(lac_river_poly, file.path("inputs", "lake_rare_poly_raw_2025.gpkg"), append = FALSE)
+# read in with QGIS and export with polygon
+
+lacs <- st_read(file.path("inputs", "lake_rare_poly_raw_2025p.gpkg"))
+lacs <- lacs |> 
+  st_cast("POLYGON")
+
+# calculate the total area of lakes within a River_ID 
+
+lac_area <- lacs |>  
+  #st_drop_geometry() %>% 
+  dplyr::group_by(RIVER_ID) %>% 
+  dplyr::mutate(total_lake_area = sum(area)) |> 
+  ungroup() |> 
+  rowwise() |>
+  dplyr::mutate(lake_prop = (area/total_lake_area)* rare_id)# |>
+
+# divide each river area/ total lakes area mutiplies by rare id 
+# sum all values per river polygon. 
+
+lac_prop_value <- lac_area |> 
+  group_by(RIVER_ID) %>%
+  mutate(rarity_code = round(sum(lake_prop),2)) |> 
+  st_drop_geometry() |> 
+  dplyr::select(RIVER_ID, rarity_code) |> 
+  distinct()
+           
+lac_prop_value
+
+la_rare <- left_join(ri, lac_prop_value) 
+
+## convert to a tif then run through the neighbourhood analysis 
+srast <- rast(file.path(outputs, "template_1km.tif"))
+
+## convert to a tif then run through the neighbourhood analysis 
+rare_laker <- rasterize(la_rare , srast, field= "rarity_code", touches = TRUE)
+
+plot(rare_laker)
+
+writeRaster(rare_laker, file.path("outputs","lake_rare_byarea_2025.tif"))
+
+# ran rarity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
+# QGIS r.neighbours toolset with GRASS. We used a circular window with a radius 
+# of 5000m or 11 x 11 pixel window
+
+rar <- rast(file.path("outputs", "sk_lake_rarity_prop_2025.tif"))
+
+#hist(rar)
+#t = quantile(values(rar), probs = seq(0, 1, 0.1), na.rm = TRUE)
+#t = data.frame(t)
+names(rar)= "rarity"
+
+writeRaster(rar, file.path(outputs, "sk_lake_rarity_prop_2025.tif"), overwrite = TRUE)
+
+## reclass the layers to a concentration # waiting on Paula for this. 
+#unique(values(rar))
+
+ m <- c(1, 2.2, 1,
+        2.2, 2.8, 2,
+        2.8, 3.8, 3,
+        3.8, 5, 4,
+        5, 10, 5)
+ rclmat <- matrix(m, ncol=3, byrow=TRUE)
+ rc <- classify(rar , rclmat, include.lowest=TRUE)
+ plot(rc)
+ writeRaster(rc, file.path("outputs", "sk_lakes_rarity_prop_2025_conc.tif"), overwrite = TRUE)
+
+# output classes 
+# split out the classes 4 + 5 as cover 
+ con_rareclass <- as.polygons(rc, digits = 2)
+ con_rareclass <- st_as_sf(con_rareclass)
+ 
+ #class5 
+ c5 <- con_rareclass |> filter(rarity == 5) 
+ 
+ c4 <- con_rareclass |> filter(rarity == 4) 
+ 
+ cc5 <- rasterize(c5 , srast,touches = TRUE, cover = TRUE)
+ cc4 <- rasterize(c4 , srast,touches = TRUE, cover = TRUE)
+ 
+ names(cc5) <- "lake_rarity_5"
+ cc5 <- mask(cc5, srast)
+ writeRaster(cc5, file.path(outputs, "aq_lake_rarity_5_cover.tif"), overwrite=TRUE)
+ 
+ names(cc4) <- "lake_rarity_4"
+ cc4 <- mask(cc4, srast)
+ writeRaster(cc4, file.path(outputs, "aq_lake_rarity_4_cover.tif"), overwrite=TRUE)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+# NOT USED IN SITES
 # 
-# mrare_lake <- lac_river_poly %>% 
-#   dplyr::group_by(RIVER_ID )%>%
+# ## Option 2 : DIVIDE THE MOST RARE by watershed area  (codes 4, 5 and 6)
+# 
+# #1 produce tabel with the rarity class and number per watershed , then select the units of interest
+# 
+# rare_count_lake <- lac_river_poly %>% 
+#   st_drop_geometry() %>% 
+#   dplyr::group_by(RIVER_ID,rare_id)%>%
 #   dplyr::select(-WSA_LAKE_ID, -lake_code)%>%
-#   dplyr::mutate(rarity_lake_code = mean(rare_id)) %>%
-#   dplyr::select(-rare_id)%>%
+#   dplyr::mutate(no_rare_lakestypes = n()) 
+# 
+# # add the river ppolygon area
+# ridf <- ri %>% 
+#   mutate(river_area_m2 = st_area(geom))%>% 
+#   st_drop_geometry()
+# 
+# # divide values by watershed area (ha) - all codes 
+# ri_lake <- left_join(rare_count_lake, ridf)%>% 
+#   ungroup() %>%
+#   distinct() %>% 
+#   rowwise() %>% 
+#   mutate(lakerarity_countbywatershed_ha = no_rare_lakestypes/(river_area_m2/10000))
 #   dplyr::distinct()%>% 
 #   st_drop_geometry()
 # 
-# rare_lake_poly <- left_join(ri, mrare_lake )
-# 
-# st_write(rare_lake_poly , file.path("inputs", "lake_rare_poly_mean_raw.gpkg"), append = FALSE)
-# 
-# 
-# ## convert to a tif then run through the neighbourhood analysis 
-# rare_lake_poly <-vect(file.path("inputs", "lake_rare_poly_mean_raw.gpkg"))
-# 
-# rare_laker <- rasterize(rare_lake_poly , srast, field= "rarity_lake_code")
-# 
-# plot(rare_laker)
-# 
-# writeRaster(rare_laker, file.path("outputs","lake_rare_mean.tif"))
-# 
-# 
-# # ran rarity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
-# 
-# rar <- rast(file.path("outputs", "sk_lakes_mean_rarity_101c.tif"))
-# 
-# hist(rar)
-# 
-# names(rar)= "rarity"
-# #reclass the valyers to a conccentration 
-# 
-# unique(values(rar))
-# 
-# m <- c(0, 1.1, 1,
-#        1.1, 1.2, 2,
-#        1.2, 1.4, 3,
-#        1.4, 1.8, 4,
-#        1.8, 10, 5)
-# rclmat <- matrix(m, ncol=3, byrow=TRUE)
-# rc <- classify(rar , rclmat, include.lowest=TRUE)
-# 
-# writeRaster(rc, file.path("outputs", "sk_lakes_rarity_conc.tif"), overwrite = TRUE)
+# # select just codes 4 and 5 
+#   # divide values by watershed area (ha) - all codes 
+# ri_lake456 <- rare_count_lake %>% 
+#   filter(rare_id %in% c(4,5,6))%>% 
+#   group_by(RIVER_ID) %>% 
+#   distinct() %>%
+#   select(-rare_id) %>% 
+#   mutate(count_lakes_rare456 = sum(no_rare_lakestypes)) %>% 
+#   select(-no_rare_lakestypes)%>%
+#   left_join(ridf) %>%
+#   rowwise() %>% 
+#   mutate(lakerarity_countbywatershed_ha = count_lakes_rare456/(river_area_m2/10000))%>%
+#   st_drop_geometry()
+#   
+# lakes_rare456 <-  left_join(ri, ri_lake456) 
 # 
 # 
-
-
-
-## Option 2 : DIVIDE THE MOST RARE by watershed area  (codes 4, 5 and 6)
-
-#1 produce tabel with the rarity class and number per watershed , then select the units of interest
-
-rare_count_lake <- lac_river_poly %>% 
-  st_drop_geometry() %>% 
-  dplyr::group_by(RIVER_ID,rare_id)%>%
-  dplyr::select(-WSA_LAKE_ID, -lake_code)%>%
-  dplyr::mutate(no_rare_lakestypes = n()) 
-
-# add the river ppolygon area
-ridf <- ri %>% 
-  mutate(river_area_m2 = st_area(geom))%>% 
-  st_drop_geometry()
-
-# divide values by watershed area (ha) - all codes 
-ri_lake <- left_join(rare_count_lake, ridf)%>% 
-  ungroup() %>%
-  distinct() %>% 
-  rowwise() %>% 
-  mutate(lakerarity_countbywatershed_ha = no_rare_lakestypes/(river_area_m2/10000))
-  dplyr::distinct()%>% 
-  st_drop_geometry()
-
-# select just codes 4 and 5 
-  # divide values by watershed area (ha) - all codes 
-ri_lake456 <- rare_count_lake %>% 
-  filter(rare_id %in% c(4,5,6))%>% 
-  group_by(RIVER_ID) %>% 
-  distinct() %>%
-  select(-rare_id) %>% 
-  mutate(count_lakes_rare456 = sum(no_rare_lakestypes)) %>% 
-  select(-no_rare_lakestypes)%>%
-  left_join(ridf) %>%
-  rowwise() %>% 
-  mutate(lakerarity_countbywatershed_ha = count_lakes_rare456/(river_area_m2/10000))%>%
-  st_drop_geometry()
-  
-lakes_rare456 <-  left_join(ri, ri_lake456) 
-
-
-st_write(lakes_rare456 , file.path("inputs", "lake_rare456_div_watershed_raw.gpkg"), append = FALSE)
-
+# st_write(lakes_rare456 , file.path("inputs", "lake_rare456_div_watershed_raw.gpkg"), append = FALSE)
 # 
 # # select just codes 5 and 6
 # # divide values by watershed area (ha) - all codes 
@@ -268,47 +327,47 @@ st_write(lakes_rare456 , file.path("inputs", "lake_rare456_div_watershed_raw.gpk
 # 
 # 
 #   
-
-
-## convert to a tif then run through the neighbourhood analysis 
-rare_lake_poly <-vect(file.path("inputs", "lake_rare456_div_watershed_raw.gpkg"))
-
-rare_laker <- rasterize(rare_lake_poly , srast, field= "lakerarity_countbywatershed_ha")
-
-plot(rare_laker)
-
-writeRaster(rare_laker, file.path("outputs","lake_rare_byarea.tif"))
+# ## convert to a tif then run through the neighbourhood analysis 
+# rare_lake_poly <-vect(file.path("inputs", "lake_rare456_div_watershed_raw.gpkg"))
+# 
+# rare_laker <- rasterize(rare_lake_poly , srast, field= "lakerarity_countbywatershed_ha")
+# 
+# plot(rare_laker)
+# 
+# writeRaster(rare_laker, file.path("outputs","lake_rare_byarea.tif"))
 
 
 
 # ran rarity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
 
-rar <- rast(file.path("outputs", "sk_lakes_meanbyarea_rarity_101c.tif"))
-
-hist(rar)
-#values(rar)
-t = quantile(values(rar), probs = seq(0, 1, 0.1), na.rm = TRUE)
-
-t = data.frame(t)
-
-names(rar)= "rarity"
+#rar <- rast(file.path("outputs", "sk_lakes_meanbyarea_rarity_101c.tif"))
+#
+#hist(rar)
+##values(rar)
+#t = quantile(values(rar), probs = seq(0, 1, 0.1), na.rm = TRUE)
+#
+#t = data.frame(t)
+#
+#names(rar)= "rarity"
 #reclass the valyers to a conccentration 
 
 
 ## still to decide on these values 
 
-sort(unique(values(rar)))
+#sort(unique(values(rar)))
 
-m <- c(0, 0.0001, 1,
-       0.0001, 0.0002, 2,
-       0.0002, 0.0003, 3,
-       0.0003, 0.0005, 4,
-       0.0005, 10, 5)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc <- classify(rar , rclmat, include.lowest=TRUE)
-plot(rc)
+#m <- c(0, 0.0001, 1,
+#       0.0001, 0.0002, 2,
+#       0.0002, 0.0003, 3,
+#       0.0003, 0.0005, 4,
+#       0.0005, 10, 5)
+#rclmat <- matrix(m, ncol=3, byrow=TRUE)
+#rc <- classify(rar , rclmat, include.lowest=TRUE)
+#plot(rc)
  
-writeRaster(rc, file.path("outputs", "sk_lakes_raritybyarea_conc.tif"), overwrite = TRUE)
+#writeRaster(rc, file.path("outputs", "sk_lakes_raritybyarea_conc.tif"), overwrite = TRUE)
+
+
 
 
 
@@ -523,21 +582,6 @@ pro_sum <- left_join(pro_sum, common_area_sum) %>%
 # export 
 
 write_csv(pro_sum, file.path( "outputs", "common_protected_by_ecoregion.csv"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -780,45 +824,250 @@ st_write(pc_cover , file.path("inputs", "lake_div_pccover.gpkg"), append = FALSE
 
 
 
-# count number of barcodes per river polygon
-lakecode_area_per_poly <- lac_river_poly %>% 
-  dplyr::group_by(RIVER_ID)%>% 
-  dplyr::mutate(lake_area_per_watershed = sum(lake_area_m2)) %>%
-  ungroup() %>%
-  group_by(RIVER_ID, lake_code) %>% 
-  dplyr::mutate(lakecode_no_per_watershed = n())%>% 
-  dplyr::mutate(lakecode_area_per_watershed = sum(lake_area_m2)) %>% 
-  select(RIVER_ID, lake_code,lakecode_no_per_watershed,lakecode_area_per_watershed, river_poly_area_m2 )%>% 
-  
-  
-# output as table 
-lakecode_area_per_poly_df <-lakecode_area_per_poly %>% 
-  select(- river_poly_area_m2 )%>%
-  st_drop_geometry() %>% 
-  distinct()
 
-# summary of no of lake codes and areas per polygon 
-write.csv <- st_write(lakecode_area_per_poly, file.path("outputs", "lakecode_count_per_watershed_no_area.csv"))
+
+
+######################################################################################
+## SHannon index diversity estimates - See appendices of the original files 
+# https://docs.google.com/document/d/1kNjgtXk-A75JfrrJ95cS_vhtOEajMiktdFVBSJDivig/edit?tab=t.0
+
+## this was used in the sites upload with updates 1km template 
+#1. Our Shannon-Weiner index H'(using area) makes sense but we need to take the exponent of it = e to the power of the index. eH’#
+#
+#Peter thinks this is a better version of the index, called the ENS - effective number of species (lakes for us)
+
+# read in csv
+si <- read_csv(file.path("outputs", "sk_lake_shannon_div_raw.csv"))
+ri
+
+# merge with river polygons
+lasi <- left_join(ri, si, by = "RIVER_ID") 
+plot(lasi$shannon_area)
+
+st_write(lasi, file.path("inputs", "lake_div_raw_shannon.gpkg"), append = FALSE)
+
+# update shannon_index by conver to exp H; or the exponent of the shannon_area value
+la <- lasi |> 
+  dplyr::select(RIVER_ID,  shannon_area, lake_area_per_watershed) |> 
+  mutate(ens = exp(shannon_area))
+  
+st_write(la, file.path("inputs", "lake_div_shannon_ens.gpkg"), append = FALSE)
+
+hist(la$ens)
+quantile(la$ens, probs = seq(0, 1, 0.1), na.rm = TRUE)
+
+## convert to a tif then run through the neighbourhood analysis 
+srast <- rast(file.path(outputs, "template_1km.tif"))
+
+## convert to a tif then run through the neighbourhood analysis 
+rare_laker <- rasterize(la, srast, field= "ens", touches = TRUE)
+
+plot(rare_laker)
+
+hist(rare_laker)
+quantile(values(rare_laker), probs = seq(0, 1, 0.1), na.rm = TRUE)
+
+writeRaster(rare_laker, file.path(outputs,"lake_div_ens.tif"))
+
+
+## check this with Paula
+
+
+# select the high and very high diversity values 
+
+# wait on paula
+ # run this through QGIS to generate neighbourhood 
+
+div <- rast(file.path(outputs, "sk_lake_div_ens_101c.tif")) 
+
+hist(div)
+quantile(values(div), probs = seq(0, 1, 0.1), na.rm = TRUE)
+
+
+
+
+
+
+
+
+# old code to complete shannon index was deleted when not needed - see github (commits between
+# pre August 2024 for details. As it is a mess, I am using the output csv to reconstruct teh output
+# old code is commented out below 
+#https://github.com/ninoxconsulting/sk_landscapefacets/commit/e35cefd24933571b072d4ba92f1d1d10a693725f#diff-9768ccbd615fe6ea866d4861d18938b4409596fd91622e484a86ec5d02801133
+
+# ## OLD CODE FROM GITHUB _ NEEDS EDITS AND REVIEW ATTENTION TO RUN 
+# # intersect the watershed
+# lac_river_poly <- st_intersection(lac_sf, ri)%>% 
+#   dplyr::select(WSA_LAKE_ID, lake_code, RIVER_ID, river_poly_area_m2) %>% 
+#   dplyr::mutate(lake_area_m2 = st_area(geom))
+# 
+# # count number of barcodes per river polygon
+# lakecode_area_per_poly <- lac_river_poly %>% 
+#   dplyr::group_by(RIVER_ID)%>% 
+#   dplyr::mutate(lake_area_per_watershed = sum(lake_area_m2)) %>%
+#   ungroup() %>%
+#   group_by(RIVER_ID, lake_code) %>% 
+#   dplyr::mutate(lakecode_no_per_watershed = n())%>% 
+#   dplyr::mutate(lakecode_area_per_watershed = sum(lake_area_m2)) %>% 
+#   dplyr::select(RIVER_ID, lake_code,lakecode_no_per_watershed, lakecode_area_per_watershed, river_poly_area_m2 )
+#   
+# # output as table 
+# lakecode_area_per_poly_df <-lakecode_area_per_poly %>% 
+#   select(- river_poly_area_m2 )%>%
+#   st_drop_geometry() %>% 
+#   distinct()
+# 
+# # summary of no of lake codes and areas per polygon 
+# write.csv <- st_write(lakecode_area_per_poly, file.path("outputs", "lakecode_count_per_watershed_no_area.csv"))
+# 
+# # ########################
+# 
+# # shannon index thing
+#  ############
+# #
+# install.packages("vegan", dep = T)
+# library(vegan)
+# 
+# diversity <- function (x, index = "shannon", groups, equalize.groups = FALSE,
+#           MARGIN = 1, base = exp(1))
+# {
+# 
+#   #x <- xx
+#   x <- drop(as.matrix(x))
+#   if (!is.numeric(x))
+#     stop("input data must be numeric")
+#   if (any(x < 0, na.rm = TRUE))
+#     stop("input data must be non-negative")
+#   if (!missing(groups)) {
+#     if (MARGIN == 2)
+#       x <- t(x)
+#     if (length(groups) == 1)
+#       groups <- rep(groups, NROW(x))
+#     if (equalize.groups)
+#       x <- decostand(x, "total")
+#     x <- aggregate(x, list(groups), sum)
+#     rownames(x) <- x[, 1]
+#     x <- x[, -1, drop = FALSE]
+#     if (MARGIN == 2)
+#       x <- t(x)
+#   }
+#   INDICES <- c("shannon", "simpson", "invsimpson")
+#   index <- match.arg(index, INDICES)
+#   if (length(dim(x)) > 1) {
+#     total <- apply(x, MARGIN, sum)
+#     x <- sweep(x, MARGIN, total, "/")
+#   }
+#   else {
+#     x <- x/(total <- sum(x))
+#   }
+#   if (index == "shannon")
+#     x <- -x * log(x, base)
+#   else x <- x * x
+#   if (length(dim(x)) > 1)
+#     H <- apply(x, MARGIN, sum, na.rm = TRUE)
+#   else H <- sum(x, na.rm = TRUE)
+#   if (index == "simpson")
+#     H <- 1 - H
+#   else if (index == "invsimpson")
+#     H <- 1/H
+#   if (any(NAS <- is.na(total)))
+#     H[NAS] <- NA
+#   H
+# }
+# 
+# 
+# # Need a table with lake codes and no of lakes = columns  axis and rows = river_polygons
+# # format the table
+# 
+# lakecode_count = lakecode_area_per_poly #%>%
+#   dplyr::select(-lakecode_area_per_watershed,-river_poly_area_m2)
+# 
+# #length(unique(lakecode_count$RIVER_ID)) #4368
+# #length(lakecode_count$RIVER_ID) # 16968
+# 
+# # convert to table format  to run Shannon index
+# ab <- pivot_wider(lakecode_count, names_from = lake_code, values_from = lakecode_no_per_watershed) %>%
+#   mutate_if(is.integer, ~replace(., is.na(.), 0)) %>%
+#   ungroup()
+# 
+# ab <- ab %>%
+#   dplyr::select(-RIVER_ID)
+# 
+# shannon_count <- diversity(ab, index = "shannon")
+# 
+# 
+# 
+# 
+# xx <- ab[1,]
+# xx1<- ab[1,1]
+# 
+# diversity(xx, index = "shannon")
+# diversity(xx1, index = "shannon")
+# 
+# diversity_count <- tibble(shannon_count, RIVER_ID = unique(lakecode_count$RIVER_ID))
+# 
+# 
+# 
+# # repeat based on the size of the lakes (area) not count
+# lakecode_area = lakecode_area_per_poly %>%
+#   select(-lakecode_no_per_watershed )%>%
+#   mutate(lakecode_area_per_watershed = as.numeric(lakecode_area_per_watershed))
+# 
+# ac <- pivot_wider(lakecode_area, names_from = lake_code, values_from = lakecode_area_per_watershed) %>%
+#   mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>%
+#   ungroup() %>%
+#   select(-RIVER_ID)
+# 
+# # calcualte shannon index by area of lake type
+# shannon_area <- diversity(ac, index = "shannon")
+# diversity_area<- tibble( shannon_area, RIVER_ID = unique(lakecode_count$RIVER_ID))
+# 
+# 
+# # join together the tables
+# 
+# shannon <- left_join(diversity_area, diversity_count)
+# shannon <- left_join(lac_count_per_poly, shannon)
+# 
+# # summary of diversity
+# 
+# write_csv(shannon, file.path("outputs", "sk_lake_shannon_div_raw.csv"))
+# 
+# 
+# hist(shannon$shannon_area)
+# 
+# hist(shannon$shannon_count)
+# 
+# 
+# # rejoin to the spatial data and export
+# 
+# ri_diversity <- left_join(ri, shannon )
+# 
+# st_write(ri_diversity , file.path("inputs", "lake_div_raw.gpkg"), append = FALSE)# st_write(ri_diversity , file.path("inputs", "lake_div_raw.gpkg"), append = FALSE)
+#
+
+
+
 
 
 
 ## OPTION 2: diversity based on watershed area 
 # output as spatial and calculate raw diversity based on number of lake barcodes per watershed by area of watershed (hectares)
 
-lac_sf <- st_read(file.path("inputs", "sk_lakes_barcode_poly.gpkg"))
+lac_sf <- st_read(file.path("inputs", "sk_lakes_barcode_poly.gpkg")) |> 
+  mutate(lake_area_m2 = as.numeric(st_area(geom)))
 
 ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg")) %>% 
-  select(RIVER_ID)%>% 
-  mutate(river_poly_area_m2 = st_area(geom))
+  dplyr::select(RIVER_ID)%>% 
+  mutate(river_poly_area_m2 = as.numeric(st_area(geom)))
 
 # intersect the watershed
 lac_river_poly <- st_intersection(lac_sf, ri)%>% 
-  select(lake_code, RIVER_ID, river_poly_area_m2) 
+  dplyr::select(lake_code, RIVER_ID, lake_area_m2, river_poly_area_m2) 
 
 lac_count_per_poly <- lac_river_poly %>% 
   dplyr::group_by(RIVER_ID)%>% 
   dplyr::mutate(lake_no_per_watershed = n()) %>% 
-  select(RIVER_ID, river_poly_area_m2, lake_no_per_watershed)%>% 
+  dplyr::select(RIVER_ID, river_poly_area_m2, lake_no_per_watershed)%>% 
   st_drop_geometry() %>% 
   distinct()%>%
   ungroup() %>% 
@@ -857,9 +1106,6 @@ names(div)= "diversity"
 #t = data.frame(t)
 
 
-
-## still to decide on these values 
-
 unique(values(div))
 
 m <- c(0, 0.002, 1,
@@ -871,8 +1117,6 @@ m <- c(0, 0.002, 1,
  rc <- classify(div , rclmat, include.lowest=TRUE)
  plot(rc)
  
- 
-
  
  writeRaster(rc, file.path("outputs", "sk_lakes_divarea_conc.tif"), overwrite = TRUE)
 
@@ -1119,8 +1363,6 @@ rri <- terra::rasterize(ri_sf, srast, field = "river_code")
 writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"), overwrite = TRUE)
 
 
-
-# up to here - currently runinng on qgis
 
 
 
@@ -1382,6 +1624,27 @@ avrarep <- terra::rasterize(avrarep, srast, "sk_rivers_rarity_mean_101c", fun = 
 names(avrarep) <- "rivers_rarity_mean_101c"
 avrarep<- mask(avrarep, srast)
 writeRaster(avrarep, file.path(outputs, "rivers_rarity_mean_101c.tif"), overwrite=TRUE)
+
+# split out the 4 and 5 values 
+av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
+
+#class5 
+av[av < 5] <- NA
+av[av >= 5] <- 1
+av <- mask(av,srast)
+names(av)<- "rivers_rare_5"
+writeRaster(av, file.path(outputs, "rivers_rarity_5.tif"), overwrite = TRUE)
+
+#class4
+av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
+av[av < 4] <- NA
+av[av >= 4] <- 1
+av <- mask(av,srast)
+names(av)<- "rivers_rare_4"
+writeRaster(av, file.path(outputs, "rivers_rarity_4.tif"), overwrite = TRUE)
+
+
+
 
 
 

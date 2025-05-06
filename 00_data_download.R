@@ -705,7 +705,18 @@ crown_lands <- crown_lands |>
 crown_lands <- rasterize(crown_lands , srast, "desc", touches = TRUE, cover = TRUE)
 names(crown_lands)<- "desc"
 cl <- mask(crown_lands ,srast)
-writeRaster(cl, file.path(outputs, "crown_lands.tif"), overwrite = TRUE)
+writeRaster(cl, file.path(outputs, "crown_lands_cover.tif"), overwrite = TRUE)
+
+# filter at 0.2 scale 
+cl<- rast( file.path(outputs, "crown_lands_cover.tif"))
+cl[cl >= 0.2] <- 1
+cl[cl < 0.2] <- NA
+cl <- mask(cl ,srast)
+names(cl)<- "crown_lands0.2"
+writeRaster(cl, file.path(outputs, "crown_lands0.2.tif"), overwrite = TRUE)
+
+
+
 
 
 
@@ -959,7 +970,36 @@ tele <- bcdc_query_geodata("6d48657f-ab33-43c5-ad40-09bd56140845") |>
 
 ##########################################################################
 
-# Michel et al dataset 
+###################################################################
+
+# Michel at al dataset - carbon standardize
+# this is a normalised values of above ground and below gruound carbon estimates 
+
+# values are 0 - 1
+
+ca <- rast(file.path('/home/user/Documents/00_data/base_vector/canada/carbon_total_std_bc.tif'))
+ca <- project(ca, srast)
+ca <- mask(ca, srast)
+common <- as.polygons(ca , digits = 2)
+names(common) = "carbon"
+iww <- terra::rasterize(common, srast, "carbon", touches = TRUE)
+iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "carbon_total.tif"), overwrite = TRUE)
+
+
+###################################################################
+# Human Canadaian Footprint
+#https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP2/EVKAVL
+
+ca <- rast(file.path('/home/user/Documents/00_data/base_vector/canada/cum_threat2020.02.18_bc.tif'))
+ca <- project(ca, srast)
+# convert to poly and back to raster at 1km grid - using cover
+common <- as.polygons(ca , digits = 2)
+names(common) = "human_footprint"
+iww <- terra::rasterize(common, srast, "human_footprint", touches = TRUE)
+iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "human_footprint_2022.tif"), overwrite = TRUE)
+
 
 
 
