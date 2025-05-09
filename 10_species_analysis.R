@@ -13,7 +13,7 @@ library(dplyr)
 #srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 
 # for 1000m x 1000m measure
-outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
+outputs <- file.path("outputs", "final", "sites_202505", "raw_tiffs")
 srast <- rast(file.path(outputs, "template_1km.tif"))
 
 in_aoi <- st_read(file.path("inputs", "sk_poly_template.gpkg"))
@@ -60,10 +60,13 @@ bb1 <- rasterize(bb, srast, cover = TRUE, touches = TRUE)
 bb2 <- rasterize(bb, srast, touches = TRUE)
 names(bb1) = "bluelisted_birds"
 names(bb2) = "bluelisted_birds"
+bb1[is.na(bb1)] <- 0
+
 bb1<- mask(bb1,srast)
 bb2<- mask(bb2,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_birds_cover.tif"), overwrite = TRUE)
 writeRaster(bb2, file.path(outputs, "bc_cdc_bluelisted_birds.tif"), overwrite = TRUE)
+
 
 
 # 2) blues listed mammals (cdc). these are mostly small polygons buffered so dropped to one pt
@@ -84,10 +87,12 @@ bm <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% bm) |>
 bb1 <- rasterize(bm, srast, cover = TRUE, touches = TRUE)
 bb2 <- rasterize(bb, srast, touches = TRUE)
 names(bb1) = names(bb2) = "bluelisted_mammals"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 bb2<- mask(bb2,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_mammals_cover.tif"), overwrite = TRUE)
 writeRaster(bb2, file.path(outputs, "bc_cdc_bluelisted_mammals.tif"), overwrite = TRUE)
+
 
 
 
@@ -101,6 +106,11 @@ bf <- wcdc %>% filter(SPECIES_ENGLISH_NAME == bf)
 
 bb1 <- rasterize(bf, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "bluelisted_fish"
+bb1[is.na(bb1)] <- 0
+bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_fish_cover.tif"), overwrite = TRUE)
+
+
 bb1[bb1 >= 0.5] <- 1
 bb1[bb1 < 0.5] <- NA
 bb1<- mask(bb1,srast)
@@ -119,11 +129,11 @@ rf <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% rf)
 #st_write(rf, file.path("outputs", "bc_red_fish.gpkg"), append = FALSE)
 bb1 <- rasterize(rf, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "redlisted_fish"
-bb1[bb1 >= 0.5] <- 1
-bb1[bb1 < 0.5] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_fish.tif"), overwrite = TRUE)
-
+bb1[is.na(bb1)] <- 0
+#bb1[bb1 >= 0.5] <- 1
+#bb1[bb1 < 0.5] <- NA
+#bb1<- mask(bb1,srast)
+writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_fish_cover.tif"), overwrite = TRUE)
 
 
 
@@ -145,12 +155,12 @@ rb <- rbind(rb, rbs)
 
 bb1 <- rasterize(rb, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "redlisted_birds"
-bb1[bb1 >= 0.5] <- 1
-bb1[bb1 < 0.5] <- NA
+bb1[is.na(bb1)] <- 0
+#bb1[bb1 >= 0.5] <- 1
+#bb1[bb1 < 0.5] <- NA
 
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_birds.tif"), overwrite = TRUE)
-
 
 
 # 6) red listed mammals (cdc)
@@ -164,10 +174,9 @@ rm <- wcdc %>% filter(SPECIES_ENGLISH_NAME == rm) |>
 st_write(rm, file.path("outputs", "bc_red_mammals.gpkg"), append = FALSE)
 bb1 <- rasterize(rm, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "redlisted_mammals"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_mammals.tif"), overwrite = TRUE)
-
-
 
 
 # 7) blue vegetation (cdc)
@@ -229,13 +238,14 @@ bv<- rbind(bv_poly, bv_centroids)
 
 bb1 <- rasterize(bv, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "bluelisted_vegetation"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_vegetation_cover.tif"), overwrite = TRUE)
 
-bb1[bb1 >= 0.5] <- 1
-bb1[bb1 < 0.5] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_vegetation.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.5] <- 1
+#bb1[bb1 < 0.5] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_vegetation.tif"), overwrite = TRUE)
 
 
 # 8) red listed vegetation (cdc)
@@ -248,8 +258,6 @@ rvv <- c("smooth draba",
         "northern daisy" ,
         "arctic daisy")
         
-        
-
 rv <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% rvv) |>
   sf::st_cast("POLYGON") |> 
   dplyr::mutate(area = as.numeric(st_area(geom)))
@@ -272,10 +280,17 @@ rv<- rbind(rv_poly, rv_centroids)
 
 bb1 <- rasterize(rv, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "redlisted_vegetation"
-bb1[bb1 >= 0.5] <- 1
-bb1[bb1 < 0.5] <- NA
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
+plot(bb1)
+#bb1[bb1 >= 0.5] <- 1
+#bb1[bb1 < 0.5] <- NA
+#bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_vegetation.tif"), overwrite = TRUE)
+
+
+
+
 
 
 ## map the uniques groupings 
@@ -295,13 +310,14 @@ el <- bind_rows(el, el2) |>
 #st_write(el, file.path("outputs", "cottonwood_poly_raw.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "cottonwood_floodplain"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_cottonwood_floodplain_cover.tif"), overwrite = TRUE)
 
-bb1[bb1 >= 0.5] <- 1
-bb1[bb1 < 0.5] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_cottonwood_floodplain.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.5] <- 1
+#bb1[bb1 < 0.5] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_cottonwood_floodplain.tif"), overwrite = TRUE)
 
 
 #10 Pacific willow 
@@ -312,8 +328,9 @@ el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Pacific willow / red-osier dogwoo
 st_write(el, file.path("outputs", "pacific_willow_poly_raw1.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "pacific_willow"
-bb1[bb1 >= 0.001] <- 1
-bb1[bb1 < 0.001] <- NA
+bb1[is.na(bb1)] <- 0
+#bb1[bb1 >= 0.001] <- 1
+#bb1[bb1 < 0.001] <- NA
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_pacific_willow.tif"), overwrite = TRUE)
 
@@ -333,12 +350,13 @@ ss <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% sss) |>
 st_write(ss, file.path("outputs", "Sitkaspruce_salmonberry_high_bench_floodplain.gpkg"), append = FALSE)
 bb1 <- rasterize(ss, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "Sitkaspruce_salmonberry_high_bench_floodplain"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain_cover.tif"), overwrite = TRUE)
-bb1[bb1 >= 0.05] <- 1
-bb1[bb1 < 0.05] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain0.05.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.05] <- 1
+#bb1[bb1 < 0.05] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_Sitkaspruce_salmonberry_high_bench_floodplain0.05.tif"), overwrite = TRUE)
 
 
 
@@ -349,12 +367,14 @@ el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "western hemlock - Sitka spruce / 
 
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "westhemlock_sitkasp_lankymoss"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
+plot(bb1)
 writeRaster(bb1, file.path(outputs, "bc_cdc_westhemlock_sitkasp_lankymoss_cover.tif"), overwrite = TRUE)
-bb1[bb1 >= 0.5] <- 1
-bb1[bb1 < 0.5] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_westhemlock_sitkasp_lankymoss.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.5] <- 1
+#bb1[bb1 < 0.5] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_westhemlock_sitkasp_lankymoss.tif"), overwrite = TRUE)
 
 
 #11 western redcedar - Sitka spruce / sword fern - threshold 0.01 as very small isolated areas, 0.5 woudl exclude all pixals. 
@@ -364,12 +384,14 @@ el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "western redcedar - Sitka spruce /
 
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "westcedar_sitkasp_swordfern"
+bb1[is.na(bb1)] <- 0
+
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_westcedar_sitkasp_swordfern_cover.tif"), overwrite = TRUE)
-bb1[bb1 >= 0.01] <- 1
-bb1[bb1 < 0.01] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_westcedar_sitkasp_swordfern.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.01] <- 1
+#bb1[bb1 < 0.01] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_westcedar_sitkasp_swordfern.tif"), overwrite = TRUE)
 
 
 #12 Endemic grasslands:  Saskatoon - slender wheatgrass and Sandbergs bluegrass - slender wheatgrass
@@ -386,12 +408,13 @@ st_write(el, file.path("outputs", "grasslands_poly_raw.gpkg"), append = FALSE)
 
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "endemic_grasslands"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_endemic_grasslands_cover.tif"), overwrite = TRUE)
-bb1[bb1 >= 0.05] <- 1
-bb1[bb1 < 0.05] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_endemic_grasslands.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.05] <- 1
+#bb1[bb1 < 0.05] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_endemic_grasslands.tif"), overwrite = TRUE)
 
 
 #13 Name is Sitka spruce / false lily of the valley,  Sitka spruce / tall trisetum floodplain forest
@@ -404,14 +427,16 @@ el <- bind_rows(el, el2)%>%
 #st_write(el, file.path("outputs", "Sitka_spruce_lily_trisetum_raw.gpkg"), append = FALSE)
 
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+bb1[is.na(bb1)] <- 0
 names(bb1) = "Sitka_spruce_lily_trisetum"
 bb1<- mask(bb1,srast)
+plot(bb1)
 writeRaster(bb1, file.path(outputs, "bc_cdc_Sitka_spruce_lily_trisetum_cover.tif"), overwrite = TRUE)
 
-bb1[bb1 >= 0.1] <- 1
-bb1[bb1 < 0.1] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_Sitka_spruce_lily_trisetum.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.1] <- 1
+#bb1[bb1 < 0.1] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_Sitka_spruce_lily_trisetum.tif"), overwrite = TRUE)
 
 
 
@@ -443,16 +468,9 @@ el <- rbind(rv_poly, rv_centroids)
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "epithetic_lichens"
-writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens_cover.tif"), overwrite = TRUE)
-
-bb1[bb1 >= 0.3] <- 1
-bb1[bb1 < 0.3] <- NA
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens.tif"), overwrite = TRUE)
-
-
-
-
+writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens_cover.tif"), overwrite = TRUE)
 
 
 # 16: Group purple - BC red-listed  lichens (mountain crab-eye and northwest waterfan)
@@ -480,13 +498,15 @@ rv_poly <- el |>
 el <- rbind(rv_poly, rv_centroids) 
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+bb1[is.na(bb1)] <- 0
 names(bb1) = "redlisted_lichen"
+bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_lichen_cover.tif"), overwrite = TRUE)
 
-bb1[bb1 >= 0.01] <- 1
-bb1[bb1 < 0.01] <- NA
-bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_lichen.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.01] <- 1
+#bb1[bb1 < 0.01] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_lichen.tif"), overwrite = TRUE)
 
 
 
@@ -514,12 +534,14 @@ rv_poly <- el |>
 el <- rbind(rv_poly, rv_centroids) 
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
+bb1[is.na(bb1)] <- 0
 names(bb1) = "bclisted_bumblebees"
-writeRaster(bb1, file.path(outputs, "bc_cdc_bclisted_bumblebees_cover.tif"), overwrite = TRUE)
-bb1[bb1 >= 0.01] <- 1
-bb1[bb1 < 0.01] <- NA
 bb1<- mask(bb1,srast)
-writeRaster(bb1, file.path(outputs, "bc_cdc_bclisted_bumblebees.tif"), overwrite = TRUE)
+writeRaster(bb1, file.path(outputs, "bc_cdc_bclisted_bumblebees_cover.tif"), overwrite = TRUE)
+#bb1[bb1 >= 0.01] <- 1
+#bb1[bb1 < 0.01] <- NA
+#bb1<- mask(bb1,srast)
+#writeRaster(bb1, file.path(outputs, "bc_cdc_bclisted_bumblebees.tif"), overwrite = TRUE)
 
 
 #18 BC blue-listed dragonfly
@@ -533,11 +555,11 @@ el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Plains Forktail" ) |>
 st_write(el, file.path("outputs", "bc_blue_listeddragonfly_poly_raw1.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "bluelisted_dragonfly"
-bb1[bb1 >= 0.001] <- 1
-bb1[bb1 < 0.001] <- NA
+bb1[is.na(bb1)] <- 0
+#bb1[bb1 >= 0.001] <- 1
+#bb1[bb1 < 0.001] <- NA
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_dragonfly.tif"), overwrite = TRUE)
-
 
 
 
@@ -588,6 +610,7 @@ wt <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Western Toad")%>%
 st_write(wt, file.path("outputs", "western_toad_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(wt, srast, cover = TRUE, touches = TRUE)
+bb1[is.na(bb1)] <- 0
 names(bb1) = "Western_Toad"
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_westerntoad_cover.tif"), overwrite = TRUE)
@@ -600,6 +623,7 @@ nwsal <- wwa %>% filter(SPECIES_ENGLISH_NAME == "Northwestern Salamander")%>%
 st_write(nwsal, file.path("outputs", "northwestsal_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(nwsal, srast, cover = TRUE, touches = TRUE)
+bb1[is.na(bb1)] <- 0
 names(bb1) = "northwestsal"
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_northwestsal_cover.tif"), overwrite = TRUE)
@@ -610,10 +634,11 @@ writeRaster(bb1, file.path(outputs, "bc_northwestsal_cover.tif"), overwrite = TR
 #-rough-skinned newt #1535  #1111
 srn <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Roughskin Newt")%>%
   distinct()
-st_write(srn, file.path("outputs", "roughskinnewt_pt.gpkg"), append = FALSE)
+#st_write(srn, file.path("outputs", "roughskinnewt_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(srn, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "roughskinnewt"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_roughskinnewt_cover.tif"), overwrite = TRUE)
 
@@ -626,6 +651,7 @@ st_write(wf, file.path("outputs", "woodfrog_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(wf, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "woodfrog"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_woodfrog_cover.tif"), overwrite = TRUE)
 
@@ -650,6 +676,7 @@ st_write(ctf, file.path("outputs", "coastaltail_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(ctf, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "coastaltail"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_coastaltail_cover.tif"), overwrite = TRUE)
 
@@ -661,6 +688,7 @@ csf <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Columbia Spotted Frog")%>%
 st_write(csf, file.path("outputs", "columbiaspotfrog_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(csf, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "columbiaspotfrog"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_columbiaspotfrog_cover.tif"), overwrite = TRUE)
 
@@ -687,6 +715,7 @@ st_write(ee, file.path("outputs", "eulachon_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "eulachon"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_eulachon_cover.tif"), overwrite = TRUE)
 
@@ -698,8 +727,12 @@ st_write(ee, file.path("outputs", "bulltrout_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "bulltrout"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_bulltrout_cover.tif"), overwrite = TRUE)
+
+
+
 
 
 
@@ -710,6 +743,7 @@ ee <- fii %>% filter(SPECIES_NAME %in% c(
 st_write(ee, file.path("outputs", "salmon_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "salmon"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_salmon_cover.tif"), overwrite = TRUE)
 
@@ -723,6 +757,7 @@ ee <- fii %>% filter(SPECIES_NAME %in% c(
 st_write(ee, file.path("outputs", "steelhead_pt.gpkg"),append = FALSE)
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "steelhead"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_steelhead_cover.tif"), overwrite = TRUE)
 
@@ -733,6 +768,7 @@ os <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Osprey")%>%distinct()
 st_write(os, file.path("outputs", "osprey_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(os, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "osprey"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_osprey_cover.tif"), overwrite = TRUE)
 
@@ -743,6 +779,7 @@ dra <- ww %>% filter(ORDER_NAME == "Odonata")%>% distinct()
 st_write(dra, file.path("outputs", "odonata_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(dra, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "odonata"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_odonata_cover.tif"), overwrite = TRUE)
 
@@ -766,10 +803,9 @@ ee <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Pacific Marten")%>%
 st_write(ee, file.path("outputs", "pacificmarten_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "pacificmarten"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_pacificmarten_cover.tif"), overwrite = TRUE)
-
-
 
 
 
@@ -780,6 +816,7 @@ ee <-  ww %>% filter(SPECIES_ENGLISH_NAME == "Northern Flying Squirrel")%>%
 st_write(ee, file.path("outputs", "nthfylingsq_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "nthfylingsq"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_nthfylingsq_cover.tif"), overwrite = TRUE)
 
@@ -790,8 +827,10 @@ writeRaster(bb1, file.path(outputs, "bc_nthfylingsq_cover.tif"), overwrite = TRU
 bb <- ww %>% filter(ORDER_NAME =="Chiroptera")  
 bb <- bb %>% distinct()                 
 st_write(bb, file.path("outputs", "bat_pt.gpkg"), append = FALSE)
+bb<- st_read(file.path("outputs", "bat_pt.gpkg"))
 bb1 <- rasterize(bb, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "bat"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_bat_cover.tif"), overwrite = TRUE)
 
@@ -802,6 +841,7 @@ ee <- ww %>% filter(SPECIES_ENGLISH_NAME == "Southern Red-backed Vole") %>% dist
 st_write(ee , file.path("outputs", "sthredbackedvole_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "sthredbackedvole"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_sthredbackedvole_cover.tif"), overwrite = TRUE)
 
@@ -813,8 +853,15 @@ nn <- bind_rows(nn, nn2)%>% distinct()
 st_write(nn , file.path("outputs", "blackbear_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(nn, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "blackbear"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_blackbear_cover.tif"), overwrite = TRUE)
+
+
+
+
+
+
 
 # grizz # 6825
 nn <- ww %>% filter(SPECIES_ENGLISH_NAME == "Grizzly Bear")      
@@ -824,6 +871,7 @@ st_write(nn , file.path("outputs", "grizbear_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(nn, srast, cover = TRUE, touches = TRUE)
 names(bb1) = "grizbear"
+bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_grizbear_cover.tif"), overwrite = TRUE)
 

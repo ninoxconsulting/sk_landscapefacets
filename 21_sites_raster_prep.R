@@ -1,6 +1,5 @@
 #21_prep_sites_layers
 
-library(dplyr)
 library(terra)
 library(sf)
 library(raster)
@@ -92,14 +91,16 @@ urban <- dis |>
 
 urban <- bind_rows(private, urban)
 urbanr <- terra::rasterize(urban, srast,touches = TRUE, cover = TRUE)
+names(urbanr) <- "urban"
+urbanr[is.na(urbanr)] <- 0
+urbanr <- mask(urbanr,srast)
 writeRaster(urbanr, file.path(outputs, "urban_cover.tif"), overwrite = TRUE)
 
-urbanr[urbanr >= 0.5] <- 1
-urbanr[urbanr < 0.5] <- NA
+#urbanr[urbanr >= 0.5] <- 1
+#urbanr[urbanr < 0.5] <- NA
 #urbanr <- mask(urbanr,srast)
-names(urbanr) <- "urban"
-writeRaster(urbanr, file.path(outputs, "urban.tif"), overwrite = TRUE)
-aa <- rast(file.path(outputs, "urban_cover.tif"))
+#names(urbanr) <- "urban"
+#writeRaster(urbanr, file.path(outputs, "urban.tif"), overwrite = TRUE)
 
 
 ## mining and OGC
@@ -163,6 +164,8 @@ aa <- rast(file.path(outputs, "ecoregion.tif"))
 aa[aa == 8] <- 99
 aa[aa != 99] <- 0
 names(aa) <- "ecoregion_nass"
+aa[is.na(aa)] <- 0
+aa <- mask(aa ,srast)
 writeRaster(aa, file.path(outputs, "ecoregion_nass.tif"), overwrite=TRUE)
 
 
@@ -177,8 +180,13 @@ gdd_v <- as.polygons(gdd)
 gddr_cover <- terra::rasterize(gdd_v , srast, "gdd", fun = "mean", na.rm = TRUE)
 names(gddr_cover)<- "gdd"
 gddr_cover <- mask(gddr_cover ,srast)
-
 writeRaster(gddr_cover, file.path(outputs, "gdd_mean.tif"), overwrite=TRUE)
+aa <- rast(file.path(outputs, "gdd_mean.tif"))
+aa[is.na(aa)] <- 0
+aa <- mask(aa ,srast)
+names(aa)<- "gdd_w"
+writeRaster(aa, file.path(outputs, "gdd_w.tif"), overwrite=TRUE)
+
 
 # threshold above 800
 gd <- rast(file.path(outputs, "gdd_mean.tif"))
@@ -390,6 +398,7 @@ pro <- rast(file.path(outputs, "protected_lands_cover.tif"))
 pro[pro >= 0.2] <- 1
 pro[pro < 0.2] <- 0
 names(pro) <- "protected"
+pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
 writeRaster(pro , file.path(outputs, "protected_lands_0.2.tif"), overwrite=TRUE)
 
@@ -406,6 +415,7 @@ pro <- mask(pro,srast)
 writeRaster(pro, file.path(outputs, "cancelled_lands_cover.tif"), overwrite = TRUE)
 pro[pro >= 0.2] <- 1
 pro[pro < 0.2] <- 0
+pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
 names(pro) <- "cancelled_lands_historic"
 writeRaster(pro  , file.path(outputs, "cancelled_lands_0.2.tif"), overwrite=TRUE)
@@ -421,7 +431,9 @@ pro <- mask(pro,srast)
 writeRaster(pro, file.path(outputs, "not_cancelled_lands_cover.tif"), overwrite = TRUE)
 pro[pro >= 0.2] <- 1
 pro[pro < 0.2] <- 0
+pro[is.na(pro)] <- 0
 names(pro) <- "cancelled_lands_current"
+pro <- mask(pro,srast)
 writeRaster(pro  , file.path(outputs, "not_cancelled_lands_0.2.tif"), overwrite=TRUE)
 
 
@@ -441,6 +453,7 @@ purrr::map(sp, function(x){
   sciname <- gsub(" ", "_", unique(rbb$SCIENTIFIC_NAME))
   rbb <- rasterize(rbb, srast, cover = TRUE, touches = TRUE)
   names(rbb) = paste0("fed_listed_", comm_name )
+  rbb[is.na(rbb)] <- 0
   #rbb[rbb >= 0.5] <- 1
   #rbb[rbb < 0.5] <- NA
   rbb <- mask(rbb,srast)
@@ -468,8 +481,13 @@ writeRaster(pro, file.path(outputs, "kba_terrestrial.tif"), overwrite = TRUE)
 j <- st_read(file.path("outputs", "final", "Jokulhaups_sk.gpkg"))
 j <- st_transform(j, crs=st_crs(srast))
 pro <- rasterize(j, srast, touches = TRUE, cover = TRUE)
+pro[is.na(pro)] <- 0
 names(pro) = "jokulhaups"
+pro <- mask(pro,srast)
 writeRaster(pro, file.path(outputs, "jokulhaups.tif"), overwrite = TRUE)
+
+
+
 
 #IBA 
 ib <- st_read(file.path("outputs", "final", "sk_important_bird_areas.gpkg"))
@@ -547,25 +565,27 @@ cc5 <- rasterize(c5 , srast,touches = TRUE, cover = TRUE)
 cc4 <- rasterize(c4 , srast,touches = TRUE, cover = TRUE)
 
 names(cc5) <- "rarity_5"
+cc5[is.na(cc5)] <- 0
 cc5 <- mask(cc5, srast)
 writeRaster(cc5, file.path(outputs, "ter_rarity_5_cover.tif"), overwrite=TRUE)
 
-cc5[cc5>= 0.5] <- 1
-cc5[cc5< 0.5] <- NA
-names(cc5) <- "rarity_5"
-cc5 <- mask(cc5, srast)
-writeRaster(cc5, file.path(outputs, "ter_rarity_5.tif"), overwrite=TRUE)
+#cc5[cc5>= 0.5] <- 1
+#cc5[cc5< 0.5] <- NA
+#names(cc5) <- "rarity_5"
+#cc5 <- mask(cc5, srast)
+#writeRaster(cc5, file.path(outputs, "ter_rarity_5.tif"), overwrite=TRUE)
 
 names(cc4) <- "rarity_4"
+cc4[is.na(cc4)] <- 0
 cc4 <- mask(cc4, srast)
 writeRaster(cc4, file.path(outputs, "ter_rarity_4_cover.tif"), overwrite=TRUE)
 
 
-cc4[cc4>= 0.5] <- 1
-cc4[cc4< 0.5] <- NA
-names(cc4) <- "rarity_4"
-cc4 <- mask(cc4, srast)
-writeRaster(cc4, file.path(outputs, "ter_rarity_4.tif"), overwrite=TRUE)
+#cc4[cc4>= 0.5] <- 1
+#cc4[cc4< 0.5] <- NA
+#names(cc4) <- "rarity_4"
+#cc4 <- mask(cc4, srast)
+#writeRaster(cc4, file.path(outputs, "ter_rarity_4.tif"), overwrite=TRUE)
 
 
 ## old version 
@@ -635,25 +655,27 @@ cc5 <- rasterize(c5 , srast,touches = TRUE, cover = TRUE)
 cc4 <- rasterize(c4 , srast,touches = TRUE, cover = TRUE)
 
 names(cc5) <- "diversity_5"
+cc5[is.na(cc5)] <- 0
 cc5 <- mask(cc5, srast)
 writeRaster(cc5, file.path(outputs, "ter_diversity_5_cover.tif"), overwrite=TRUE)
 
-cc5[cc5>= 0.5] <- 1
-cc5[cc5< 0.5] <- NA
-names(cc5) <- "diversity_5"
-cc5 <- mask(cc5, srast)
-writeRaster(cc5, file.path(outputs, "ter_diversity_5.tif"), overwrite=TRUE)
+#cc5[cc5>= 0.5] <- 1
+#cc5[cc5< 0.5] <- NA
+#names(cc5) <- "diversity_5"
+#cc5 <- mask(cc5, srast)
+#writeRaster(cc5, file.path(outputs, "ter_diversity_5.tif"), overwrite=TRUE)
 
 
 names(cc4) <- "diversity_4"
+cc4[is.na(cc4)] <- 0
 cc4 <- mask(cc4, srast)
 writeRaster(cc4, file.path(outputs, "ter_diversity_4_cover.tif"), overwrite=TRUE)
 
-cc4[cc4>= 0.5] <- 1
-cc4[cc4< 0.5] <- NA
-names(cc4) <- "diversity_4"
-cc4 <- mask(cc4, srast)
-writeRaster(cc4, file.path(outputs, "ter_diversity_4.tif"), overwrite=TRUE)
+#cc4[cc4>= 0.5] <- 1
+#cc4[cc4< 0.5] <- NA
+#names(cc4) <- "diversity_4"
+#cc4 <- mask(cc4, srast)
+#writeRaster(cc4, file.path(outputs, "ter_diversity_4.tif"), overwrite=TRUE)
 
 
 

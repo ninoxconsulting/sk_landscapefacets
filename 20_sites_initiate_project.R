@@ -124,11 +124,10 @@ themes_list <- get_all_tifs_gdbs(themes_dir)
 includes_list <- get_all_tifs_gdbs(includes_dir)
 excludes_list <- get_all_tifs_gdbs(excludes_dir)
 weights_list <- get_all_tifs_gdbs(weights_dir)
-#weights_list <- weights_list[c(1,2,4,3,5,8,9,10,11,12,13,14,15,16,17)]
 
-themes_list <-themes_list[1:27]
+#weights_list <- weights_list[c(1,2,4,3,5,6,7,8,9,10,11,12,13,14,15)]#,8,9,10,11,12,13,14,15,16,17)]
 
-#7 not working? mining_og the issue is being = new_dataset_from_auto 
+themes_list <-themes_list[c(11:18,46:69)]
 
 
 # Fill table -------------------------------------------------------------------
@@ -210,8 +209,6 @@ for (i in seq_along(file_list)) {
       #excludes 
       identical(type, "exclude") && identical(u_values, 2) ~ "#00000000, #756bb1",
       
-      # THemes 
-      
       #themes - aquatic
       identical(theme, "aquatic") && identical(legend, "continuous")  ~  "Blues",   # theme
       identical(theme, "aquatic") && identical(u_values, 2) ~ "#00000000, #756bb1",
@@ -250,6 +247,12 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "bigtree_2_cover") && identical(legend, "continuous")  ~  "Greens",
       identical(file_no_ext, "wilderness_cover") && identical(legend, "continuous")  ~  "Greens",
       
+      # themes - terrestrial
+      identical(file_no_ext, "jokulhaups") && identical(u_values, 2) ~ "#00000000, #7fbc41",
+      identical(file_no_ext, "ter_diversity_4_cover") && identical(legend, "continuous")  ~  "Reds",
+      identical(file_no_ext, "ter_diversity_5_cover") && identical(legend, "continuous")  ~  "Reds",
+      identical(file_no_ext, "ter_rarity_4_cover") && identical(legend, "continuous")  ~  "Reds",
+      identical(file_no_ext, "ter_rarity_5_cover") && identical(legend, "continuous")  ~  "Reds",
       
       # weight 
       identical(file_no_ext, "carbon_total") && identical(legend, "continuous")  ~  "magma",
@@ -296,9 +299,6 @@ for (i in seq_along(file_list)) {
     ## LABELS --------------------------------------------------------------------
     ## there is no "Label" column in species metadata
     labels <- case_when(
-      identical(theme, "aquatic") && identical(legend, "continuous") ~  "",
-      identical(theme, "aquatic") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      #identical(type, "include") && identical(u_values, 2) ~ "not included, included",
       
       #includes 
       identical(file_no_ext, "cancelled_lands_0.2") && identical(u_values, 2) ~ "not conservation lands, conservation lands",
@@ -307,33 +307,11 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "not_cancelled_lands_0.2") && identical(u_values, 2) ~ "Not conservation lands, conservation lands",
       identical(file_no_ext, "protected_lands_0.2") && identical(u_values, 2) ~ "Not protected, Protected",
       
-      identical(type, "exclude") && identical(u_values, 2) ~ "not altered, permanently altered",
-      identical(theme, "species_at_risk") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(theme, "critical_habitat_BC") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-
-      identical(theme, "productivity") && identical(legend, "continuous")   ~  "",
-      identical(theme, "productivity") && identical(u_values, 2) ~  "Non productive, Productive",   
-          
-      # themes - habitat 
-      identical(file_no_ext, "ancientforest_2_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "ancientforest_1_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "intactwatershed_10_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "intactwatershed_9_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "intactwatershed_8_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "bigtree_1_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "bigtree_2_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "wilderness_cover") && identical(legend, "continuous")   ~  "",
-      
-      identical(file_no_ext, "ter_rarity45_class") && identical(u_values, 2) ~ "not rare, very rare",
-      identical(file_no_ext, "ter_div45_class") && identical(u_values, 2) ~ "not diverse, very diverse",
-      #identical(file_no_ext, "macrorefugia") && identical(legend, "continuous")  ~  "",
-      #identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "",
-      #identical(file_no_ext, "gdd") && identical(legend, "continuous")  ~  "",
-      #identical(type, "weight") && identical(legend, "continuous")  ~  "",
-      #identical(type, "weight") && identical(u_values, 2)  ~  "not altered, altered",
-      
+      # excludes 
+      #identical(type, "exclude") && identical(u_values, 2) ~ "not altered, permanently altered",
+     
       # weights
-      identical(file_no_ext, "carbon_total") && identical(legend, "continuous")  ~  "index",
+      identical(file_no_ext, "carbon_total") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "gdd_mean") && identical(legend, "continuous")  ~  "growing degree days",
       identical(file_no_ext, "human_footprint_2022") && identical(legend, "continuous")  ~  "human footprint index",
       identical(file_no_ext, "iba_cover") && identical(legend, "continuous")  ~  "cover",
@@ -350,7 +328,46 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "diversity",
       identical(file_no_ext, "ter_rarity_continuous") && identical(legend, "continuous")  ~  "rarity",
       identical(file_no_ext, "urban_cover") && identical(legend, "continuous")  ~  "cover",
-      # identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+     
+      
+      # themes - aquatic
+      identical(theme, "aquatic") && identical(legend, "continuous") ~  "",
+      identical(theme, "aquatic") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      #identical(type, "include") && identical(u_values, 2) ~ "not included, included",
+      
+      identical(theme, "productivity") && identical(legend, "continuous")   ~  "",
+      identical(theme, "productivity") && identical(u_values, 2) ~  "Non productive, Productive",   
+        
+      identical(theme, "species_at_risk") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "species_at_risk") && identical(legend, "continuous")   ~  "",
+      identical(theme, "species_at_risk_bcdc") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "species_at_risk_bcdc") && identical(legend, "continuous")   ~  "",
+      identical(theme, "regional_focal_species") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "regional_focal_species") && identical(u_values, 3) ~  "Nan, Non Habitat, Habitat",
+      identical(theme, "regional_focal_species") && identical(legend, "continuous")  ~  "",
+      
+      # themes - habitat 
+      identical(file_no_ext, "ancientforest_2_cover") && identical(legend, "continuous")   ~  "",
+      identical(file_no_ext, "ancientforest_1_cover") && identical(legend, "continuous")   ~  "",
+      identical(file_no_ext, "intactwatershed_10_cover") && identical(legend, "continuous")   ~  "",
+      identical(file_no_ext, "intactwatershed_9_cover") && identical(legend, "continuous")   ~  "",
+      identical(file_no_ext, "intactwatershed_8_cover") && identical(legend, "continuous")   ~  "",
+      identical(file_no_ext, "bigtree_1_cover") && identical(legend, "continuous")   ~  "",
+      identical(file_no_ext, "bigtree_2_cover") && identical(legend, "continuous")   ~  "",
+      identical(file_no_ext, "wilderness_cover") && identical(legend, "continuous")   ~  "",
+      
+      # themes - terrestrial
+      identical(file_no_ext, "jokulhaups") && identical(u_values, 2) ~ "not present, present",
+      identical(file_no_ext, "ter_diversity_4_cover") && identical(legend, "continuous")  ~  "",
+      identical(file_no_ext, "ter_diversity_5_cover") && identical(legend, "continuous")  ~  "",
+      identical(file_no_ext, "ter_rarity_4_cover") && identical(legend, "continuous")  ~  "",
+      identical(file_no_ext, "ter_rarity_5_cover") && identical(legend, "continuous")  ~  "",
+      identical(theme, "terrestrial") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "terrestrial") && identical(legend, "continuous")  ~  "",
+      #identical(type, "weight") && identical(legend, "continuous")  ~  "",
+      #identical(type, "weight") && identical(u_values, 2)  ~  "not altered, altered",
+      
+       # identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "Habitat",
       # identical(source, "ECCC_CH") && identical(legend, "continuous") ~  "",
       # identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "Non Range, Range",
@@ -369,9 +386,11 @@ for (i in seq_along(file_list)) {
       type == "include" ~ "km2",
       type == "exclude" ~ "km2",
       theme == "species_at_risk" ~ "km2",
-      theme == "critical_habitat_BC" ~ "km2",
+      theme == "species_at_risk_bcdc" ~ "km2",
+      theme == "regional_focal_species" ~ "km2",
       theme == "aquatic" ~ "km2",
       theme == "habitat" ~ "km2",
+      theme == "terrestrial" ~ "km2",
       theme == "productivity" ~ "km2",
       file_no_ext == "iba" ~ "km2",
       file_no_ext %in%  c("ter_diversity_c","ter_rarity_c") ~ "km2",
@@ -620,26 +639,22 @@ if ("exclude" %in% unique(metadata$Type)) {
 #  c(theme_data, weight_data, include_data, exclude_data)
 #)
 
-#dataset <- wheretowork::new_dataset_from_auto(c(weight_data,include_data))
-
-# each works seperately but not together 
-
+#dataset <- wheretowork::new_dataset_from_auto(theme_data)
 #dataset <- wheretowork::new_dataset_from_auto(weight_data)
 #dataset <- wheretowork::new_dataset_from_auto(include_data)
+#dataset <- wheretowork::new_dataset_from_auto(c(theme_data, include_data))
+#dataset <- wheretowork::new_dataset_from_auto(c(weight_data, include_data))
 
-#dataset <- wheretowork::new_dataset_from_auto(c(include_data,weight_data))
-
-dataset <- wheretowork::new_dataset_from_auto(c(theme_data,weight_data))
-dataset <- wheretowork::new_dataset_from_auto(theme_data)
+dataset <- wheretowork::new_dataset_from_auto(c(theme_data, weight_data, include_data))
+#dataset <- wheretowork::new_dataset_from_auto(theme_data)
 #)
-
 
 ## Create themes (must have) ----
 ### loop over unique theme groups (ex. Endemic Species, Species at Risk, etc.)
 themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
   # start test lin
-  #i <- 3
+  #i <- 1
   # end test line 
   
   #### store temp variables associated with group (i)
@@ -660,8 +675,7 @@ themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
   #### create list of features (j) associated with group
   curr_features <- lapply(seq_along(curr_theme_names), function(j) {
-    
-    #j = 2
+  #  j = 10
     #print(curr_theme_legend[j])
     
     #### create variable (if manual legend)
@@ -728,7 +742,7 @@ themes <- lapply(seq_along(unique(theme_groups)), function(i) {
 if (!is.null(weight_data)) {
   weights <- lapply(seq_len(terra::nlyr(weight_data)), function(i) {
     
-   # i <- 1
+    #i <- 1
     
     #### prepare variable (if manual legend)
     if (identical(weight_legend[i], "manual")) {
@@ -862,7 +876,7 @@ if (!is.null(exclude_data)) {
 } 
 
 PRJ_NAME = "skeena"
-PRJ_PATH = fs::path("outputs", "final", "sites")
+PRJ_PATH = fs::path("outputs", "final", "sites_202505") 
 PRJ_FILE_NAME = "skeena"
 
 ## Save project to disk ---- 

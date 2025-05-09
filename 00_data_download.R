@@ -764,8 +764,9 @@ writeRaster(cl, file.path(outputs, "crown_lands_cover.tif"), overwrite = TRUE)
 cl<- rast( file.path(outputs, "crown_lands_cover.tif"))
 cl[cl >= 0.2] <- 1
 cl[cl < 0.2] <- 0
+cl[is.na(cl)] <- 0
 cl <- mask(cl ,srast)
-names(cl)<- "crown_lands_0.2"
+names(cl)<- "crown_lands_reserve"
 writeRaster(cl, file.path(outputs, "crown_lands0.2.tif"), overwrite = TRUE)
 
 
@@ -1037,7 +1038,12 @@ names(common) = "carbon"
 iww <- terra::rasterize(common, srast, "carbon", touches = TRUE)
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "carbon_total.tif"), overwrite = TRUE)
-#aa <- rast(file.path(outputs, "carbon_total.tif")
+aa <- rast(file.path(outputs, "carbon_total.tif"))
+aa[is.na(aa)] <- 0           
+iww <- mask(aa ,srast)
+writeRaster(iww, file.path(outputs, "carbon_total.tif"), overwrite = TRUE)
+
+           
 
 ###################################################################
 # Human Canadaian Footprint
