@@ -257,26 +257,50 @@ names(iww)<- "ws0"
 writeRaster(iww, file.path(outputs, "intactwatershed_0.tif"), overwrite = TRUE)
 
 
+
+
+
+
+
 common <- y8
 # convert to poly and back to raster at 1km grid - using cover
 common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
-names(iww)<- "ws"
+#names(iww)<- "ws"
+#iww <- mask(iww ,srast)
+#plot(iww)
+
+# fix for sites
+#iww <- rast(file.path(outputs, "intactwatershed_8_cover.tif"))
+names(iww) <- "Watersheds_70_80pc_intact"
+iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
-plot(iww)
+writeRaster(iww, file.path(outputs, "intactwatershed_8_cover.tif"), overwrite=TRUE)
+
 iww[iww >= 0.5] <- 1
-iww[iww < 0.5] <- NA
+iww[iww < 0.5] <- 0
 iww <- mask(iww ,srast)
-names(iww)<- "ws8"
+#names(iww)<- "ws8"
 writeRaster(iww, file.path(outputs, "intactwatershed_8.tif"), overwrite = TRUE)
+
+Watersheds_80_90pc_intact
+
+
 
 common <- y9
 # convert to poly and back to raster at 1km grid - using cover
 common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
-names(iww)<- "ws"
+#names(iww)<- "ws"
+#iww <- mask(iww ,srast)
+#plot(iww)
+# fix for sites
+#iww <- rast(file.path(outputs, "intactwatershed_9_cover.tif"))
+names(iww) <- "Watersheds_80_90pc_intact"
+iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
-plot(iww)
+writeRaster(iww, file.path(outputs, "intactwatershed_9_cover.tif"), overwrite=TRUE)
+
 iww[iww >= 0.5] <- 1
 iww[iww < 0.5] <- NA
 iww <- mask(iww ,srast)
@@ -284,17 +308,27 @@ names(iww)<- "ws9"
 writeRaster(iww, file.path(outputs, "intactwatershed_9.tif"), overwrite = TRUE)
 
 
+
+
 common <- y10
 # convert to poly and back to raster at 1km grid - using cover
 common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
-names(iww)<- "ws"
+#names(iww)<- "ws"
+#iww <- mask(iww ,srast)
+#plot(iww)
+
+# fix for sites
+#iww <- rast(file.path(outputs, "intactwatershed_10_cover.tif"))
+names(iww) <- "Watersheds_gth_90pc_intact"
+iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
-plot(iww)
+writeRaster(iww, file.path(outputs, "intactwatershed_10_cover.tif"), overwrite=TRUE)
+
 iww[iww >= 0.5] <- 1
 iww[iww < 0.5] <- NA
 iww <- mask(iww ,srast)
-names(iww)<- "ws10"
+#names(iww)<- "ws10"
 writeRaster(iww, file.path(outputs, "intactwatershed_10.tif"), overwrite = TRUE)
 
 
@@ -342,23 +376,38 @@ common <- y3
 # convert to poly and back to raster at 1km grid - using cover
 common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
-names(iww)<- "bt"
+#names(iww)<- "bt"
+#iww <- mask(iww ,srast)
+#plot(iww)
+#writeRaster(iww, file.path(outputs, "bigtree_1_cover.tif"), overwrite = TRUE)
+# fix for sites
+#iww <- rast(file.path(outputs, "bigtree_1_cover.tif"))
+names(iww) <- "Big-treed old growth forests"
+iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
-plot(iww)
-writeRaster(iww, file.path(outputs, "bigtree_1_cover.tif"), overwrite = TRUE)
+writeRaster(iww, file.path(outputs, "bigtree_1_cover.tif"), overwrite=TRUE)
+
 iww[iww >= 0.5] <- 1
 iww[iww < 0.5] <- NA
 iww <- mask(iww ,srast)
 names(iww)<- "bt1"
 writeRaster(iww, file.path(outputs, "bigtree_1.tif"), overwrite = TRUE)
 
+
+
 common <- y4
 # convert to poly and back to raster at 1km grid - using cover
 common <- as.polygons(common, digits = 2)
 iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
-names(iww)<- "bt"
+#names(iww)<- "bt"
+#iww <- mask(iww ,srast)
+#writeRaster(iww, file.path(outputs, "bigtree_2_cover.tif"), overwrite = TRUE)
+# fix for sites
+#iww <- rast(file.path(outputs, "bigtree_2_cover.tif"))
+names(iww) <- "Big-treed older mature forests"
+iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
-writeRaster(iww, file.path(outputs, "bigtree_2_cover.tif"), overwrite = TRUE)
+writeRaster(iww, file.path(outputs, "bigtree_2_cover.tif"), overwrite=TRUE)
 
 plot(iww)
 iww[iww >= 0.5] <- 1
@@ -368,8 +417,16 @@ names(iww)<- "bt2"
 writeRaster(iww, file.path(outputs, "bigtree_2.tif"), overwrite = TRUE)
 
 
-# Priority old growth 
 
+
+
+
+
+
+
+
+
+# Priority old growth 
 bt1 <- rast(file.path('/home/user/Documents/00_data/base_vector/bc/BC_TAP_Forestry_data/BCVW_tap_watewrshed_data/',"Map3_PriorityBigTreeOG_2021_10_24.tif"))
 names(bt1)<- "bt"
 unique(values(bt1))
@@ -382,49 +439,34 @@ y0 <- ifel(bt1 == 0, 1, NA)
 plot(y0)
 plot(y3)
 plot(y4)
-
-common <- y3
-# convert to poly and back to raster at 1km grid - using cover
-common <- as.polygons(common, digits = 2)
-iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
-names(iww)<- "bt"
-iww <- mask(iww ,srast)
-writeRaster(iww, file.path(outputs, "bigtree_3_cover.tif"), overwrite = TRUE)
-plot(iww)
-iww[iww >= 0.5] <- 1
-iww[iww < 0.5] <- NA
-iww <- mask(iww ,srast)
-names(iww)<- "bt3"
-writeRaster(iww, file.path(outputs, "bigtree_3.tif"), overwrite = TRUE)
-
-common <- y4
-# convert to poly and back to raster at 1km grid - using cover
-common <- as.polygons(common, digits = 2)
-iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
-names(iww)<- "bt"
-iww <- mask(iww ,srast)
-writeRaster(iww, file.path(outputs, "bigtree_4_cover.tif"), overwrite = TRUE)
-plot(iww)
-iww[iww >= 0.5] <- 1
-iww[iww < 0.5] <- NA
-iww <- mask(iww ,srast)
-names(iww)<- "bt4"
-writeRaster(iww, file.path(outputs, "bigtree_4.tif"), overwrite = TRUE)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# 
+# common <- y3
+# # convert to poly and back to raster at 1km grid - using cover
+# common <- as.polygons(common, digits = 2)
+# iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
+# names(iww)<- "bt"
+# iww <- mask(iww ,srast)
+# writeRaster(iww, file.path(outputs, "bigtree_3_cover.tif"), overwrite = TRUE)
+# plot(iww)
+# iww[iww >= 0.5] <- 1
+# iww[iww < 0.5] <- NA
+# iww <- mask(iww ,srast)
+# names(iww)<- "bt3"
+# writeRaster(iww, file.path(outputs, "bigtree_3.tif"), overwrite = TRUE)
+# 
+# common <- y4
+# # convert to poly and back to raster at 1km grid - using cover
+# common <- as.polygons(common, digits = 2)
+# iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
+# names(iww)<- "bt"
+# iww <- mask(iww ,srast)
+# writeRaster(iww, file.path(outputs, "bigtree_4_cover.tif"), overwrite = TRUE)
+# plot(iww)
+# iww[iww >= 0.5] <- 1
+# iww[iww < 0.5] <- NA
+# iww <- mask(iww ,srast)
+# names(iww)<- "bt4"
+# writeRaster(iww, file.path(outputs, "bigtree_4.tif"), overwrite = TRUE)
 
 
 
@@ -458,6 +500,14 @@ iww[iww < 0.5] <- NA
 iww <- mask(iww ,srast)
 names(iww)<- "af2"
 writeRaster(iww, file.path(outputs, "ancientforest_2.tif"), overwrite = TRUE)
+# fix for sites
+iww <- rast(file.path(outputs, "ancientforest_2_cover.tif"))
+names(iww) <- "ancient_forest_gt400"
+iww[is.na(iww)] <- 0
+iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "ancientforest_2_cover.tif"), overwrite=TRUE)
+
+
 
 common <- y1
 # convert to poly and back to raster at 1km grid - using cover
@@ -472,9 +522,12 @@ iww <- mask(iww ,srast)
 names(iww)<- "af1"
 writeRaster(iww, file.path(outputs, "ancientforest_1.tif"), overwrite = TRUE)
 
-
-
-
+# fix for sites
+iww <- rast(file.path(outputs, "ancientforest_1_cover.tif"))
+names(iww) <- "ancient_forest_gt250"
+iww[is.na(iww)] <- 0
+iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "ancientforest_1_cover.tif"), overwrite=TRUE)
 
 
 
@@ -710,11 +763,10 @@ writeRaster(cl, file.path(outputs, "crown_lands_cover.tif"), overwrite = TRUE)
 # filter at 0.2 scale 
 cl<- rast( file.path(outputs, "crown_lands_cover.tif"))
 cl[cl >= 0.2] <- 1
-cl[cl < 0.2] <- NA
+cl[cl < 0.2] <- 0
 cl <- mask(cl ,srast)
-names(cl)<- "crown_lands0.2"
+names(cl)<- "crown_lands_0.2"
 writeRaster(cl, file.path(outputs, "crown_lands0.2.tif"), overwrite = TRUE)
-
 
 
 
@@ -925,7 +977,7 @@ st_write(ggsf, file.path("outputs", "Jokulhaups_sk.gpkg"))
 
 
 
-### Pitehr data sets 
+### Pither data sets 
 
 con <- rast(file.path("inputs", "Pither_etal", "Current_Density_1_Conductance.tif"))
 res <- rast(file.path("inputs", "Pither_etal", "Current_Density_2_Resistance.tif"))
@@ -985,7 +1037,7 @@ names(common) = "carbon"
 iww <- terra::rasterize(common, srast, "carbon", touches = TRUE)
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "carbon_total.tif"), overwrite = TRUE)
-
+#aa <- rast(file.path(outputs, "carbon_total.tif")
 
 ###################################################################
 # Human Canadaian Footprint
@@ -1000,9 +1052,10 @@ iww <- terra::rasterize(common, srast, "human_footprint", touches = TRUE)
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "human_footprint_2022.tif"), overwrite = TRUE)
 
-
-
-
+iww<- rast(file.path(outputs, "human_footprint_2022.tif"))
+iww[is.na(iww)] <- 0
+iww <- mask(iww ,srast)
+writeRaster(iww, file.path(outputs, "human_footprint_2022.tif"), overwrite=TRUE)
 
 
 

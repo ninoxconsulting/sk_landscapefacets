@@ -230,7 +230,8 @@ writeRaster(rar, file.path(outputs, "sk_lake_rarity_prop_2025.tif"), overwrite =
  rc <- classify(rar , rclmat, include.lowest=TRUE)
  plot(rc)
  writeRaster(rc, file.path("outputs", "sk_lakes_rarity_prop_2025_conc.tif"), overwrite = TRUE)
-
+ rc <- rast(file.path("outputs", "sk_lakes_rarity_prop_2025_conc.tif"))
+ 
 # output classes 
 # split out the classes 4 + 5 as cover 
  con_rareclass <- as.polygons(rc, digits = 2)
@@ -245,10 +246,14 @@ writeRaster(rar, file.path(outputs, "sk_lake_rarity_prop_2025.tif"), overwrite =
  cc4 <- rasterize(c4 , srast,touches = TRUE, cover = TRUE)
  
  names(cc5) <- "lake_rarity_5"
+ cc5[is.na(cc5)] <- 0
+ cc5[cc5  >= 1] <- 1
  cc5 <- mask(cc5, srast)
  writeRaster(cc5, file.path(outputs, "aq_lake_rarity_5_cover.tif"), overwrite=TRUE)
  
  names(cc4) <- "lake_rarity_4"
+ cc4[is.na(cc4)] <- 0
+ cc4[cc4  >= 1] <- 1
  cc4 <- mask(cc4, srast)
  writeRaster(cc4, file.path(outputs, "aq_lake_rarity_4_cover.tif"), overwrite=TRUE)
  
@@ -869,19 +874,47 @@ quantile(values(rare_laker), probs = seq(0, 1, 0.1), na.rm = TRUE)
 
 writeRaster(rare_laker, file.path(outputs,"lake_div_ens.tif"))
 
-
-## check this with Paula
-
-
 # select the high and very high diversity values 
-
-# wait on paula
- # run this through QGIS to generate neighbourhood 
+# run this through QGIS to generate neighbourhood 
 
 div <- rast(file.path(outputs, "sk_lake_div_ens_101c.tif")) 
 
 hist(div)
 quantile(values(div), probs = seq(0, 1, 0.1), na.rm = TRUE)
+unique(values(div))
+
+m <- c(1, 2.8, 1,
+       2.8, 3.8, 2,
+       3.8 , 5.5, 3,
+       5.5 , 7, 4,
+       7, 50, 5)
+rclmat <- matrix(m, ncol=3, byrow=TRUE)
+rc <- classify(div , rclmat, include.lowest=TRUE)
+plot(rc)
+
+writeRaster(rc, file.path(outputs, "aq_lakes_divsi_class.tif"), overwrite = TRUE)
+
+# split off diversity class 4 and 5 
+
+rc <- rast(file.path(outputs, "aq_lakes_divsi_class.tif"))
+#class5 
+rc[rc < 5] <- 0
+rc[rc >= 5] <- 1
+rc <- mask(rc,srast)
+names(rc)<- "lakes_div_5"
+writeRaster(rc, file.path(outputs, "aq_lakes_divens_5.tif"), overwrite = TRUE)
+
+#class4
+rc <- rast(file.path(outputs, "aq_lakes_divsi_class.tif"))
+rc[rc < 4] <- 0
+rc[rc > 5] <- 0
+rc[rc >= 4] <- 1
+rc<- mask(rc,srast)
+names(rc)<- "lakes_div_4"
+writeRaster(rc, file.path(outputs, "aq_lakes_divens_4.tif"), overwrite = TRUE)
+
+
+
 
 
 
@@ -1050,76 +1083,76 @@ quantile(values(div), probs = seq(0, 1, 0.1), na.rm = TRUE)
 
 
 
-## OPTION 2: diversity based on watershed area 
-# output as spatial and calculate raw diversity based on number of lake barcodes per watershed by area of watershed (hectares)
-
-lac_sf <- st_read(file.path("inputs", "sk_lakes_barcode_poly.gpkg")) |> 
-  mutate(lake_area_m2 = as.numeric(st_area(geom)))
-
-ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg")) %>% 
-  dplyr::select(RIVER_ID)%>% 
-  mutate(river_poly_area_m2 = as.numeric(st_area(geom)))
-
-# intersect the watershed
-lac_river_poly <- st_intersection(lac_sf, ri)%>% 
-  dplyr::select(lake_code, RIVER_ID, lake_area_m2, river_poly_area_m2) 
-
-lac_count_per_poly <- lac_river_poly %>% 
-  dplyr::group_by(RIVER_ID)%>% 
-  dplyr::mutate(lake_no_per_watershed = n()) %>% 
-  dplyr::select(RIVER_ID, river_poly_area_m2, lake_no_per_watershed)%>% 
-  st_drop_geometry() %>% 
-  distinct()%>%
-  ungroup() %>% 
-  rowwise() %>% 
-  mutate(lake_div_raw_m2 = lake_no_per_watershed/river_poly_area_m2)%>%
-  mutate(lake_div_raw_ha = lake_no_per_watershed/(river_poly_area_m2/10000))
-
-la_div_sf_raw <- left_join(ri, lac_count_per_poly) 
-
-
- st_write(la_div_sf_raw , file.path("inputs", "lake_div_raw.gpkg"), append = FALSE)
-
- 
- ## convert to a tif then run through the neighbourhood analysis 
-
- div_lake_poly <-vect(file.path("inputs", "lake_div_raw.gpkg"))
- 
- div_laker <- rasterize(div_lake_poly  , srast, field= "lake_div_raw_ha")
- 
- plot(div_laker)
- 
- writeRaster(div_laker, file.path("outputs","lake_div_byarea.tif"))
-
-# ran diversity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
-
-div <- rast(file.path("outputs", "sk_lakes_meanbyarea_div_101c.tif"))
-
-hist(div)
-
-names(div)= "diversity"
-
-#reclass the layers to a conccentration 
-
-#t = quantile(values(div), probs = seq(0, 1, 0.1), na.rm = TRUE)
-#
-#t = data.frame(t)
-
-
-unique(values(div))
-
-m <- c(0, 0.002, 1,
-       0.002, 0.003, 2,
-       0.003, 0.004, 3,
-       0.004 , 0.006, 4,
-       0.006, 1, 5)
- rclmat <- matrix(m, ncol=3, byrow=TRUE)
- rc <- classify(div , rclmat, include.lowest=TRUE)
- plot(rc)
- 
- 
- writeRaster(rc, file.path("outputs", "sk_lakes_divarea_conc.tif"), overwrite = TRUE)
-
+# ## OPTION 2: diversity based on watershed area 
+# # output as spatial and calculate raw diversity based on number of lake barcodes per watershed by area of watershed (hectares)
+# 
+# lac_sf <- st_read(file.path("inputs", "sk_lakes_barcode_poly.gpkg")) |> 
+#   mutate(lake_area_m2 = as.numeric(st_area(geom)))
+# 
+# ri <- st_read(file.path("inputs", "eaubc_rivers.gpkg")) %>% 
+#   dplyr::select(RIVER_ID)%>% 
+#   mutate(river_poly_area_m2 = as.numeric(st_area(geom)))
+# 
+# # intersect the watershed
+# lac_river_poly <- st_intersection(lac_sf, ri)%>% 
+#   dplyr::select(lake_code, RIVER_ID, lake_area_m2, river_poly_area_m2) 
+# 
+# lac_count_per_poly <- lac_river_poly %>% 
+#   dplyr::group_by(RIVER_ID)%>% 
+#   dplyr::mutate(lake_no_per_watershed = n()) %>% 
+#   dplyr::select(RIVER_ID, river_poly_area_m2, lake_no_per_watershed)%>% 
+#   st_drop_geometry() %>% 
+#   distinct()%>%
+#   ungroup() %>% 
+#   rowwise() %>% 
+#   mutate(lake_div_raw_m2 = lake_no_per_watershed/river_poly_area_m2)%>%
+#   mutate(lake_div_raw_ha = lake_no_per_watershed/(river_poly_area_m2/10000))
+# 
+# la_div_sf_raw <- left_join(ri, lac_count_per_poly) 
+# 
+# 
+#  st_write(la_div_sf_raw , file.path("inputs", "lake_div_raw.gpkg"), append = FALSE)
+# 
+#  
+#  ## convert to a tif then run through the neighbourhood analysis 
+# 
+#  div_lake_poly <-vect(file.path("inputs", "lake_div_raw.gpkg"))
+#  
+#  div_laker <- rasterize(div_lake_poly  , srast, field= "lake_div_raw_ha")
+#  
+#  plot(div_laker)
+#  
+#  writeRaster(div_laker, file.path("outputs","lake_div_byarea.tif"))
+# 
+# # ran diversity neighbourhood analysis in QGIS with 101c circular neighbourhood and average value. 
+# 
+# div <- rast(file.path("outputs", "sk_lakes_meanbyarea_div_101c.tif"))
+# 
+# hist(div)
+# 
+# names(div)= "diversity"
+# 
+# #reclass the layers to a conccentration 
+# 
+# #t = quantile(values(div), probs = seq(0, 1, 0.1), na.rm = TRUE)
+# #
+# #t = data.frame(t)
+# 
+# 
+# unique(values(div))
+# 
+# m <- c(0, 0.002, 1,
+#        0.002, 0.003, 2,
+#        0.003, 0.004, 3,
+#        0.004 , 0.006, 4,
+#        0.006, 1, 5)
+#  rclmat <- matrix(m, ncol=3, byrow=TRUE)
+#  rc <- classify(div , rclmat, include.lowest=TRUE)
+#  plot(rc)
+#  
+#  
+#  writeRaster(rc, file.path("outputs", "sk_lakes_divarea_conc.tif"), overwrite = TRUE)
+# 
 
  
  
@@ -1364,16 +1397,7 @@ writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"), overwrite = T
 
 
 
-
-
 # read in the neighbourhood version 
-
-div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
-div <- mask(div, srast)
-#hist(div)
-#aa <- values(div, na.rm = T)
-#quantile(aa, seq(0,1, 0.1))
-writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
 
 # new version - 1km
 div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
@@ -1383,14 +1407,11 @@ names(divp) <- "rivers_diversity_101"
 divp <- mask(divp, srast)
 writeRaster(divp, file.path(outputs, "rivers_diversity_101_c.tif"), overwrite=TRUE)
 
-
-
-
 # set thresholds 
-names(div)= "diversity"
+names(divp)= "diversity"
 #reclass the valyers to a conccentration 
 
-unique(values(div))
+#unique(values(div))
 
 m <- c(1, 2.5, 1,
        2.5, 3, 2,
@@ -1398,9 +1419,39 @@ m <- c(1, 2.5, 1,
        4.5, 6, 4,
        6, 20, 5)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc <- classify(div , rclmat, include.lowest=TRUE)
+rc <- classify(divp , rclmat, include.lowest=TRUE)
 
-writeRaster(rc, file.path("outputs", "sk_rivers_diversity_conc.tif"), overwrite = TRUE)
+plot(rc)
+
+writeRaster(rc, file.path(outputs, "sk_rivers_diversity_class.tif"), overwrite = TRUE)
+
+
+# split into 4 and 5 classes 
+
+rc <- rast(file.path(outputs, "sk_rivers_diversity_class.tif"))
+
+#class5
+rc[rc < 5] <- 0
+rc[rc >= 5] <- 1
+rc <- mask(rc,srast)
+names(rc)<- "rivers_div_5"
+writeRaster(rc, file.path(outputs, "sk_rivers_diversity_5.tif"), overwrite = TRUE)
+
+#class4
+rc <- rast(file.path(outputs, "sk_rivers_diversity_class.tif"))
+rc[rc < 4] <- 0
+rc[rc > 5] <- 0
+rc[rc >= 4] <- 1
+rc<- mask(rc,srast)
+names(rc)<- "rivers_div_4"
+writeRaster(rc, file.path(outputs, "sk_rivers_diversity_4.tif"), overwrite = TRUE)
+
+
+
+
+
+
+
 
 
 
@@ -1596,14 +1647,37 @@ terra::writeRaster(rc1,file.path("outputs", "sk_rivers_rarity_class.tif"), overw
 
 # read in the neighbourhood version 
 
-avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
-avrare <- mask(avrare, srast)
+#avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
+#avrare <- mask(avrare, srast)#
 
-hist(avrare)
+#hist(avrare)
 
 #writeRaster(div, file.path("outputs", "sk_rivers_diversity_101c.tif"), overwrite = TRUE)
+# 
+# unique(values(avrare))
+# 
+# m <- c(1, 1.1, 1,
+#        1.1, 1.2, 2,
+#        1.2, 1.8, 3,
+#        1.8, 2.8, 4,
+#        2.8, 20, 5)
+# rclmat <- matrix(m, ncol=3, byrow=TRUE)
+# rc <- classify(avrare , rclmat, include.lowest=TRUE)
+# 
+# writeRaster(rc, file.path("outputs", "sk_rivers_rarity_mean_conc.tif"), overwrite = TRUE)
 
-unique(values(avrare))
+
+# new version - 1km
+avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
+avrarep <- as.polygons(avrare, digits = 2)
+#avrarep
+avrarep <- terra::rasterize(avrarep, srast, "sk_rivers_rarity_mean_101c", fun = "mean", na.rm = TRUE)
+names(avrarep) <- "rivers_rarity_mean_101c"
+avrarep<- mask(avrarep, srast)
+writeRaster(avrarep, file.path(outputs, "rivers_rarity_mean_101c.tif"), overwrite=TRUE)
+
+# split out the 4 and 5 values 
+av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
 
 m <- c(1, 1.1, 1,
        1.1, 1.2, 2,
@@ -1613,34 +1687,24 @@ m <- c(1, 1.1, 1,
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
 rc <- classify(avrare , rclmat, include.lowest=TRUE)
 
-writeRaster(rc, file.path("outputs", "sk_rivers_rarity_mean_conc.tif"), overwrite = TRUE)
 
-
-# new version - 1km
-avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
-avrarep <- as.polygons(avrare, digits = 2)
-avrarep
-avrarep <- terra::rasterize(avrarep, srast, "sk_rivers_rarity_mean_101c", fun = "mean", na.rm = TRUE)
-names(avrarep) <- "rivers_rarity_mean_101c"
-avrarep<- mask(avrarep, srast)
-writeRaster(avrarep, file.path(outputs, "rivers_rarity_mean_101c.tif"), overwrite=TRUE)
-
-# split out the 4 and 5 values 
 av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
-
 #class5 
-av[av < 5] <- NA
+av[av < 5] <- 0
 av[av >= 5] <- 1
 av <- mask(av,srast)
 names(av)<- "rivers_rare_5"
 writeRaster(av, file.path(outputs, "rivers_rarity_5.tif"), overwrite = TRUE)
 
+
 #class4
 av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
-av[av < 4] <- NA
+av[av < 4] <- 0
+av[av > 5] <- 0
 av[av >= 4] <- 1
 av <- mask(av,srast)
 names(av)<- "rivers_rare_4"
+plot(av)
 writeRaster(av, file.path(outputs, "rivers_rarity_4.tif"), overwrite = TRUE)
 
 

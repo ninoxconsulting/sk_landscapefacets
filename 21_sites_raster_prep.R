@@ -7,7 +7,8 @@ library(raster)
 library(dplyr)
 # read in templates 
 
-outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
+#outputs <- file.path("outputs", "final", "sites", "raw_tiffs")
+outputs <- file.path("outputs", "final", "sites_202505", "raw_tiffs")
 
 # create a raster with the same extent and resolution as the template
 # see here for Terra option: https://github.com/rspatial/terra/issues/142
@@ -59,14 +60,16 @@ w <- rast(file.path("outputs", "final", "sk_wilderness_2023.tif"))
 names(w)<- "humanfootprint"
 inw <- read_sf(file.path("outputs", "sk_wilderness.gpkg"))
 wwwvc <- rasterize(inw, srast, "type",touches = TRUE, cover = TRUE)
+wwwvc[is.na(wwwvc)] <- 0
+wwwvc <- mask(wwwvc,srast)
+writeRaster(wwwvc  , file.path(outputs, "wilderness_cover.tif"), overwrite=TRUE)
 
-writeRaster(wwwvc  , file.path(outputs, "humanfootprint_cover.tif"), overwrite=TRUE)
 
 # generate binary based 1km template usign 0.5 as threshold
 wwwvc[wwwvc >= 0.5] <- 1
 wwwvc[wwwvc < 0.5] <- NA
 names(wwwvc) <- "wilderness"
-writeRaster(wwwvc  , file.path(outputs, "humanfootprint.tif"), overwrite=TRUE)
+writeRaster(wwwvc  , file.path(outputs, "wilderness.tif"), overwrite=TRUE)
 
 #############################################################################
 
@@ -96,7 +99,7 @@ urbanr[urbanr < 0.5] <- NA
 #urbanr <- mask(urbanr,srast)
 names(urbanr) <- "urban"
 writeRaster(urbanr, file.path(outputs, "urban.tif"), overwrite = TRUE)
-
+aa <- rast(file.path(outputs, "urban_cover.tif"))
 
 
 ## mining and OGC
@@ -110,10 +113,15 @@ mining <- dis |>
 mine <- terra::rasterize(mining, srast,touches = TRUE, cover = TRUE)
 names(mine) <- "mining_oilgas"
 writeRaster(mine, file.path(outputs, "mining_OG_cover.tif"), overwrite = TRUE)
+aa <- rast(file.path(outputs, "mining_OG_cover.tif"))
+mine <- mask(aa,srast)
+mine[mine <= 0.1] <- 0
+mine[is.na(mine)] <- 0
+mine <- mask(mine,srast)
+writeRaster(mine, file.path(outputs, "mining_og_cover.tif"), overwrite = TRUE)
 
 mine[mine >= 0.5] <- 1
 mine[mine < 0.5] <- NA
-
 mine <- mask(mine,srast)
 names(mine) <- "mining_oilgas"
 writeRaster(mine, file.path(outputs, "mining_OG.tif"), overwrite = TRUE)
@@ -150,8 +158,12 @@ names(ec )<- "ecoregion_name"
 ec <- mask(ec ,srast)
 writeRaster(ec, file.path(outputs, "ecoregion.tif"), overwrite=TRUE)
 
-
-
+# test with one ecoregion
+aa <- rast(file.path(outputs, "ecoregion.tif"))
+aa[aa == 8] <- 99
+aa[aa != 99] <- 0
+names(aa) <- "ecoregion_nass"
+writeRaster(aa, file.path(outputs, "ecoregion_nass.tif"), overwrite=TRUE)
 
 
 
@@ -170,22 +182,20 @@ writeRaster(gddr_cover, file.path(outputs, "gdd_mean.tif"), overwrite=TRUE)
 
 # threshold above 800
 gd <- rast(file.path(outputs, "gdd_mean.tif"))
-gd[gd < 800] <- NA
+gd[gd < 800] <- 0
 gd[gd  >= 800] <- 1
+names(gd) <- "gdd_800"
 gd <- mask(gd ,srast)
-
 writeRaster(gd, file.path(outputs, "gdd_mean_800.tif"), overwrite=TRUE)
 
 
-# threahold abovve 1000
+# threahold above 1000
 gd <- rast(file.path(outputs, "gdd_mean.tif"))
-gd[gd < 1000] <- NA
+gd[gd < 1000] <- 0
 gd[gd  >= 1000] <- 1
+names(gd) <- "gdd_1000"
 gd <- mask(gd ,srast)
-
 writeRaster(gd, file.path(outputs, "gdd_mean_1000.tif"), overwrite=TRUE)
-
-
 
 
 
@@ -204,23 +214,21 @@ writeRaster(ndvir, file.path(outputs, "ndvi_mean.tif"), overwrite=TRUE)
 #2. >0.68
 
 nd <- rast(file.path(outputs, "ndvi_mean.tif"))
-nd[nd < 0.58] <- NA
-nd[nd  >= 0.68] <- NA
+nd[nd < 0.58] <- 0
+nd[nd  >= 0.68] <- 0
 nd[nd  >= 0.58] <- 1
+names(nd) <- "ndvi_0.58_0.68"
 nd <- mask(nd, srast)
 writeRaster(nd, file.path(outputs, "ndvi_mean_0.58_0.68.tif"), overwrite=TRUE)
 
+
 # threshold above 0.68
 gd <- rast(file.path(outputs, "ndvi_mean.tif"))
-gd[gd < 0.68] <- NA
+gd[gd < 0.68] <- 0
 gd[gd  >=0.68] <- 1
+names(gd) <- "ndvi_0.68"
 gd <- mask(gd ,srast)
-
 writeRaster(gd, file.path(outputs, "ndvi_mean_0.68.tif"), overwrite=TRUE)
-
-
-
-
 
 
 #npp - complete
@@ -229,10 +237,9 @@ names(npp)<- "npp"
 npp <- project(npp,srast, method = "average")
 nppv_cover<- mask(npp , srast)
 writeRaster(nppv_cover, file.path(outputs, "npp.tif"), overwrite = TRUE)
-
-range(values(nppv_cover), na.rm = T)
-
-
+npp <- rast(file.path(outputs, "npp.tif"))
+names(npp)<- "npp_productivity"
+writeRaster(npp, file.path(outputs, "npp.tif"), overwrite = TRUE)
 
 
 
@@ -272,6 +279,12 @@ unique(values(common))
 rc1 <- mask(common, srast )
 terra::writeRaster(rc1,file.path(outputs, "sk_pither_resistence_90threshold.tif"), overwrite = TRUE)
 
+aa <- rast(file.path(outputs, "sk_pither_resistence_90threshold.tif"))
+aa
+names(aa) <- "resistence_90th"
+writeRaster(aa, file.path(outputs, "sk_pither_resistence_90threshold1.tif"), overwrite=TRUE)
+
+
 
 # or 40% 
 res <- rast(file.path(outputs, "res_mean.tif"))
@@ -283,6 +296,29 @@ common <- classify(res, rclmat, include.lowest=TRUE)
 unique(values(common))
 rc1 <- mask(common, srast )
 terra::writeRaster(rc1,file.path(outputs, "sk_pither_resistence_40threshold.tif"), overwrite = TRUE)
+
+aa <- rast(file.path(outputs, "sk_pither_resistence_40threshold.tif"))
+names(aa) <- "resistence_40th"
+writeRaster(aa, file.path(outputs, "sk_pither_resistence_40threshold1.tif"), overwrite=TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -343,18 +379,19 @@ terra::writeRaster(rc1,file.path(outputs, "sk_pither_resistence_40threshold.tif"
 # #protected _lands = completed
 
 pro <- st_read(file.path("outputs", "sk_protected_lands.gpkg"))
-#pro <- rasterize(vect(pro), srast)
 pro <- rasterize(pro, srast,touches = TRUE, cover = TRUE)
 names(pro) = "protected_lands"
 pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
 writeRaster(pro, file.path(outputs, "protected_lands_cover.tif"), overwrite = TRUE)
 
+pro <- rast(file.path(outputs, "protected_lands_cover.tif"))
 # generate binary based 1km template usign 0.5 as threshold
 pro[pro >= 0.2] <- 1
-pro[pro < 0.2] <- NA
-names(pro) <- "wilderness"
-writeRaster(pro  , file.path(outputs, "protected_lands_0.2.tif"), overwrite=TRUE)
+pro[pro < 0.2] <- 0
+names(pro) <- "protected"
+pro <- mask(pro,srast)
+writeRaster(pro , file.path(outputs, "protected_lands_0.2.tif"), overwrite=TRUE)
 
 
 # cancelled lands 
@@ -368,8 +405,9 @@ pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
 writeRaster(pro, file.path(outputs, "cancelled_lands_cover.tif"), overwrite = TRUE)
 pro[pro >= 0.2] <- 1
-pro[pro < 0.2] <- NA
-names(pro) <- "cancelled_lands"
+pro[pro < 0.2] <- 0
+pro <- mask(pro,srast)
+names(pro) <- "cancelled_lands_historic"
 writeRaster(pro  , file.path(outputs, "cancelled_lands_0.2.tif"), overwrite=TRUE)
 
 
@@ -382,8 +420,8 @@ pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
 writeRaster(pro, file.path(outputs, "not_cancelled_lands_cover.tif"), overwrite = TRUE)
 pro[pro >= 0.2] <- 1
-pro[pro < 0.2] <- NA
-names(pro) <- "not_cancelled_lands"
+pro[pro < 0.2] <- 0
+names(pro) <- "cancelled_lands_current"
 writeRaster(pro  , file.path(outputs, "not_cancelled_lands_0.2.tif"), overwrite=TRUE)
 
 
@@ -624,42 +662,33 @@ writeRaster(cc4, file.path(outputs, "ter_diversity_4.tif"), overwrite=TRUE)
 
 
 
-
-
-
-
-
-
-
-
-
 ## Aquatic terrestrial barcodes - lakes 
-
-# rarity - continuous lakes 
-rar <- rast(file.path("outputs", "sk_lakes_meanbyarea_rarity_101c.tif"))
-rar<- aggregate(rar , fact=10, fun="mean")
-names(rar )= "aq_lakes_rarity_c"
-writeRaster(rar, file.path(outputs, "aq_lakes_rarity_c.tif"), overwrite = T)
-
-# rarity - classed lakes 
-
-rc <- rast(file.path("outputs", "sk_lakes_raritybyarea_conc.tif"))
-rc<- aggregate(rc , fact=10, fun="mean")
-names(rc )= "aq_lakes_rarity_class"
-writeRaster(rc, file.path(outputs, "aq_lakes_rarity_class.tif"), overwrite = T)
-
-
-# diversity - continuous lakes
-div <- rast(file.path("outputs", "sk_lakes_meanbyarea_div_101c.tif"))
-div<- aggregate(div , fact=10, fun="mean")
-names(div)= "aq_lakes_diversity_c"
-writeRaster(div, file.path(outputs, "aq_lakes_diversity_c.tif"), overwrite = T)
-
-# diversity - classed lakes
-div <- rast(file.path("outputs", "sk_lakes_divarea_conc.tif"))
-div <- aggregate(div , fact=10, fun="mean")
-names(div)= "aq_lakes_diversity_class"
-writeRaster(div, file.path(outputs, "aq_lakes_diversity_class.tif"), overwrite = T)
+# 
+# # rarity - continuous lakes 
+# rar <- rast(file.path("outputs", "sk_lakes_meanbyarea_rarity_101c.tif"))
+# rar<- aggregate(rar , fact=10, fun="mean")
+# names(rar )= "aq_lakes_rarity_c"
+# writeRaster(rar, file.path(outputs, "aq_lakes_rarity_c.tif"), overwrite = T)
+# 
+# # rarity - classed lakes 
+# 
+# rc <- rast(file.path("outputs", "sk_lakes_raritybyarea_conc.tif"))
+# rc<- aggregate(rc , fact=10, fun="mean")
+# names(rc )= "aq_lakes_rarity_class"
+# writeRaster(rc, file.path(outputs, "aq_lakes_rarity_class.tif"), overwrite = T)
+# 
+# 
+# # diversity - continuous lakes
+# div <- rast(file.path("outputs", "sk_lakes_meanbyarea_div_101c.tif"))
+# div<- aggregate(div , fact=10, fun="mean")
+# names(div)= "aq_lakes_diversity_c"
+# writeRaster(div, file.path(outputs, "aq_lakes_diversity_c.tif"), overwrite = T)
+# 
+# # diversity - classed lakes
+# div <- rast(file.path("outputs", "sk_lakes_divarea_conc.tif"))
+# div <- aggregate(div , fact=10, fun="mean")
+# names(div)= "aq_lakes_diversity_class"
+# writeRaster(div, file.path(outputs, "aq_lakes_diversity_class.tif"), overwrite = T)
 
 # 
 # ## Aquatic terrestrial barcodes - Rivers
@@ -694,6 +723,13 @@ names(wet) = "aq_wetland_density"
 wet <- mask(wet, srast)
 writeRaster(wet, file.path(outputs, "aq_wetland_density_mean.tif"), overwrite=TRUE)
 
+wet <- rast(file.path(outputs, "aq_wetland_density_mean.tif"))
+wet [is.na(wet )] <- 0
+wet <- mask(wet, srast)
+writeRaster(wet, file.path(outputs, "aq_wetland_density_mean.tif"), overwrite = T)
+
+
+
 
 # lake density
 
@@ -706,33 +742,66 @@ names(lak) = "aq_lake_density"
 lak <- mask(lak, srast)
 writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
 
+lak <- rast(file.path(outputs, "aq_lake_density_mean.tif"))
+lak [is.na(lak )] <- 0
+lak <- mask(lak, srast)
+writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
 
 
 
 
+# 
+# ## check the number of cells 
+# # ecoregion 
+# 
+# ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg")) |> 
+#   mutate(ecocode = seq_along(ECOREGION_NAME))
+# # 
+# ecv <- vect(ec)
+# 
+# ecr <- rasterize(ecv, srast, field = "ecocode")
+# 
+# # count number of cells per ecoregion
+# 
+# ecr <- ecr |> 
+#   as.data.frame() |> 
+#   group_by(ecocode) |> 
+#   summarise(n = n())
+# 
+# ecdf <- ec %>% st_drop_geometry(ec)
+# 
+# cellno <- left_join(ecr, ecdf)
+# 
+
+## 
+#
+#Shortcut to fix the names of the layers for final outputs
+
+
+outdir <- file.path("outputs","final","sites_202505","Regional","Includes")
+outdir <- file.path("outputs","final","sites_202505","Regional","weights")
+ffs <- list.files(outdir) 
+
+aa <- rast(file.path(outdir,ffs [1])) 
+aa <- rast(file.path(outdir,ffs [5])) 
+names(aa) <- "protected"
+writeRaster(aa, file.path(outdir, "protected_lands_0.21.tif"), overwrite=TRUE)
+
+
+aa <- rast(file.path(outdir,ffs [6])) 
+names(aa) <- "macrorefugia_c"
+writeRaster(aa, file.path(outdir, "macrorefugia_w.tif"), overwrite=TRUE)
+aa <- rast(file.path(outdir,ffs [9]))
+names(aa) <- "ndvi_w"
+writeRaster(aa, file.path(outdir, "ndvi_w.tif"), overwrite=TRUE)
+aa <- rast(file.path(outdir,ffs [10]))
+names(aa) <- "npp_w"
+writeRaster(aa, file.path(outdir, "npp_w.tif"), overwrite=TRUE)
+
+aa <- rast(file.path(outdir,ffs [11]))
+names(aa) <- "resistance_w"
+writeRaster(aa, file.path(outdir, "resistance_w.tif"), overwrite=TRUE)
+aa <- rast(file.path(outdir,ffs [12]))
 
 
 
-
-
-
-## check the number of cells 
-# ecoregion 
-
-ec <- st_read(file.path("outputs", "sk_ecoreg_reduced.gpkg")) |> 
-  mutate(ecocode = seq_along(ECOREGION_NAME))
-
-ecv <- vect(ec)
-
-ecr <- rasterize(ecv, srast, field = "ecocode")
-
-# count number of cells per ecoregion
-
-ecr <- ecr |> 
-  as.data.frame() |> 
-  group_by(ecocode) |> 
-  summarise(n = n())
-
-ecdf <- ec %>% st_drop_geometry(ec)
-
-cellno <- left_join(ecr, ecdf)

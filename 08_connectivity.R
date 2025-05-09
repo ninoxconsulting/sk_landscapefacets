@@ -194,6 +194,9 @@ common <- classify(mic, rclmat, include.lowest=TRUE)
 rc1 <- mask(common, srast )
 terra::writeRaster(rc1,file.path(outputs, "microrefugia_70threshold.tif"), overwrite = TRUE)
 
+aa <- rast(file.path(outdir,ffs [4]))
+names(aa) <- "microrefugia_70th"
+writeRaster(aa, file.path(outdir, "microrefugia_70threshold1.tif "), overwrite=TRUE)
 
 
 # macrorefugia
@@ -209,6 +212,19 @@ common <- classify(mic, rclmat, include.lowest=TRUE)
 #unique(values(common))
 rc1 <- mask(common, srast )
 terra::writeRaster(rc1,file.path(outputs, "macrorefugia_70threshold.tif"), overwrite = TRUE)
+
+aa <- rast(file.path(outputs, "macrorefugia_70threshold.tif"))
+names(aa) <- "macrorefugia_70th"
+writeRaster(aa, file.path(outdir, "macrorefugia_70threshold1.tif"), overwrite=TRUE)
+
+
+
+
+
+
+
+
+
 
 
 
