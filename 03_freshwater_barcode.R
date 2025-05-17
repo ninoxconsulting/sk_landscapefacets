@@ -210,16 +210,15 @@ writeRaster(rare_laker, file.path("outputs","lake_rare_byarea_2025.tif"))
 # of 5000m or 11 x 11 pixel window
 
 rar <- rast(file.path("outputs", "sk_lake_rarity_prop_2025.tif"))
-
+plot(rar)
+rar[is.na(rar)] <- 0
+rar <- mask(rar, srast)
 #hist(rar)
 #t = quantile(values(rar), probs = seq(0, 1, 0.1), na.rm = TRUE)
 #t = data.frame(t)
 names(rar)= "rarity"
 
 writeRaster(rar, file.path(outputs, "sk_lake_rarity_prop_2025.tif"), overwrite = TRUE)
-
-## reclass the layers to a concentration # waiting on Paula for this. 
-#unique(values(rar))
 
  m <- c(1, 2.2, 1,
         2.2, 2.8, 2,
@@ -231,6 +230,12 @@ writeRaster(rar, file.path(outputs, "sk_lake_rarity_prop_2025.tif"), overwrite =
  plot(rc)
  writeRaster(rc, file.path("outputs", "sk_lakes_rarity_prop_2025_conc.tif"), overwrite = TRUE)
  rc <- rast(file.path("outputs", "sk_lakes_rarity_prop_2025_conc.tif"))
+ rc[is.na(rc)] <- 0
+ rc <- mask(rc, srast)
+ names(rc)= "Lake rarity"
+ writeRaster(rc, file.path(outputs, "sk_lakes_rarity_prop_2025.tif"), overwrite = TRUE)
+ 
+ 
  
 # output classes 
 # split out the classes 4 + 5 as cover 
@@ -245,26 +250,23 @@ writeRaster(rar, file.path(outputs, "sk_lake_rarity_prop_2025.tif"), overwrite =
  cc5 <- rasterize(c5 , srast,touches = TRUE, cover = TRUE)
  cc4 <- rasterize(c4 , srast,touches = TRUE, cover = TRUE)
  
- names(cc5) <- "lake_rarity_5"
+ #writeRaster(cc5, file.path(outputs, "aq_lake_rarity_5_cover.tif"), overwrite=TRUE)
+ #cc5 <- rast(file.path(outputs, "aq_lake_rarity_5_cover.tif"))
+ names(cc5) <- "Concentrations of very high lake rarity"
  cc5[is.na(cc5)] <- 0
  cc5[cc5  >= 1] <- 1
  cc5 <- mask(cc5, srast)
  writeRaster(cc5, file.path(outputs, "aq_lake_rarity_5_cover.tif"), overwrite=TRUE)
  
- names(cc4) <- "lake_rarity_4"
+ #cc4 <- rast(file.path(outputs, "aq_lake_rarity_4_cover.tif"))
+ names(cc4) <- "Concentrations of high lake rarity"
  cc4[is.na(cc4)] <- 0
  cc4[cc4  >= 1] <- 1
  cc4 <- mask(cc4, srast)
+ 
  writeRaster(cc4, file.path(outputs, "aq_lake_rarity_4_cover.tif"), overwrite=TRUE)
  
  
- 
- 
- 
- 
- 
- 
-
 
 # NOT USED IN SITES
 # 
@@ -878,6 +880,10 @@ writeRaster(rare_laker, file.path(outputs,"lake_div_ens.tif"))
 # run this through QGIS to generate neighbourhood 
 
 div <- rast(file.path(outputs, "sk_lake_div_ens_101c.tif")) 
+names(div) <- "Lake diversity"
+div[is.na(div)] <- 0
+div <- mask(div, srast)
+writeRaster(div, file.path(outputs, "sk_lake_div_ens_101c.tif"), overwrite = TRUE) 
 
 hist(div)
 quantile(values(div), probs = seq(0, 1, 0.1), na.rm = TRUE)
@@ -897,11 +903,18 @@ writeRaster(rc, file.path(outputs, "aq_lakes_divsi_class.tif"), overwrite = TRUE
 # split off diversity class 4 and 5 
 
 rc <- rast(file.path(outputs, "aq_lakes_divsi_class.tif"))
+rc[is.na(rc)] <- 0
+rc <- mask(rc,srast)
+names(rc)<- "lake diversity class"
+writeRaster(rc, file.path(outputs, "aq_lakes_divsi_class.tif"), overwrite = TRUE)
+
+
 #class5 
 rc[rc < 5] <- 0
 rc[rc >= 5] <- 1
+rc[is.na(rc)] <- 0
 rc <- mask(rc,srast)
-names(rc)<- "lakes_div_5"
+names(rc)<- "Concentration of very high lake diversity"
 writeRaster(rc, file.path(outputs, "aq_lakes_divens_5.tif"), overwrite = TRUE)
 
 #class4
@@ -909,8 +922,9 @@ rc <- rast(file.path(outputs, "aq_lakes_divsi_class.tif"))
 rc[rc < 4] <- 0
 rc[rc > 5] <- 0
 rc[rc >= 4] <- 1
+rc[is.na(rc)] <- 0
 rc<- mask(rc,srast)
-names(rc)<- "lakes_div_4"
+names(rc)<- "Concentration of high lake diversity"
 writeRaster(rc, file.path(outputs, "aq_lakes_divens_4.tif"), overwrite = TRUE)
 
 
@@ -1431,19 +1445,21 @@ writeRaster(rc, file.path(outputs, "sk_rivers_diversity_class.tif"), overwrite =
 rc <- rast(file.path(outputs, "sk_rivers_diversity_class.tif"))
 
 #class5
+rc[is.na(rc)] <- 0
 rc[rc < 5] <- 0
 rc[rc >= 5] <- 1
 rc <- mask(rc,srast)
-names(rc)<- "rivers_div_5"
+names(rc)<- "Concentration of very high river diversity"
 writeRaster(rc, file.path(outputs, "sk_rivers_diversity_5.tif"), overwrite = TRUE)
 
 #class4
 rc <- rast(file.path(outputs, "sk_rivers_diversity_class.tif"))
+rc[is.na(rc)] <- 0
 rc[rc < 4] <- 0
 rc[rc > 5] <- 0
 rc[rc >= 4] <- 1
 rc<- mask(rc,srast)
-names(rc)<- "rivers_div_4"
+names(rc)<- "Concentration of high river diversity"
 writeRaster(rc, file.path(outputs, "sk_rivers_diversity_4.tif"), overwrite = TRUE)
 
 
@@ -1672,9 +1688,13 @@ avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
 avrarep <- as.polygons(avrare, digits = 2)
 #avrarep
 avrarep <- terra::rasterize(avrarep, srast, "sk_rivers_rarity_mean_101c", fun = "mean", na.rm = TRUE)
-names(avrarep) <- "rivers_rarity_mean_101c"
+names(avrarep) <- "Rivers rarity"
 avrarep<- mask(avrarep, srast)
 writeRaster(avrarep, file.path(outputs, "rivers_rarity_mean_101c.tif"), overwrite=TRUE)
+#avrarep <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
+#names(avrarep) <- "Rivers rarity"
+
+
 
 # split out the 4 and 5 values 
 av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
@@ -1689,22 +1709,24 @@ rc <- classify(avrare , rclmat, include.lowest=TRUE)
 
 
 av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
+av[is.na(av)] <- 0
 #class5 
 av[av < 5] <- 0
 av[av >= 5] <- 1
 av <- mask(av,srast)
-names(av)<- "rivers_rare_5"
+names(av)<- "Concentration of very high river rarity"
 writeRaster(av, file.path(outputs, "rivers_rarity_5.tif"), overwrite = TRUE)
 
 
 #class4
 av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
+av[is.na(av)] <- 0
 av[av < 4] <- 0
 av[av > 5] <- 0
 av[av >= 4] <- 1
 av <- mask(av,srast)
-names(av)<- "rivers_rare_4"
-plot(av)
+names(av)<- "Concentration of high river rarity"
+#plot(av)
 writeRaster(av, file.path(outputs, "rivers_rarity_4.tif"), overwrite = TRUE)
 
 

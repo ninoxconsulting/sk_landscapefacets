@@ -679,7 +679,7 @@ names(bb1) = "coastaltail"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_coastaltail_cover.tif"), overwrite = TRUE)
-
+aa <- 
 
 
 #-Columbia spotted frog #2346 

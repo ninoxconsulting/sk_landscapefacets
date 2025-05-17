@@ -182,6 +182,7 @@ write_csv(eco_pro_rardiv_output, file.path("outputs", "resistence_per_ecoregion_
 # microrefugia 
 mic <- rast(file.path("inputs", "microrefugia.tif"))
 rc1 <- mask(mic, srast )
+names(rc1) <- "Microrefugia"
 terra::writeRaster(rc1,file.path(outputs, "microrefugia_c.tif"), overwrite = TRUE)
 
 # threshold values of 0.7
@@ -194,15 +195,16 @@ common <- classify(mic, rclmat, include.lowest=TRUE)
 rc1 <- mask(common, srast )
 terra::writeRaster(rc1,file.path(outputs, "microrefugia_70threshold.tif"), overwrite = TRUE)
 
-aa <- rast(file.path(outdir,ffs [4]))
-names(aa) <- "microrefugia_70th"
-writeRaster(aa, file.path(outdir, "microrefugia_70threshold1.tif "), overwrite=TRUE)
+aa <- rast(file.path(outputs, "microrefugia_70threshold.tif"))
+names(aa) <- "Microrefugia 70% threshold"
+writeRaster(aa, file.path(outputs, "microrefugia_70threshold1.tif "), overwrite=TRUE)
 
 
 # macrorefugia
 mic <- rast(file.path("inputs", "2080s_macrorefugia.tif"))
 rc1 <- mask(mic, srast )
-terra::writeRaster(rc1,file.path(outputs, "macrorefugia_c.tif"), overwrite = TRUE)
+names(rc1) <- "Macrorefugia"
+terra::writeRaster(rc1,file.path(outputs, "macrorefugia_w.tif"), overwrite = TRUE)
 
 m <- c(0, 0.7, 0,
        0.7, 999999, 1)
@@ -214,8 +216,8 @@ rc1 <- mask(common, srast )
 terra::writeRaster(rc1,file.path(outputs, "macrorefugia_70threshold.tif"), overwrite = TRUE)
 
 aa <- rast(file.path(outputs, "macrorefugia_70threshold.tif"))
-names(aa) <- "macrorefugia_70th"
-writeRaster(aa, file.path(outdir, "macrorefugia_70threshold1.tif"), overwrite=TRUE)
+names(aa) <- "Macrorefugia 70% threshold"
+writeRaster(aa, file.path(outputs, "macrorefugia_70threshold1.tif"), overwrite=TRUE)
 
 
 

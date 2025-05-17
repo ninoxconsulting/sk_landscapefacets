@@ -103,8 +103,6 @@ pu_cell_area <- 1000 # <--- SET PLANNING UNIT AREA IN units
 
 # put the relevant files in the folders as specified above 
 
-
-
 # Build vectors of data paths --------------------------------------------------
 
 get_all_tifs_gdbs <- function(search_dir){
@@ -125,16 +123,14 @@ includes_list <- get_all_tifs_gdbs(includes_dir)
 excludes_list <- get_all_tifs_gdbs(excludes_dir)
 weights_list <- get_all_tifs_gdbs(weights_dir)
 
-#weights_list <- weights_list[c(1,2,4,3,5,6,7,8,9,10,11,12,13,14,15)]#,8,9,10,11,12,13,14,15,16,17)]
 
-themes_list <-themes_list[c(11:18,46:69)]
-
+#themes_list <- themes_list[11:18]
 
 # Fill table -------------------------------------------------------------------
 
 file_list <- c(themes_list, includes_list, excludes_list, weights_list)
 
-#file_list <- weights_list
+#file_list <- c(themes_list,includes_list, weights_list)
 
 ## Build empty data.frame (template for metadata.csv) ----
 df <- init_metadata()
@@ -364,19 +360,6 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "ter_rarity_5_cover") && identical(legend, "continuous")  ~  "",
       identical(theme, "terrestrial") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       identical(theme, "terrestrial") && identical(legend, "continuous")  ~  "",
-      #identical(type, "weight") && identical(legend, "continuous")  ~  "",
-      #identical(type, "weight") && identical(u_values, 2)  ~  "not altered, altered",
-      
-       # identical(source, "ECCC_CH") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "Habitat",
-      # identical(source, "ECCC_CH") && identical(legend, "continuous") ~  "",
-      # identical(source, "ECCC_SAR") && identical(u_values, 2) ~  "Non Range, Range",
-      # identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "Range",
-      # identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "",
-      # #identical(substring(source, 1, 4), "IUCN") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      #identical(substring(source, 1, 4), "IUCN") && identical(values, 1) ~  "Habitat",
-      #identical(substring(source, 1, 3), "NSC") && identical(u_values, 2) ~  "Non Occurrence, Occurrence",
-      #identical(substring(source, 1, 3), "NSC") && identical(values, 1) ~  "Occurrence",
       TRUE ~ ""
     )
     
@@ -410,15 +393,6 @@ for (i in seq_along(file_list)) {
       file_no_ext == "sk_lake_rarity_prop_2025" ~ "index",
       file_no_ext == "ter_diversity_c" ~ "km2",
       file_no_ext == "ter_rarity_continuous" ~ "km2",
-      # (identical(source, "ECCC_CH")) ~ "ha",
-      # (identical(source, "ECCC_SAR")) ~  "ha",
-      # identical(source, "IUCN_AMPH") ~  "km2",
-      # identical(source, "IUCN_BIRD") ~  "km2",
-      # identical(source, "IUCN_MAMM") ~  "km2",
-      # identical(source, "IUCN_REPT") ~  "km2",
-      # identical(source, "NSC_END") ~  "km2",
-      # identical(source, "NSC_SAR") ~  "km2",
-      # identical(source, "NSC_SPP") ~  "km2",
       TRUE ~ ""
     )   
     
@@ -635,19 +609,7 @@ if ("exclude" %in% unique(metadata$Type)) {
 # Requires wheretowork package (version >= 1.2.3)
 
 ## Create dataset ----
-#dataset <- wheretowork::new_dataset_from_auto(
-#  c(theme_data, weight_data, include_data, exclude_data)
-#)
-
-#dataset <- wheretowork::new_dataset_from_auto(theme_data)
-#dataset <- wheretowork::new_dataset_from_auto(weight_data)
-#dataset <- wheretowork::new_dataset_from_auto(include_data)
-#dataset <- wheretowork::new_dataset_from_auto(c(theme_data, include_data))
-#dataset <- wheretowork::new_dataset_from_auto(c(weight_data, include_data))
-
 dataset <- wheretowork::new_dataset_from_auto(c(theme_data, weight_data, include_data))
-#dataset <- wheretowork::new_dataset_from_auto(theme_data)
-#)
 
 ## Create themes (must have) ----
 ### loop over unique theme groups (ex. Endemic Species, Species at Risk, etc.)
@@ -742,7 +704,7 @@ themes <- lapply(seq_along(unique(theme_groups)), function(i) {
 if (!is.null(weight_data)) {
   weights <- lapply(seq_len(terra::nlyr(weight_data)), function(i) {
     
-    #i <- 1
+    #i <- 5
     
     #### prepare variable (if manual legend)
     if (identical(weight_legend[i], "manual")) {

@@ -271,8 +271,8 @@ iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
 #plot(iww)
 
 # fix for sites
-#iww <- rast(file.path(outputs, "intactwatershed_8_cover.tif"))
-names(iww) <- "Watersheds_70_80pc_intact"
+iww <- rast(file.path(outputs, "intactwatershed_8_cover.tif"))
+names(iww) <- "Watersheds 70-80% intact"
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "intactwatershed_8_cover.tif"), overwrite=TRUE)
@@ -283,7 +283,7 @@ iww <- mask(iww ,srast)
 #names(iww)<- "ws8"
 writeRaster(iww, file.path(outputs, "intactwatershed_8.tif"), overwrite = TRUE)
 
-Watersheds_80_90pc_intact
+
 
 
 
@@ -295,8 +295,8 @@ iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
 #iww <- mask(iww ,srast)
 #plot(iww)
 # fix for sites
-#iww <- rast(file.path(outputs, "intactwatershed_9_cover.tif"))
-names(iww) <- "Watersheds_80_90pc_intact"
+iww <- rast(file.path(outputs, "intactwatershed_9_cover.tif"))
+names(iww) <- "Watersheds 80-90% intact"
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "intactwatershed_9_cover.tif"), overwrite=TRUE)
@@ -319,8 +319,8 @@ iww <- terra::rasterize(common, srast, "ws", touches = TRUE, cover = TRUE)
 #plot(iww)
 
 # fix for sites
-#iww <- rast(file.path(outputs, "intactwatershed_10_cover.tif"))
-names(iww) <- "Watersheds_gth_90pc_intact"
+iww <- rast(file.path(outputs, "intactwatershed_10_cover.tif"))
+names(iww) <- "Watersheds >90% intact"
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "intactwatershed_10_cover.tif"), overwrite=TRUE)
@@ -502,7 +502,7 @@ names(iww)<- "af2"
 writeRaster(iww, file.path(outputs, "ancientforest_2.tif"), overwrite = TRUE)
 # fix for sites
 iww <- rast(file.path(outputs, "ancientforest_2_cover.tif"))
-names(iww) <- "ancient_forest_gt400"
+names(iww) <- "Ancient forests >400 years"
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "ancientforest_2_cover.tif"), overwrite=TRUE)
@@ -524,7 +524,7 @@ writeRaster(iww, file.path(outputs, "ancientforest_1.tif"), overwrite = TRUE)
 
 # fix for sites
 iww <- rast(file.path(outputs, "ancientforest_1_cover.tif"))
-names(iww) <- "ancient_forest_gt250"
+names(iww) <- "Ancient forests >250 years"
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "ancientforest_1_cover.tif"), overwrite=TRUE)
@@ -766,7 +766,7 @@ cl[cl >= 0.2] <- 1
 cl[cl < 0.2] <- 0
 cl[is.na(cl)] <- 0
 cl <- mask(cl ,srast)
-names(cl)<- "crown_lands_reserve"
+names(cl)<- "Crown lands reserve"
 writeRaster(cl, file.path(outputs, "crown_lands0.2.tif"), overwrite = TRUE)
 
 
@@ -1061,6 +1061,7 @@ writeRaster(iww, file.path(outputs, "human_footprint_2022.tif"), overwrite = TRU
 iww<- rast(file.path(outputs, "human_footprint_2022.tif"))
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
+names(iww) = "Human footprint"
 writeRaster(iww, file.path(outputs, "human_footprint_2022.tif"), overwrite=TRUE)
 
 
