@@ -247,13 +247,32 @@ writeRaster(gd, file.path(outputs, "ndvi_mean_0.68.tif"), overwrite=TRUE)
 npp <- rast(file.path("inputs", "npp_skeena_2019_2023.tif"))
 names(npp)<- "npp"
 npp <- project(npp,srast, method = "average")
-nppv_cover<- mask(npp , srast)
-writeRaster(nppv_cover, file.path(outputs, "npp.tif"), overwrite = TRUE)
-npp <- rast(file.path(outputs, "npp.tif"))
+
+#nppv_cover<- mask(npp , srast)
+#writeRaster(nppv_cover, file.path(outputs, "npp.tif"), overwrite = TRUE)
+#npp <- rast(file.path(outputs, "npp.tif"))
 npp[is.na(npp)] <- 0
 names(npp)<- "Net Primary Productivity"
 npp<- mask(npp , srast)
 writeRaster(npp, file.path(outputs, "npp.tif"), overwrite = TRUE)
+
+aa <- rast(file.path(outputs,"npp.tif"))
+names(aa) <- "Net Primary Productivity Weight"
+writeRaster(aa, file.path(outputs, "npp_w.tif"), overwrite=TRUE)
+# 
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -810,32 +829,32 @@ writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
 ## 
 #
 #Shortcut to fix the names of the layers for final outputs
-
-
-outdir <- file.path("outputs","final","sites_202505","Regional","Includes")
-outdir <- file.path("outputs","final","sites_202505","Regional","weights")
-ffs <- list.files(outdir) 
-
-aa <- rast(file.path(outdir,ffs [1])) 
-aa <- rast(file.path(outdir,ffs [5])) 
-names(aa) <- "protected"
-writeRaster(aa, file.path(outdir, "protected_lands_0.21.tif"), overwrite=TRUE)
-
-
-aa <- rast(file.path(outdir,ffs [6])) 
-names(aa) <- "macrorefugia_c"
-writeRaster(aa, file.path(outdir, "macrorefugia_w.tif"), overwrite=TRUE)
-aa <- rast(file.path(outdir,ffs [9]))
-names(aa) <- "ndvi_w"
-writeRaster(aa, file.path(outdir, "ndvi_w.tif"), overwrite=TRUE)
-aa <- rast(file.path(outdir,ffs [10]))
-names(aa) <- "npp_w"
-writeRaster(aa, file.path(outdir, "npp_w.tif"), overwrite=TRUE)
-
-aa <- rast(file.path(outdir,ffs [11]))
-names(aa) <- "resistance_w"
-writeRaster(aa, file.path(outdir, "resistance_w.tif"), overwrite=TRUE)
-aa <- rast(file.path(outdir,ffs [12]))
+# 
+# 
+# outdir <- file.path("outputs","final","sites_202505","Regional","Includes")
+# outdir <- file.path("outputs","final","sites_202505","Regional","weights")
+# ffs <- list.files(outdir) 
+# 
+# aa <- rast(file.path(outdir,ffs [1])) 
+# aa <- rast(file.path(outdir,ffs [5])) 
+# names(aa) <- "protected"
+# writeRaster(aa, file.path(outdir, "protected_lands_0.21.tif"), overwrite=TRUE)
+# 
+# 
+# aa <- rast(file.path(outdir,ffs [6])) 
+# names(aa) <- "macrorefugia_c"
+# writeRaster(aa, file.path(outdir, "macrorefugia_w.tif"), overwrite=TRUE)
+# aa <- rast(file.path(outdir,ffs [9]))
+# names(aa) <- "ndvi_w"
+# writeRaster(aa, file.path(outdir, "ndvi_w.tif"), overwrite=TRUE)
+# aa <- rast(file.path(outdir,ffs [10]))
+# names(aa) <- "npp_w"
+# writeRaster(aa, file.path(outdir, "npp_w.tif"), overwrite=TRUE)
+# 
+# aa <- rast(file.path(outdir,ffs [11]))
+# names(aa) <- "resistance_w"
+# writeRaster(aa, file.path(outdir, "resistance_w.tif"), overwrite=TRUE)
+# aa <- rast(file.path(outdir,ffs [12]))
 
 
 

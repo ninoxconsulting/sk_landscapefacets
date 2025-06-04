@@ -15,6 +15,8 @@ srast <- rast(file.path(outputs, "template_1km.tif"))
 # convert lower to 0 
 
 
+list.files(outputs, full.names = TRUE)
+
 
 
 
