@@ -153,26 +153,28 @@ writeRaster(rd, file.path(outputs, "roads.tif"), overwrite = TRUE)
 
 
 # ecoregions
+# 
+# ec <- st_read(file.path("inputs", "sk_ecoreg_reduced.gpkg")) |>
+#   mutate(ecocode = seq_along(ECOREGION_NAME))
+# 
+# ec <- terra::rasterize(ec , srast, "ECOREGION_NAME", touches = TRUE,na.rm = TRUE)
+# names(ec )<- "ecoregion_name"
+# ec <- mask(ec ,srast)
+# writeRaster(ec, file.path(outputs, "ecoregion.tif"), overwrite=TRUE)
+# 
+# # test with one ecoregion
+# aa <- rast(file.path(outputs, "ecoregion.tif"))
+# aa[aa == 8] <- 99
+# aa[aa != 99] <- 0
+# names(aa) <- "ecoregion_nass"
+# aa[is.na(aa)] <- 0
+# aa[aa == 99] <- 1
+# aa <- mask(aa ,srast)
+# writeRaster(aa, file.path(outputs, "ecoregion_nass.tif"), overwrite=TRUE)
 
-ec <- st_read(file.path("inputs", "sk_ecoreg_reduced.gpkg")) |>
-  mutate(ecocode = seq_along(ECOREGION_NAME))
 
-ec <- terra::rasterize(ec , srast, "ECOREGION_NAME", touches = TRUE,na.rm = TRUE)
-names(ec )<- "ecoregion_name"
-ec <- mask(ec ,srast)
-writeRaster(ec, file.path(outputs, "ecoregion.tif"), overwrite=TRUE)
-
-# test with one ecoregion
-aa <- rast(file.path(outputs, "ecoregion.tif"))
-aa[aa == 8] <- 99
-aa[aa != 99] <- 0
-names(aa) <- "ecoregion_nass"
-aa[is.na(aa)] <- 0
-aa[aa == 99] <- 1
-aa <- mask(aa ,srast)
-writeRaster(aa, file.path(outputs, "ecoregion_nass.tif"), overwrite=TRUE)
-
-
+# TSA 
+#- created in the 00_data_dowload file. 
 
 
 
@@ -229,7 +231,7 @@ nd <- rast(file.path(outputs, "ndvi_mean.tif"))
 nd[nd < 0.58] <- 0
 nd[nd  >= 0.68] <- 0
 nd[nd  >= 0.58] <- 1
-names(nd) <- "Ndvi between 0.58 and 0.68"
+names(nd) <- "High NDVI (0.58 to 0.68)"
 nd <- mask(nd, srast)
 writeRaster(nd, file.path(outputs, "ndvi_mean_0.58_0.68.tif"), overwrite=TRUE)
 
@@ -238,7 +240,7 @@ writeRaster(nd, file.path(outputs, "ndvi_mean_0.58_0.68.tif"), overwrite=TRUE)
 gd <- rast(file.path(outputs, "ndvi_mean.tif"))
 gd[gd < 0.68] <- 0
 gd[gd  >=0.68] <- 1
-names(gd) <- "Ndvi greater than 0.68"
+names(gd) <- "Very High NDVI (> 0.68)"
 gd <- mask(gd ,srast)
 writeRaster(gd, file.path(outputs, "ndvi_mean_0.68.tif"), overwrite=TRUE)
 
@@ -257,11 +259,9 @@ npp<- mask(npp , srast)
 writeRaster(npp, file.path(outputs, "npp.tif"), overwrite = TRUE)
 
 aa <- rast(file.path(outputs,"npp.tif"))
-names(aa) <- "Net Primary Productivity Weight"
+names(aa) <- "Net Primary Productivity"
 writeRaster(aa, file.path(outputs, "npp_w.tif"), overwrite=TRUE)
 # 
-
-
 
 
 
@@ -285,12 +285,19 @@ res <- as.polygons(res, digits = 4)
 res <- terra::rasterize(res , srast, "resistance", fun = "mean", na.rm = TRUE)
 res <- mask(res,srast)
 writeRaster(res, file.path(outputs, "res_mean.tif"), overwrite=TRUE)
+
+res <- rast(file.path(outputs, "res_mean.tif"))
+names(res) = "Connectivity (current density)"
+writeRaster(res, file.path(outputs, "resistance_w.tif"), overwrite=TRUE)
+
+
+
 range(values(res), na.rm = TRUE)
 
 # export the 40th percentile and the 90th percentile (based on calcualtions in 08_connectivity script)
 
 res <- rast(file.path(outputs, "res_mean.tif"))
-hist(nres)
+hist(res)
 aa <- sort(values(res, na.rm = T))
 quantile(aa, probs = seq(0, 1, 0.05), na.rm = TRUE)
 
@@ -310,12 +317,8 @@ common <- classify(res, rclmat, include.lowest=TRUE)
 
 unique(values(common))
 rc1 <- mask(common, srast )
+names(rc1) <- "Connectivity (90th percentile current densities)"
 terra::writeRaster(rc1,file.path(outputs, "sk_pither_resistence_90threshold.tif"), overwrite = TRUE)
-
-aa <- rast(file.path(outputs, "sk_pither_resistence_90threshold.tif"))
-aa
-names(aa) <- "Resistence 90% threshold"
-writeRaster(aa, file.path(outputs, "sk_pither_resistence_90threshold1.tif"), overwrite=TRUE)
 
 
 
@@ -328,14 +331,8 @@ common <- classify(res, rclmat, include.lowest=TRUE)
 
 unique(values(common))
 rc1 <- mask(common, srast )
+names(rc1) <- "Connectivity (40th percentile current densities)"
 terra::writeRaster(rc1,file.path(outputs, "sk_pither_resistence_40threshold.tif"), overwrite = TRUE)
-
-aa <- rast(file.path(outputs, "sk_pither_resistence_40threshold.tif"))
-names(aa) <- "Resistence 40% threshold"
-writeRaster(aa, file.path(outputs, "sk_pither_resistence_40threshold1.tif"), overwrite=TRUE)
-
-
-
 
 
 
@@ -444,7 +441,7 @@ pro[pro >= 0.2] <- 1
 pro[pro < 0.2] <- 0
 pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
-names(pro) <- "Historic Cancelled Lands"
+names(pro) <- "Historic conservation lands = for cancelled"
 writeRaster(pro  , file.path(outputs, "cancelled_lands_0.2.tif"), overwrite=TRUE)
 
 
@@ -460,7 +457,7 @@ pro <- rast(file.path(outputs, "not_cancelled_lands_cover.tif"))
 pro[pro >= 0.2] <- 1
 pro[pro < 0.2] <- 0
 pro[is.na(pro)] <- 0
-names(pro) <- "Current Cancelled lands"
+names(pro) <- "Conservation lands = for current"
 pro <- mask(pro,srast)
 writeRaster(pro  , file.path(outputs, "not_cancelled_lands_0.2.tif"), overwrite=TRUE)
 
@@ -477,15 +474,17 @@ purrr::map(sp, function(x){
   print(x)
   #x <- sp[1]
   rbb <- rb |> filter(SCIENTIFIC_NAME == x)
-  comm_name <- gsub(" ", "_", unique(rbb$COMMON_NAME_ENGLISH))
-  sciname <- gsub(" ", "_", unique(rbb$SCIENTIFIC_NAME))
+  comm_name <- gsub(" ", " ", unique(rbb$COMMON_NAME_ENGLISH))
+  #comm_name <- rbb$COMMON_NAME_ENGLISH
+  sciname <- gsub(" ", " ", unique(rbb$SCIENTIFIC_NAME))
+  #sciname <- rbb$SCIENTIFIC_NAME
   rbb <- rasterize(rbb, srast, cover = TRUE, touches = TRUE)
   names(rbb) = paste0(comm_name)
   rbb[is.na(rbb)] <- 0
   #rbb[rbb >= 0.5] <- 1
   #rbb[rbb < 0.5] <- NA
   rbb <- mask(rbb,srast)
-  writeRaster(rbb, file.path(outputs, paste0("fed_listed_", sciname, "_cover.tif")), overwrite = TRUE)
+  writeRaster(rbb, file.path(outputs, paste0(sciname, "_cover.tif")), overwrite = TRUE)
 })
 
 
@@ -559,6 +558,9 @@ con_rarecm <- terra::rasterize(con_rarec, srast, "ter_rarity", fun = "mean", na.
 names(con_rarecm) <- "Terrestrial rarity"
 con_rarecm <- mask(con_rarecm, srast)
 writeRaster(con_rarecm, file.path(outputs, "ter_rarity_continuous.tif"), overwrite=TRUE)
+con_rarecm <- rast(file.path(outputs, "ter_rarity_continuous.tif"))
+names(con_rarecm) <- "Rare enduring landscape features"
+writeRaster(con_rarecm, file.path(outputs, "ter_rarity_continuous1.tif"), overwrite=TRUE)
 
 
 # old version 
@@ -593,10 +595,15 @@ c4 <- con_rareclass |>
 cc5 <- rasterize(c5 , srast,touches = TRUE, cover = TRUE)
 cc4 <- rasterize(c4 , srast,touches = TRUE, cover = TRUE)
 
-names(cc5) <- "rarity_5"
+names(cc5) <- "Concentrations of very high enduring features rarity"
 cc5[is.na(cc5)] <- 0
 cc5 <- mask(cc5, srast)
 writeRaster(cc5, file.path(outputs, "ter_rarity_5_cover.tif"), overwrite=TRUE)
+#cc5 <- rast(file.path(outputs, "ter_rarity_5_cover.tif"))
+#names(cc5) <- "Concentrations of very high enduring features rarity"
+#writeRaster(cc5, file.path(outputs, "ter_rarity_5_cover1.tif"), overwrite=TRUE)
+
+
 
 #cc5[cc5>= 0.5] <- 1
 #cc5[cc5< 0.5] <- NA
@@ -604,10 +611,13 @@ writeRaster(cc5, file.path(outputs, "ter_rarity_5_cover.tif"), overwrite=TRUE)
 #cc5 <- mask(cc5, srast)
 #writeRaster(cc5, file.path(outputs, "ter_rarity_5.tif"), overwrite=TRUE)
 
-names(cc4) <- "rarity_4"
+names(cc4) <- "Concentrations of high enduring features rarity"
 cc4[is.na(cc4)] <- 0
 cc4 <- mask(cc4, srast)
 writeRaster(cc4, file.path(outputs, "ter_rarity_4_cover.tif"), overwrite=TRUE)
+#cc4 <- rast(file.path(outputs, "ter_rarity_4_cover.tif"))
+#names(cc4) <- "Concentrations of high enduring features rarity"
+#writeRaster(cc4, file.path(outputs, "ter_rarity_4_cover1.tif"), overwrite=TRUE)
 
 
 #cc4[cc4>= 0.5] <- 1
@@ -634,13 +644,14 @@ writeRaster(cc4, file.path(outputs, "ter_rarity_4_cover.tif"), overwrite=TRUE)
 
 # diversity - terrestrial 
 div= rast(file.path("outputs", "sk_lf_rdc_diversity_101c.tif"))
-names(div)= "Terrestrial diversity"
+names(div)= "Enduring landscape feature diversity"
 div <- as.polygons(div, digits = 2)
 # option 1
 divc<- terra::rasterize(div, srast, "ter_diversity", fun = "mean", na.rm = TRUE)
 writeRaster(divc, file.path(outputs, "ter_diversity_c1.tif"), overwrite = T)
-#divc <- rast(file.path(outputs, "ter_diversity_c.tif"))
-#names(divc)= "Terrestrial diversity"
+divc <- rast(file.path(outputs, "ter_diversity_c.tif"))
+names(divc)= "Enduring landscape feature diversity"
+writeRaster(divc, file.path(outputs, "ter_diversity_c1.tif"), overwrite = T)
 
 
 
@@ -687,6 +698,10 @@ names(cc5) <- "diversity_5"
 cc5[is.na(cc5)] <- 0
 cc5 <- mask(cc5, srast)
 writeRaster(cc5, file.path(outputs, "ter_diversity_5_cover.tif"), overwrite=TRUE)
+#cc5 <- rast(file.path(outputs, "ter_diversity_5_cover.tif"))
+#names(cc5) <- "Concentrations of very high enduring feature diversity"
+#writeRaster(cc5, file.path(outputs, "ter_diversity_5_cover1.tif"), overwrite=TRUE)
+
 
 #cc5[cc5>= 0.5] <- 1
 #cc5[cc5< 0.5] <- NA
@@ -699,6 +714,10 @@ names(cc4) <- "diversity_4"
 cc4[is.na(cc4)] <- 0
 cc4 <- mask(cc4, srast)
 writeRaster(cc4, file.path(outputs, "ter_diversity_4_cover.tif"), overwrite=TRUE)
+#cc4 <- rast(file.path(outputs, "ter_diversity_4_cover.tif"))
+#names(cc4) <- "Concentrations of high enduring feature diversity"
+#writeRaster(cc4, file.path(outputs, "ter_diversity_4_cover1.tif"), overwrite=TRUE)
+
 
 #cc4[cc4>= 0.5] <- 1
 #cc4[cc4< 0.5] <- NA
@@ -776,7 +795,7 @@ writeRaster(wet, file.path(outputs, "aq_wetland_density_mean.tif"), overwrite=TR
 
 wet <- rast(file.path(outputs, "aq_wetland_density_mean.tif"))
 wet [is.na(wet )] <- 0
-names(wet) = "Wetland density"
+names(wet) = "Wetland cover"
 wet <- mask(wet, srast)
 writeRaster(wet, file.path(outputs, "aq_wetland_density_mean.tif"), overwrite = T)
 
@@ -795,7 +814,7 @@ lak <- mask(lak, srast)
 writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
 
 lak <- rast(file.path(outputs, "aq_lake_density_mean.tif"))
-names(lak) = "Lake density"
+names(lak) = "Lake cover"
 lak [is.na(lak )] <- 0
 lak <- mask(lak, srast)
 writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
@@ -851,10 +870,5 @@ writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
 # names(aa) <- "npp_w"
 # writeRaster(aa, file.path(outdir, "npp_w.tif"), overwrite=TRUE)
 # 
-# aa <- rast(file.path(outdir,ffs [11]))
-# names(aa) <- "resistance_w"
-# writeRaster(aa, file.path(outdir, "resistance_w.tif"), overwrite=TRUE)
-# aa <- rast(file.path(outdir,ffs [12]))
-
 
 

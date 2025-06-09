@@ -242,13 +242,14 @@ writeRaster(rar, file.path(outputs, "sk_lake_rarity_prop_2025.tif"), overwrite =
  con_rareclass <- as.polygons(rc, digits = 2)
  con_rareclass <- st_as_sf(con_rareclass)
  
+ unique(con_rareclass$`Lake rarity`)
  #class5 
- c5 <- con_rareclass |> filter(rarity == 5) 
+ c5 <- con_rareclass |> filter(`Lake rarity` == 5) 
  
- c4 <- con_rareclass |> filter(rarity == 4) 
+ c4 <- con_rareclass |> filter(`Lake rarity` == 4) 
  
- cc5 <- rasterize(c5 , srast,touches = TRUE, cover = TRUE)
- cc4 <- rasterize(c4 , srast,touches = TRUE, cover = TRUE)
+ cc5 <- rasterize(c5 , srast, touches = TRUE, cover = TRUE)
+ cc4 <- rasterize(c4 , srast, touches = TRUE, cover = TRUE)
  
  #writeRaster(cc5, file.path(outputs, "aq_lake_rarity_5_cover.tif"), overwrite=TRUE)
  #cc5 <- rast(file.path(outputs, "aq_lake_rarity_5_cover.tif"))
@@ -916,11 +917,13 @@ rc[is.na(rc)] <- 0
 rc <- mask(rc,srast)
 names(rc)<- "Concentration of very high lake diversity"
 writeRaster(rc, file.path(outputs, "aq_lakes_divens_5.tif"), overwrite = TRUE)
+#rc5 = rc
+
 
 #class4
 rc <- rast(file.path(outputs, "aq_lakes_divsi_class.tif"))
 rc[rc < 4] <- 0
-rc[rc > 5] <- 0
+rc[rc >= 5] <- 0
 rc[rc >= 4] <- 1
 rc[is.na(rc)] <- 0
 rc<- mask(rc,srast)
@@ -1417,7 +1420,7 @@ writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"), overwrite = T
 div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
 divp <- as.polygons(div, digits = 2)
 divp <- terra::rasterize(divp, srast, "sk_rivers_diversity_101", fun = "mean", na.rm = TRUE)
-names(divp) <- "rivers_diversity_101"
+names(divp) <- "Concentrations of river diversity"
 divp <- mask(divp, srast)
 writeRaster(divp, file.path(outputs, "rivers_diversity_101_c.tif"), overwrite=TRUE)
 
@@ -1456,7 +1459,7 @@ writeRaster(rc, file.path(outputs, "sk_rivers_diversity_5.tif"), overwrite = TRU
 rc <- rast(file.path(outputs, "sk_rivers_diversity_class.tif"))
 rc[is.na(rc)] <- 0
 rc[rc < 4] <- 0
-rc[rc > 5] <- 0
+rc[rc >= 5] <- 0
 rc[rc >= 4] <- 1
 rc<- mask(rc,srast)
 names(rc)<- "Concentration of high river diversity"

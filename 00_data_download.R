@@ -6,7 +6,7 @@ library(terra)
 library(sf)
 
 ## note templates are generated in scripr : 01_prep..
-
+outputs <- file.path("outputs", "final", "sites_202505", "raw_tiffs")
 #srast <- rast(file.path("inputs", "sk_rast_template.tif"))
 srast <- srast <- rast(file.path(outputs, "template_1km.tif")) # new 1km raster with coastline updata
 
@@ -766,7 +766,7 @@ cl[cl >= 0.2] <- 1
 cl[cl < 0.2] <- 0
 cl[is.na(cl)] <- 0
 cl <- mask(cl ,srast)
-names(cl)<- "Crown lands reserve"
+names(cl)<- "Crown land reserves"
 writeRaster(cl, file.path(outputs, "crown_lands0.2.tif"), overwrite = TRUE)
 
 
@@ -1064,5 +1064,24 @@ iww <- mask(iww ,srast)
 names(iww) = "Human footprint"
 writeRaster(iww, file.path(outputs, "human_footprint_2022.tif"), overwrite=TRUE)
 
+
+
+
+######################################################################
+# Download the Timber suply area 
+# keep bulkley morice 
+
+tsa <- st_read(file.path("inputs", "bc_tsa.gpkg")) |> 
+  filter(TSA_NUMBER_DESCRIPTION %in% c("Bulkley TSA", "Morice TSA")) |>
+  select(TSA_NUMBER, TSA_NUMBER_DESCRIPTION) |> 
+  mutate(tsa = 1)
+
+tsa  <- terra::rasterize(tsa  , srast, "tsa", touches = TRUE,na.rm = TRUE)
+names(tsa)<- "Bulkley Morice TSA"
+tsa <- mask(tsa, srast)
+tsa[is.na(tsa)] <- 0
+tsa <- mask(tsa, srast)
+
+writeRaster(tsa, file.path(outputs, "bulkley_morice_tsa.tif"), overwrite=TRUE)
 
 

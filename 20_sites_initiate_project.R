@@ -61,14 +61,14 @@ PROJECT_TYPE <- "REGIONAL"
 # 3.0 Processing ----------------------------------------------------------------
 # create folder structure
 
-dir.create(fs::path(project_folder, "PU"), recursive = TRUE)
-dir.create(file.path(project_folder, "scripts"), recursive = TRUE)
-dir.create(file.path(project_folder, "Tiffs"), recursive = TRUE)
-dir.create(file.path(project_folder, "WTW/metadata"), recursive = TRUE)
+#dir.create(fs::path(project_folder, "PU"), recursive = TRUE)
+#dir.create(file.path(project_folder, "scripts"), recursive = TRUE)
+#dir.create(file.path(project_folder, "Tiffs"), recursive = TRUE)
+#dir.create(file.path(project_folder, "WTW/metadata"), recursive = TRUE)
 
-if(PROJECT_TYPE == "REGIONAL"){
-  dir.create(file.path(project_folder, "Regional"), recursive = TRUE)
-}
+#if(PROJECT_TYPE == "REGIONAL"){
+#  dir.create(file.path(project_folder, "Regional"), recursive = TRUE)
+#}
 
 # 2.0 Set up AOI -------------------------------------------------------------------
 
@@ -129,9 +129,9 @@ weights_list <- get_all_tifs_gdbs(weights_dir)
 # Fill table -------------------------------------------------------------------
 
 file_list <- c(themes_list, includes_list, excludes_list, weights_list)
-
+#file_list <- c(themes_list,includes_list)
 #file_list <- c(themes_list,includes_list, weights_list)
-
+#file_list<-file_list[1:69]
 ## Build empty data.frame (template for metadata.csv) ----
 df <- init_metadata()
 
@@ -203,37 +203,54 @@ for (i in seq_along(file_list)) {
       # includes
       identical(type, "include") && identical(u_values, 2) ~ "#00000000, #7fbc41",
       #excludes 
-      identical(type, "exclude") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      #identical(type, "exclude") && identical(u_values, 2) ~ "#00000000, #756bb1",
       
-      #themes - aquatic
-      identical(theme, "aquatic") && identical(legend, "continuous")  ~  "Blues",   # theme
-      identical(theme, "aquatic") && identical(u_values, 2) ~ "#00000000, #756bb1",
-       
+      #themes - Aquatic
+      identical(theme, "Freshwater features") && identical(legend, "continuous")  ~  "Blues",   # theme
+      #identical(theme, "Freshwater features") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(file_no_ext, "aq_lake_rarity_4_cover") && identical(u_values, 2) ~ "#00000000, #85c1e9",
+      identical(file_no_ext, "aq_lake_rarity_5_cover") && identical(u_values, 2) ~ "#00000000, #2874a6",
+      identical(file_no_ext, "aq_lakes_divens_4") && identical(u_values, 2) ~ "#00000000, #85c1e9",
+      identical(file_no_ext, "aq_lakes_divens_5") && identical(u_values, 2) ~ "#00000000, #2874a6",
+      identical(file_no_ext, "rivers_rarity_4") && identical(u_values, 2) ~ "#00000000, #85c1e9",
+      identical(file_no_ext, "rivers_rarity_5") && identical(u_values, 2) ~ "#00000000, #2874a6",
+      identical(file_no_ext, "sk_rivers_diversity_4") && identical(u_values, 2) ~ "#00000000, #85c1e9",
+      identical(file_no_ext, "sk_rivers_diversity_5") && identical(u_values, 2) ~ "#00000000, #2874a6",
+      
       # themes - fed species 
-      identical(theme, "species_at_risk") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(theme, "species_at_risk") && identical(legend, "continuous")  ~  "Purples",
+      identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(legend, "continuous")  ~  "Purples",
       # themes - bc species
-      identical(theme, "species_at_risk_bccdc") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(theme, "species_at_risk_bccdc") && identical(legend, "continuous")  ~  "Purples",
+      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(legend, "continuous")  ~  "Purples",
       # themes - focal species BC
-      identical(theme, "regional_focal_species") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(theme, "regional_focal_species") && identical(legend, "continuous")  ~  "Purples",
+      identical(theme, "Regional focal species") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(theme, "Regional focal species") && identical(legend, "continuous")  ~  "Purples",
       
       #themes -  
-      identical(theme, "productivity") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(theme, "productivity") && identical(legend, "continuous")  ~  "Purples",
+      #identical(theme, "Productivity") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(file_no_ext, "ndvi_mean_0.58_0.68") && identical(u_values, 2) ~ "#00000000, #d7bde2",
+      identical(file_no_ext, "ndvi_mean_0.68") && identical(u_values, 2) ~ "#00000000, #7d3c98",
+      identical(file_no_ext, "gdd_mean_1000") && identical(u_values, 2) ~ "#00000000, #7d3c98",
+      identical(file_no_ext, "gdd_mean_800") && identical(u_values, 2) ~ "#00000000, #d2b4de",
+      identical(file_no_ext, "macrorefugia_70threshold") && identical(u_values, 2) ~ "#00000000, #d7bde2",
+      identical(file_no_ext, "microrefugia_70threshold") && identical(u_values, 2) ~ "#00000000, #d2b4de",
+      identical(file_no_ext, "sk_pither_resistence_40threshold") && identical(u_values, 2) ~ "#00000000, #d7bde2",
+      identical(file_no_ext, "sk_pither_resistence_90threshold") && identical(u_values, 2) ~ "#00000000, #d2b4de",
+      
+      identical(theme, "Productivity") && identical(legend, "continuous")  ~  "Purples",
       
       # themes - terrestrial 
       identical(file_no_ext, "iba") && identical(u_values, 2) ~ "#00000000, #7fbc41",
       identical(file_no_ext, "TAP_intact_watershed") && identical(legend, "continuous")  ~  "Greens",
       identical(file_no_ext, "TAP_bigtrees") && identical(legend, "continuous")  ~  "Greens",
       identical(file_no_ext, "TAP_ancient_forest") && identical(legend, "continuous")  ~  "Greens",
-      identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "Purples",
+      #identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")   ~  "magma",
       identical(file_no_ext, "ter_rarity_c") && identical(legend, "continuous")  ~  "Purples",
       identical(file_no_ext, "ter_div45_class") && identical(u_values, 2) ~ "#00000000, #7fbc41",
       identical(file_no_ext, "ter_rarity45_class") && identical(u_values, 2) ~ "#00000000, #7fbc41",
       
-      # themes - habitat 
+      # themes - Climate resilience
       identical(file_no_ext, "ancientforest_2_cover") && identical(legend, "continuous")  ~  "Greens",
       identical(file_no_ext, "ancientforest_1_cover") && identical(legend, "continuous")  ~  "Greens",
       identical(file_no_ext, "intactwatershed_10_cover") && identical(legend, "continuous")  ~  "Greens",
@@ -262,12 +279,16 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "npp_w") && identical(legend, "continuous")  ~  "YlOrBr",
       identical(file_no_ext, "resistance_w") && identical(legend, "continuous")  ~  "magma",
       identical(file_no_ext, "rivers_rarity_mean_101c") && identical(legend, "continuous")  ~  "magma",
+      identical(file_no_ext, "rivers_diversity_101_c") && identical(legend, "continuous")  ~  "magma",
       identical(file_no_ext, "roads_cover") && identical(legend, "continuous")  ~  "magma",
       identical(file_no_ext, "sk_lake_div_ens_101c") && identical(legend, "continuous")  ~  "magma",
       identical(file_no_ext, "sk_lake_rarity_prop_2025") && identical(legend, "continuous")  ~  "magma",
       identical(file_no_ext, "ter_diversity_c") && identical(legend, "continuous")  ~  "magma",
       identical(file_no_ext, "ter_rarity_continuous") && identical(legend, "continuous")  ~  "magma",
       identical(file_no_ext, "urban_cover") && identical(legend, "continuous")  ~  "magma",
+      
+  
+      
       
       # identical(theme, "ECCC_CH") && identical(u_values, 2) ~  "#00000000, #756bb1",
       # identical(source, "ECCC_CH") && identical(u_values, 1) ~  "#756bb1", 
@@ -276,19 +297,10 @@ for (i in seq_along(file_list)) {
       # identical(source, "ECCC_SAR") && identical(u_values, 1) ~  "#fb9a99", 
       # identical(source, "ECCC_SAR") && identical(legend, "continuous") ~  "Reds",
       # identical(source, "IUCN_AMPH") && identical(u_values, 2) ~  "#00000000, #a6cee3",
-      # identical(source, "IUCN_AMPH") && identical(u_values, 1) ~  "#a6cee3",
-      # identical(source, "IUCN_BIRD") && identical(u_values, 2) ~  "#00000000, #ff7f00",
-      # identical(source, "IUCN_BIRD") && identical(u_values, 1) ~  "#ff7f00",
-      # identical(source, "IUCN_MAMM") && identical(u_values, 2) ~  "#00000000, #b15928",
-      # identical(source, "IUCN_MAMM") && identical(u_values, 1) ~  "#b15928",
-      # identical(source, "IUCN_REPT") && identical(u_values, 2) ~  "#00000000, #b2df8a",
       # identical(source, "IUCN_REPT") && identical(u_values, 1) ~  "#b2df8a",
       # identical(source, "NSC_END") && identical(u_values, 2) ~  "#00000000, #4575b4",
       # identical(source, "NSC_END") && identical(u_values, 1) ~  "#4575b4",
-      # identical(source, "NSC_SAR") && identical(u_values, 2) ~  "#00000000, #d73027",
-      # identical(source, "NSC_SAR") && identical(u_values, 1) ~  "#d73027",
-      # identical(source, "NSC_SPP") && identical(u_values, 2) ~  "#00000000, #e6f598",
-      # identical(source, "NSC_SPP") && identical(u_values, 1) ~  "#e6f598",
+    
       TRUE ~ "" 
     )
   
@@ -299,20 +311,21 @@ for (i in seq_along(file_list)) {
       #includes 
       identical(file_no_ext, "cancelled_lands_0.2") && identical(u_values, 2) ~ "not conservation lands, conservation lands",
       identical(file_no_ext, "crown_lands0.2") && identical(u_values, 2) ~ "Not crown land, crown land",
-      identical(file_no_ext, "ecoregion_nass") && identical(u_values, 2) ~ "Not ecoregion, ecoregion",
+      #identical(file_no_ext, "ecoregion_nass") && identical(u_values, 2) ~ "Not ecoregion, ecoregion",
       identical(file_no_ext, "not_cancelled_lands_0.2") && identical(u_values, 2) ~ "Not conservation lands, conservation lands",
       identical(file_no_ext, "protected_lands_0.2") && identical(u_values, 2) ~ "Not protected, Protected",
+      identical(file_no_ext, "bulkley_morice_tsa") && identical(u_values, 2) ~ "outside TSA, within TSA",
       
       # excludes 
-      #identical(type, "exclude") && identical(u_values, 2) ~ "not altered, permanently altered",
+      identical(type, "exclude") && identical(u_values, 2) ~ "not altered, permanently altered",
      
       # weights
       identical(file_no_ext, "carbon_total") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "gdd_mean") && identical(legend, "continuous")  ~  "growing degree days",
       identical(file_no_ext, "human_footprint_2022") && identical(legend, "continuous")  ~  "human footprint index",
       identical(file_no_ext, "iba_cover") && identical(legend, "continuous")  ~  "cover",
-      identical(file_no_ext, "macrorefugia_C") && identical(legend, "continuous")  ~  "percentage",
-      identical(file_no_ext, "microrefugia_c") && identical(legend, "continuous")  ~  "percentage",
+      identical(file_no_ext, "macrorefugia_C") && identical(legend, "continuous")  ~  "index",
+      identical(file_no_ext, "microrefugia_c") && identical(legend, "continuous")  ~  "index",
       identical(file_no_ext, "mining_OG_cover") && identical(legend, "continuous")  ~  "cover",
       identical(file_no_ext, "ndvi_mean") && identical(legend, "continuous")  ~  "index",
       identical(file_no_ext, "npp") && identical(legend, "continuous")  ~  "index",
@@ -326,21 +339,21 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "urban_cover") && identical(legend, "continuous")  ~  "cover",
      
       
-      # themes - aquatic
-      identical(theme, "aquatic") && identical(legend, "continuous") ~  "",
-      identical(theme, "aquatic") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      # themes - Aquatic
+      identical(theme, "Freshwater features") && identical(legend, "continuous") ~  "",
+      identical(theme, "Freshwater features") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       #identical(type, "include") && identical(u_values, 2) ~ "not included, included",
       
-      identical(theme, "productivity") && identical(legend, "continuous")   ~  "",
-      identical(theme, "productivity") && identical(u_values, 2) ~  "Non productive, Productive",   
+      identical(theme, "Productivity") && identical(legend, "continuous")   ~  "",
+      identical(theme, "Productivity") && identical(u_values, 2) ~  "Absence, Presence",   
         
-      identical(theme, "species_at_risk") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(theme, "species_at_risk") && identical(legend, "continuous")   ~  "",
-      identical(theme, "species_at_risk_bcdc") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(theme, "species_at_risk_bcdc") && identical(legend, "continuous")   ~  "",
-      identical(theme, "regional_focal_species") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(theme, "regional_focal_species") && identical(u_values, 3) ~  "Nan, Non Habitat, Habitat",
-      identical(theme, "regional_focal_species") && identical(legend, "continuous")  ~  "",
+      identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(legend, "continuous")   ~  "",
+      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(u_values, 2) ~  "uncertain occurrence, known occurrence",
+      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(legend, "continuous")   ~  "",
+      identical(theme, "Regional focal species") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "Regional focal species") && identical(u_values, 3) ~  "Nan, Non Habitat, Habitat",
+      identical(theme, "Regional focal species") && identical(legend, "continuous")  ~  "",
       
       # themes - habitat 
       identical(file_no_ext, "ancientforest_2_cover") && identical(legend, "continuous")   ~  "",
@@ -350,16 +363,19 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "intactwatershed_8_cover") && identical(legend, "continuous")   ~  "",
       identical(file_no_ext, "bigtree_1_cover") && identical(legend, "continuous")   ~  "",
       identical(file_no_ext, "bigtree_2_cover") && identical(legend, "continuous")   ~  "",
-      identical(file_no_ext, "wilderness_cover") && identical(legend, "continuous")   ~  "",
       
+      # themes - climate resilience
+      identical(file_no_ext, "wilderness_cover") && identical(legend, "continuous")   ~  "",
+      identical(theme, "Climate resilience") && identical(u_values, 2) ~  "Absent, Present",
+        
       # themes - terrestrial
       identical(file_no_ext, "jokulhaups") && identical(u_values, 2) ~ "not present, present",
       identical(file_no_ext, "ter_diversity_4_cover") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_diversity_5_cover") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_rarity_4_cover") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_rarity_5_cover") && identical(legend, "continuous")  ~  "",
-      identical(theme, "terrestrial") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(theme, "terrestrial") && identical(legend, "continuous")  ~  "",
+      identical(theme, "Enduring landscape features") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "Enduring landscape features") && identical(legend, "continuous")  ~  "",
       TRUE ~ ""
     )
     
@@ -368,31 +384,32 @@ for (i in seq_along(file_list)) {
     unit <- case_when(
       type == "include" ~ "km2",
       type == "exclude" ~ "km2",
-      theme == "species_at_risk" ~ "km2",
-      theme == "species_at_risk_bcdc" ~ "km2",
-      theme == "regional_focal_species" ~ "km2",
-      theme == "aquatic" ~ "km2",
-      theme == "habitat" ~ "km2",
-      theme == "terrestrial" ~ "km2",
-      theme == "productivity" ~ "km2",
+      theme == "Federal species at risk critical habitat (ECCC)" ~ "km2",
+      theme == "Species at risk (BC Conservation Data Centre)" ~ "km2",
+      theme == "Regional focal species" ~ "km2",
+      theme == "Freshwater features" ~ "km2",
+      theme == "Habitat" ~ "km2",
+      theme == "Climate resilience" ~ "km2",
+      theme == "Enduring landscape features" ~ "km2",
+      theme == "Productivity" ~ "km2",
       file_no_ext == "iba" ~ "km2",
-      file_no_ext %in%  c("ter_diversity_c","ter_rarity_c") ~ "km2",
+      file_no_ext %in%  c("ter_diversity_c","ter_rarity_c") ~ "index",
       file_no_ext %in%  c("TAP_intact_watershed", "TAP_bigtrees", "TAP_ancient_forest") ~ "km2",
       # weights 
       file_no_ext == "carbon_total" ~ "index", 
-      file_no_ext == "gdd_w" ~ "kgC/m2/yr", # check this!
+      file_no_ext == "gdd_w" ~ "index", 
       file_no_ext == "human_footprint_2022" ~ "index",
       file_no_ext %in%  c("iba_cover","urban_cover","roads_cover") ~ "percentage",
       file_no_ext == "mining_OG_cover" ~ "percentage",
-      file_no_ext %in%  c("macrorefugia_w", "microrefugia_c") ~ "percentage",
-      file_no_ext == "ndvi_w" ~ "kgC/m2/yr", # check this!
+      file_no_ext %in%  c("macrorefugia_w", "microrefugia_c") ~ "index",
+      file_no_ext == "ndvi_w" ~ "index", 
       file_no_ext == "npp_w" ~ "kgC/m2/yr", # check this!
-      file_no_ext %in%  c("resistence_w") ~ "index",
+      file_no_ext =="resistance_w" ~ "index",
       file_no_ext == "rivers_rarity_mean_101c" ~ "index",
       file_no_ext == "sk_lake_div_ens_101c" ~ "index",
       file_no_ext == "sk_lake_rarity_prop_2025" ~ "index",
       file_no_ext == "ter_diversity_c" ~ "km2",
-      file_no_ext == "ter_rarity_continuous" ~ "km2",
+      file_no_ext == "ter_rarity_continuous" ~ "index",
       TRUE ~ ""
     )   
     
@@ -459,6 +476,17 @@ write.csv(
 )
 
 ## review the metadata table and update as needed. 
+
+# need to reorder the theme groups 
+# ensure species is FEDS, BC, other species 
+
+# re order weights
+
+#New order of weights: climate refugia, connectivity, carbon, npp, ndvi, gdd, 
+#ter div and rare, lake div and rare, river div and rare, iba, human footprint, 
+#mining, roads. Seems to be missing river diversity. Grouping them together with similar types.
+
+
 
 
 
@@ -616,7 +644,7 @@ dataset <- wheretowork::new_dataset_from_auto(c(theme_data, weight_data, include
 themes <- lapply(seq_along(unique(theme_groups)), function(i) {
   
   # start test lin
-  #i <- 1
+  #i <- 4
   # end test line 
   
   #### store temp variables associated with group (i)

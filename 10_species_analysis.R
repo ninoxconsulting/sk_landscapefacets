@@ -467,10 +467,15 @@ rv_poly <- el |>
 el <- rbind(rv_poly, rv_centroids) 
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "epithetic_lichens"
+names(bb1) = "epiphytic_lichens"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens_cover.tif"), overwrite = TRUE)
+
+#bb1 <- rast(file.path(outputs, "bc_cdc_epiphytic_lichens_cover.tif"))
+#names(bb1) = "epiphytic_lichens"
+#writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens_cover1.tif"), overwrite = TRUE)
+
 
 
 # 16: Group purple - BC red-listed  lichens (mountain crab-eye and northwest waterfan)
