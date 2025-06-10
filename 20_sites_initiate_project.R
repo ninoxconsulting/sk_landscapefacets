@@ -342,7 +342,7 @@ for (i in seq_along(file_list)) {
       
       # themes - Aquatic
       identical(theme, "Freshwater features") && identical(legend, "continuous") ~  "",
-      identical(theme, "Freshwater features") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "Freshwater features") && identical(u_values, 2) ~  "Absence, Presence",
       #identical(type, "include") && identical(u_values, 2) ~ "not included, included",
       
       identical(theme, "Productivity") && identical(legend, "continuous")   ~  "",
@@ -350,11 +350,11 @@ for (i in seq_along(file_list)) {
         
       identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(legend, "continuous")   ~  "",
-      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(u_values, 2) ~  "uncertain occurrence, known occurrence",
+      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(u_values, 2) ~  "Uncertain occurrence, Known occurrence",
       identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(legend, "continuous")   ~  "",
-      identical(theme, "Regional focal species") && identical(u_values, 2) ~  "Non Habitat, Habitat",
-      identical(theme, "Regional focal species") && identical(u_values, 3) ~  "Nan, Non Habitat, Habitat",
-      identical(theme, "Regional focal species") && identical(legend, "continuous")  ~  "",
+      identical(theme, "Regional focal species") && identical(u_values, 2) ~  "Absence, Presence",
+      identical(theme, "Regional focal species") && identical(u_values, 3) ~  "Nan, Absence, Presence",
+      identical(theme, "Regional focal species") && identical(legend, "continuous")  ~  "Presence",
       
       # themes - habitat 
       identical(file_no_ext, "ancientforest_2_cover") && identical(legend, "continuous")   ~  "",
@@ -367,15 +367,15 @@ for (i in seq_along(file_list)) {
       
       # themes - climate resilience
       identical(file_no_ext, "wilderness_cover") && identical(legend, "continuous")   ~  "",
-      identical(theme, "Climate resilience") && identical(u_values, 2) ~  "Absent, Present",
+      identical(theme, "Climate resilience") && identical(u_values, 2) ~  "Absence, Presence",
         
       # themes - terrestrial
-      identical(file_no_ext, "jokulhaups") && identical(u_values, 2) ~ "not present, present",
+      identical(file_no_ext, "jokulhaups") && identical(u_values, 2) ~ "Absence, Presence",
       identical(file_no_ext, "ter_diversity_4_cover") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_diversity_5_cover") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_rarity_4_cover") && identical(legend, "continuous")  ~  "",
       identical(file_no_ext, "ter_rarity_5_cover") && identical(legend, "continuous")  ~  "",
-      identical(theme, "Enduring landscape features") && identical(u_values, 2) ~  "Non Habitat, Habitat",
+      identical(theme, "Enduring landscape features") && identical(u_values, 2) ~  "Absence, Presence",
       identical(theme, "Enduring landscape features") && identical(legend, "continuous")  ~  "",
       TRUE ~ ""
     )
