@@ -114,7 +114,10 @@ mining <- dis |>
   dplyr::select(type)
 
 mine <- terra::rasterize(mining, srast,touches = TRUE, cover = TRUE)
-names(mine) <- "mining_oilgas"
+mine[is.na(mine)] <- 0
+names(mine) <- "Mining and oil & gas"
+mine <- mask(mine,srast)
+
 writeRaster(mine, file.path(outputs, "mining_OG_cover.tif"), overwrite = TRUE)
 aa <- rast(file.path(outputs, "mining_OG_cover.tif"))
 mine <- mask(aa,srast)
@@ -124,11 +127,11 @@ mine <- mask(mine,srast)
 names(mine) <- "Mining and oil & gas"
 writeRaster(mine, file.path(outputs, "mining_og_cover.tif"), overwrite = TRUE)
 
-mine[mine >= 0.5] <- 1
-mine[mine < 0.5] <- NA
-mine <- mask(mine,srast)
-names(mine) <- "mining_oilgas"
-writeRaster(mine, file.path(outputs, "mining_OG.tif"), overwrite = TRUE)
+#mine[mine >= 0.5] <- 1
+#mine[mine < 0.5] <- NA
+#mine <- mask(mine,srast)
+#names(mine) <- "mining_oilgas"
+#writeRaster(mine, file.path(outputs, "mining_OG.tif"), overwrite = TRUE)
 
 
 
@@ -218,9 +221,13 @@ ndvi <- rast(file.path("outputs", "ndvi_2019_2023_mean_101c.tif"))
 names(ndvi)<- "ndvi"
 ndviv <- as.polygons(ndvi, digits= 4)
 ndvir <- terra::rasterize(ndviv  , srast, "ndvi", fun = "mean", na.rm = TRUE)
-names(ndvir)<- "ndvi"
+names(ndvir)<- "NDVI"
 ndvir <- mask(ndvir ,srast)
 writeRaster(ndvir, file.path(outputs, "ndvi_mean.tif"), overwrite=TRUE)
+ndvir <- rast(file.path(outputs, "ndvi_mean.tif"))
+names(ndvir)<- "NDVI"
+writeRaster(ndvir, file.path(outputs, "ndvi_w.tif"), overwrite=TRUE)
+
 #range(values(ndvir), na.rm = TRUE)
 
 # Themes = 2 layers. 
@@ -818,6 +825,30 @@ names(lak) = "Lake cover"
 lak [is.na(lak )] <- 0
 lak <- mask(lak, srast)
 writeRaster(lak, file.path(outputs, "aq_lake_density_mean.tif"), overwrite = T)
+
+
+
+# check the values in regional datasets 
+
+reg <- list.files(file.path("outputs", "final", "sites_202505", "Regional", "Themes", "Regional focal Species"), 
+                  pattern = ".tif$", full.names = TRUE)
+
+
+for (i in reg){
+  
+  print(basename(i))
+  trast <- rast(i)
+  print(unique(values(trast)))  
+  
+  
+}
+
+
+
+
+
+
+
 
 
 

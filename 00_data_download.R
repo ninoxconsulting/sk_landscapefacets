@@ -382,16 +382,18 @@ iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
 #writeRaster(iww, file.path(outputs, "bigtree_1_cover.tif"), overwrite = TRUE)
 # fix for sites
 #iww <- rast(file.path(outputs, "bigtree_1_cover.tif"))
-names(iww) <- "Big-treed old growth forests"
+names(iww) <- "Big-treed older mature forests"
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "bigtree_1_cover.tif"), overwrite=TRUE)
+#iww <- rast(file.path(outputs, "bigtree_1_cover.tif"))
 
-iww[iww >= 0.5] <- 1
-iww[iww < 0.5] <- NA
-iww <- mask(iww ,srast)
-names(iww)<- "bt1"
-writeRaster(iww, file.path(outputs, "bigtree_1.tif"), overwrite = TRUE)
+
+##iww[iww >= 0.5] <- 1
+#iww[iww < 0.5] <- NA
+#iww <- mask(iww ,srast)
+#names(iww)<- "bt1"
+#writeRaster(iww, file.path(outputs, "bigtree_1.tif"), overwrite = TRUE)
 
 
 
@@ -404,10 +406,11 @@ iww <- terra::rasterize(common, srast, "bt", touches = TRUE, cover = TRUE)
 #writeRaster(iww, file.path(outputs, "bigtree_2_cover.tif"), overwrite = TRUE)
 # fix for sites
 #iww <- rast(file.path(outputs, "bigtree_2_cover.tif"))
-names(iww) <- "Big-treed older mature forests"
+names(iww) <- "Big-treed old growth forests"
 iww[is.na(iww)] <- 0
 iww <- mask(iww ,srast)
 writeRaster(iww, file.path(outputs, "bigtree_2_cover.tif"), overwrite=TRUE)
+iww <- rast(file.path(outputs, "bigtree_2_cover.tif"))
 
 plot(iww)
 iww[iww >= 0.5] <- 1

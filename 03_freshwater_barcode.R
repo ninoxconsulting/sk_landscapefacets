@@ -1708,24 +1708,24 @@ m <- c(1, 1.1, 1,
        1.8, 2.8, 4,
        2.8, 20, 5)
 rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rc <- classify(avrare , rclmat, include.lowest=TRUE)
+rcc <- classify(av, rclmat, include.lowest=TRUE)
 
-
-av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
-av[is.na(av)] <- 0
+rc <- rcc
+#av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
+#av[is.na(av)] <- 0
 #class5 
-av[av < 5] <- 0
-av[av >= 5] <- 1
-av <- mask(av,srast)
+rc[rc < 5] <- 0
+rc[rc >= 5] <- 1
+av <- mask(rc,srast)
 names(av)<- "Concentration of very high river rarity"
 writeRaster(av, file.path(outputs, "rivers_rarity_5.tif"), overwrite = TRUE)
 
 
 #class4
-av <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
+av <- rcc
 av[is.na(av)] <- 0
 av[av < 4] <- 0
-av[av > 5] <- 0
+av[av >= 5] <- 0
 av[av >= 4] <- 1
 av <- mask(av,srast)
 names(av)<- "Concentration of high river rarity"
