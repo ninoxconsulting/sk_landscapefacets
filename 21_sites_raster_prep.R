@@ -448,7 +448,7 @@ pro[pro >= 0.2] <- 1
 pro[pro < 0.2] <- 0
 pro[is.na(pro)] <- 0
 pro <- mask(pro,srast)
-names(pro) <- "Historic conservation lands = for cancelled"
+names(pro) <- "Historic conservation lands"
 writeRaster(pro  , file.path(outputs, "cancelled_lands_0.2.tif"), overwrite=TRUE)
 
 
@@ -464,7 +464,7 @@ pro <- rast(file.path(outputs, "not_cancelled_lands_cover.tif"))
 pro[pro >= 0.2] <- 1
 pro[pro < 0.2] <- 0
 pro[is.na(pro)] <- 0
-names(pro) <- "Conservation lands = for current"
+names(pro) <- "Current conservation lands"
 pro <- mask(pro,srast)
 writeRaster(pro  , file.path(outputs, "not_cancelled_lands_0.2.tif"), overwrite=TRUE)
 
@@ -566,7 +566,7 @@ names(con_rarecm) <- "Terrestrial rarity"
 con_rarecm <- mask(con_rarecm, srast)
 writeRaster(con_rarecm, file.path(outputs, "ter_rarity_continuous.tif"), overwrite=TRUE)
 con_rarecm <- rast(file.path(outputs, "ter_rarity_continuous.tif"))
-names(con_rarecm) <- "Rare enduring landscape features"
+names(con_rarecm) <- "Enduring landscape features rarity"
 writeRaster(con_rarecm, file.path(outputs, "ter_rarity_continuous1.tif"), overwrite=TRUE)
 
 

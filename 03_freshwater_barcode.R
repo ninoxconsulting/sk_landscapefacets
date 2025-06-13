@@ -915,7 +915,7 @@ rc[rc < 5] <- 0
 rc[rc >= 5] <- 1
 rc[is.na(rc)] <- 0
 rc <- mask(rc,srast)
-names(rc)<- "Concentration of very high lake diversity"
+names(rc)<- "Concentrations of very high lake diversity"
 writeRaster(rc, file.path(outputs, "aq_lakes_divens_5.tif"), overwrite = TRUE)
 #rc5 = rc
 
@@ -927,7 +927,7 @@ rc[rc >= 5] <- 0
 rc[rc >= 4] <- 1
 rc[is.na(rc)] <- 0
 rc<- mask(rc,srast)
-names(rc)<- "Concentration of high lake diversity"
+names(rc)<- "Concentrations of high lake diversity"
 writeRaster(rc, file.path(outputs, "aq_lakes_divens_4.tif"), overwrite = TRUE)
 
 
@@ -1420,7 +1420,7 @@ writeRaster(rri, file.path("inputs", "sk_river_barcodes_raw.tif"), overwrite = T
 div <- rast(file.path("outputs","sk_rivers_diversity_101.tif"))
 divp <- as.polygons(div, digits = 2)
 divp <- terra::rasterize(divp, srast, "sk_rivers_diversity_101", fun = "mean", na.rm = TRUE)
-names(divp) <- "Concentrations of river diversity"
+names(divp) <- "River diversity"
 divp <- mask(divp, srast)
 writeRaster(divp, file.path(outputs, "rivers_diversity_101_c.tif"), overwrite=TRUE)
 
@@ -1452,7 +1452,7 @@ rc[is.na(rc)] <- 0
 rc[rc < 5] <- 0
 rc[rc >= 5] <- 1
 rc <- mask(rc,srast)
-names(rc)<- "Concentration of very high river diversity"
+names(rc)<- "Concentrations of very high river diversity"
 writeRaster(rc, file.path(outputs, "sk_rivers_diversity_5.tif"), overwrite = TRUE)
 
 #class4
@@ -1462,7 +1462,7 @@ rc[rc < 4] <- 0
 rc[rc >= 5] <- 0
 rc[rc >= 4] <- 1
 rc<- mask(rc,srast)
-names(rc)<- "Concentration of high river diversity"
+names(rc)<- "Concentrations of high river diversity"
 writeRaster(rc, file.path(outputs, "sk_rivers_diversity_4.tif"), overwrite = TRUE)
 
 
@@ -1691,7 +1691,7 @@ avrare <- rast(file.path("outputs","sk_rivers_rarity_mean_101c.tif"))
 avrarep <- as.polygons(avrare, digits = 2)
 #avrarep
 avrarep <- terra::rasterize(avrarep, srast, "sk_rivers_rarity_mean_101c", fun = "mean", na.rm = TRUE)
-names(avrarep) <- "Rivers rarity"
+names(avrarep) <- "River rarity"
 avrarep<- mask(avrarep, srast)
 writeRaster(avrarep, file.path(outputs, "rivers_rarity_mean_101c.tif"), overwrite=TRUE)
 #avrarep <- rast(file.path(outputs, "rivers_rarity_mean_101c.tif"))
@@ -1717,7 +1717,7 @@ rc <- rcc
 rc[rc < 5] <- 0
 rc[rc >= 5] <- 1
 av <- mask(rc,srast)
-names(av)<- "Concentration of very high river rarity"
+names(av)<- "Concentrations of very high river rarity"
 writeRaster(av, file.path(outputs, "rivers_rarity_5.tif"), overwrite = TRUE)
 
 
@@ -1728,7 +1728,7 @@ av[av < 4] <- 0
 av[av >= 5] <- 0
 av[av >= 4] <- 1
 av <- mask(av,srast)
-names(av)<- "Concentration of high river rarity"
+names(av)<- "Concentrations of high river rarity"
 #plot(av)
 writeRaster(av, file.path(outputs, "rivers_rarity_4.tif"), overwrite = TRUE)
 

@@ -57,15 +57,15 @@ bb <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% bb) |>
 #st_write(bb1, file.path("outputs", "bc_blue_bird.gpkg"), append = FALSE)
 
 bb1 <- rasterize(bb, srast, cover = TRUE, touches = TRUE)
-bb2 <- rasterize(bb, srast, touches = TRUE)
-names(bb1) = "BC blue-listed birds"
-names(bb2) = "bluelisted_birds"
+#bb2 <- rasterize(bb, srast, touches = TRUE)
+names(bb1) = "Blue-listed birds"
+#names(bb2) = "bluelisted_birds"
 bb1[is.na(bb1)] <- 0
 
 bb1<- mask(bb1,srast)
-bb2<- mask(bb2,srast)
+#bb2<- mask(bb2,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_birds_cover.tif"), overwrite = TRUE)
-writeRaster(bb2, file.path(outputs, "bc_cdc_bluelisted_birds.tif"), overwrite = TRUE)
+#writeRaster(bb2, file.path(outputs, "bc_cdc_bluelisted_birds.tif"), overwrite = TRUE)
 
 
 
@@ -86,7 +86,7 @@ bm <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% bm) |>
 
 bb1 <- rasterize(bm, srast, cover = TRUE, touches = TRUE)
 bb2 <- rasterize(bb, srast, touches = TRUE)
-names(bb1) = names(bb2) = "BC blue-listed mammals"
+names(bb1) = names(bb2) = "Blue-listed mammals"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 bb2<- mask(bb2,srast)
@@ -105,7 +105,7 @@ bf <- wcdc %>% filter(SPECIES_ENGLISH_NAME == bf)
 #st_write(bf, file.path("outputs", "bc_blue_fish.gpkg"), append = FALSE)
 
 bb1 <- rasterize(bf, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC blue-listed fish"
+names(bb1) = "Blue-listed fish"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_fish_cover.tif"), overwrite = TRUE)
@@ -128,11 +128,11 @@ rf <- c("Broad Whitefish",
 rf <- wcdc %>% filter(SPECIES_ENGLISH_NAME %in% rf) 
 #st_write(rf, file.path("outputs", "bc_red_fish.gpkg"), append = FALSE)
 bb1 <- rasterize(rf, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC red-listed fish"
+names(bb1) = "Red-listed fish"
 bb1[is.na(bb1)] <- 0
 #bb1[bb1 >= 0.5] <- 1
 #bb1[bb1 < 0.5] <- NA
-#bb1<- mask(bb1,srast)
+bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_fish_cover.tif"), overwrite = TRUE)
 
 
@@ -154,7 +154,7 @@ rb <- rbind(rb, rbs)
 #st_write(rb, file.path("outputs", "bc_cdc_red_birds1.gpkg"), append = FALSE)
 
 bb1 <- rasterize(rb, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC red-listed_birds"
+names(bb1) = "Red-listed birds"
 bb1[is.na(bb1)] <- 0
 #bb1[bb1 >= 0.5] <- 1
 #bb1[bb1 < 0.5] <- NA
@@ -173,7 +173,7 @@ rm <- wcdc %>% filter(SPECIES_ENGLISH_NAME == rm) |>
 
 st_write(rm, file.path("outputs", "bc_red_mammals.gpkg"), append = FALSE)
 bb1 <- rasterize(rm, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC red-listed mammals"
+names(bb1) = "Red-listed mammals"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_mammals.tif"), overwrite = TRUE)
@@ -237,7 +237,7 @@ bv<- rbind(bv_poly, bv_centroids)
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 
 bb1 <- rasterize(bv, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC blue-listed vascular plants"
+names(bb1) = "Blue-listed vascular plants"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bluelisted_vegetation_cover.tif"), overwrite = TRUE)
@@ -279,10 +279,10 @@ rv<- rbind(rv_poly, rv_centroids)
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 
 bb1 <- rasterize(rv, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC red-listed vascular plants"
+names(bb1) = "Red-listed vascular plants"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
-plot(bb1)
+#plot(bb1)
 #bb1[bb1 >= 0.5] <- 1
 #bb1[bb1 < 0.5] <- NA
 #bb1<- mask(bb1,srast)
@@ -407,7 +407,7 @@ el <- bind_rows(el, el2)%>%
 st_write(el, file.path("outputs", "grasslands_poly_raw.gpkg"), append = FALSE)
 
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "Endemic grasslands:  Saskatoon - slender wheatgrass and Sandbergs bluegrass - slender wheatgrass"
+names(bb1) = "Endemic grasslands:  Saskatoon - slender wheatgrass, and Sandberg bluegrass - slender wheatgrass"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_endemic_grasslands_cover.tif"), overwrite = TRUE)
@@ -467,7 +467,7 @@ rv_poly <- el |>
 el <- rbind(rv_poly, rv_centroids) 
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC blue-listed lichens (smoker's lung, cryptic paw, oldgrowth specklebelly)"
+names(bb1) = "Blue-listed lichens (smoker's lung, cryptic paw, oldgrowth specklebelly)"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_epiphytic_lichens_cover.tif"), overwrite = TRUE)
@@ -504,7 +504,7 @@ el <- rbind(rv_poly, rv_centroids)
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 bb1[is.na(bb1)] <- 0
-names(bb1) = "BC red-listed lichens (mountain crab-eye and northwest waterfan)"
+names(bb1) = "Red-listed lichens (mountain crab-eye and northwest waterfan)"
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_redlisted_lichen_cover.tif"), overwrite = TRUE)
 
@@ -540,7 +540,7 @@ el <- rbind(rv_poly, rv_centroids)
 #st_write(bv, file.path("outputs", "bc_blue_vegetation.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
 bb1[is.na(bb1)] <- 0
-names(bb1) = "BC listed bumblebees (McKay's, yellow-banded and gypsy cuckoo)"
+names(bb1) = "Listed bumblebees (McKay's, yellow-banded and gypsy cuckoo)"
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_cdc_bclisted_bumblebees_cover.tif"), overwrite = TRUE)
 #bb1[bb1 >= 0.01] <- 1
@@ -559,7 +559,7 @@ el <- wcdc %>% filter(SPECIES_ENGLISH_NAME == "Plains Forktail" ) |>
 
 st_write(el, file.path("outputs", "bc_blue_listeddragonfly_poly_raw1.gpkg"), append = FALSE)
 bb1 <- rasterize(el, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "BC blue-listed dragonfly (Plains forktail)"
+names(bb1) = "Blue-listed dragonfly (Plains forktail)"
 bb1[is.na(bb1)] <- 0
 #bb1[bb1 >= 0.001] <- 1
 #bb1[bb1 < 0.001] <- NA
@@ -596,8 +596,8 @@ ww <- bind_rows(wa, wi)
 
 # 5) cdc dataset
 wcdc <- st_read(file.path("inputs", "bc_cbc_sp_raw.gpkg")) %>% 
-  select(ENG_NAME, SCI_NAME, EL_TYPE)%>%
-  rename("SPECIES_ENGLISH_NAME" = ENG_NAME,
+  dplyr::select(ENG_NAME, SCI_NAME, EL_TYPE)%>%
+  dplyr::rename("SPECIES_ENGLISH_NAME" = ENG_NAME,
          "SCIENTIFIC_NAME" = SCI_NAME,
          "NAME_TYPE_SUB" = EL_TYPE)
 
@@ -642,7 +642,7 @@ srn <-  wwa %>% filter(SPECIES_ENGLISH_NAME == "Roughskin Newt")%>%
 #st_write(srn, file.path("outputs", "roughskinnewt_pt.gpkg"), append = FALSE)
 
 bb1 <- rasterize(srn, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "Roughskin Newt"
+names(bb1) = "Rough-skinned Newt"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_roughskinnewt_cover.tif"), overwrite = TRUE)
@@ -761,7 +761,7 @@ ee <- fii %>% filter(SPECIES_NAME %in% c(
 
 st_write(ee, file.path("outputs", "steelhead_pt.gpkg"),append = FALSE)
 bb1 <- rasterize(ee, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "Steelhead salmon"
+names(bb1) = "Steelhead"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_steelhead_cover.tif"), overwrite = TRUE)
@@ -783,7 +783,7 @@ writeRaster(bb1, file.path(outputs, "bc_osprey_cover.tif"), overwrite = TRUE)
 dra <- ww %>% filter(ORDER_NAME == "Odonata")%>% distinct()
 st_write(dra, file.path("outputs", "odonata_pt.gpkg"), append = FALSE)
 bb1 <- rasterize(dra, srast, cover = TRUE, touches = TRUE)
-names(bb1) = "Odonata"
+names(bb1) = "Odonata (dragonflies)"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_odonata_cover.tif"), overwrite = TRUE)
@@ -839,7 +839,7 @@ bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_bat_cover.tif"), overwrite = TRUE)
 bb1 <- rast(file.path(outputs, "bc_bat_cover.tif"))
-names(bb1) = "Chiroptera"
+names(bb1) = "Chiroptera (bats)"
 bb1[is.na(bb1)] <- 0
 bb1<- mask(bb1,srast)
 writeRaster(bb1, file.path(outputs, "bc_bat_cover1.tif"), overwrite = TRUE)

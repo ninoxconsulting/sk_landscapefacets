@@ -1046,6 +1046,11 @@ aa[is.na(aa)] <- 0
 iww <- mask(aa ,srast)
 writeRaster(iww, file.path(outputs, "carbon_total.tif"), overwrite = TRUE)
 
+
+iww <- rast(file.path(outputs, "carbon_total.tif"))
+names(common) = "Carbon"  
+writeRaster(iww, file.path(outputs, "carbon_total1.tif"), overwrite = TRUE)
+
            
 
 ###################################################################

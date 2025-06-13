@@ -206,7 +206,7 @@ for (i in seq_along(file_list)) {
       #identical(type, "exclude") && identical(u_values, 2) ~ "#00000000, #756bb1",
       
       #themes - Aquatic
-      identical(theme, "Freshwater features") && identical(legend, "continuous")  ~  "Blues",   # theme
+      #identical(theme, "Freshwater features") && identical(legend, "continuous")  ~  "Blues",   # theme
       #identical(theme, "Freshwater features") && identical(u_values, 2) ~ "#00000000, #756bb1",
       identical(file_no_ext, "aq_lake_rarity_4_cover") && identical(u_values, 2) ~ "#00000000, #85c1e9",
       identical(file_no_ext, "aq_lake_rarity_5_cover") && identical(u_values, 2) ~ "#00000000, #2874a6",
@@ -215,18 +215,21 @@ for (i in seq_along(file_list)) {
       identical(file_no_ext, "rivers_rarity_4") && identical(u_values, 2) ~ "#00000000, #85c1e9",
       identical(file_no_ext, "rivers_rarity_5") && identical(u_values, 2) ~ "#00000000, #2874a6",
       identical(file_no_ext, "sk_rivers_diversity_4") && identical(u_values, 2) ~ "#00000000, #85c1e9",
-      identical(file_no_ext, "sk_rivers_diversity_5") && identical(u_values, 2) ~ "#00000000, #2874a6",
+      identical(file_no_ext, "sk_rivers_diversity_5") && identical(u_values, 2) ~ "#00000000, #2874a6", 
+      identical(file_no_ext, "aq_lake_density_mean") && identical(legend, "continuous")  ~  "mako",
+      identical(file_no_ext, "aq_wetland_density_mean") && identical(legend, "continuous")  ~  "mako",
+
       
       # themes - fed species 
       identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(legend, "continuous")  ~  "PuBu",
+      identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(legend, "continuous")  ~  "cividis",
       # themes - bc species
-      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(legend, "continuous")  ~  "PuRd",
+      identical(theme, "Species and ecosystems at risk (BC CDC)") && identical(u_values, 2) ~ "#00000000, #756bb1",
+      identical(theme, "Species and ecosystems at risk (BC CDC)") && identical(legend, "continuous")  ~  "turbo",
       # themes - focal species BC
-      identical(theme, "Regional focal species") && identical(u_values, 2) ~ "#00000000, #756bb1",
-      identical(theme, "Regional focal species") && identical(u_values, 3) ~ "#00000000, #00000000, #756bb1",
-      identical(theme, "Regional focal species") && identical(legend, "continuous")  ~  "Purples",
+      identical(theme, "Regional focal species") && identical(u_values, 2) ~ "#f3f6f4, #e01717",
+      identical(theme, "Regional focal species") && identical(u_values, 3) ~ "#f3f6f4, #f3f6f4, #e01717",
+      identical(theme, "Regional focal species") && identical(legend, "continuous")  ~  "PrGn",
       
       #themes -  
       #identical(theme, "Productivity") && identical(u_values, 2) ~ "#00000000, #756bb1",
@@ -350,8 +353,8 @@ for (i in seq_along(file_list)) {
         
       identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(u_values, 2) ~  "Non Habitat, Habitat",
       identical(theme, "Federal species at risk critical habitat (ECCC)") && identical(legend, "continuous")   ~  "",
-      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(u_values, 2) ~  "Uncertain occurrence, Known occurrence",
-      identical(theme, "Species at risk (BC Conservation Data Centre)") && identical(legend, "continuous")   ~  "",
+      identical(theme, "Species and ecosystems at risk (BC CDC)") && identical(u_values, 2) ~  "Uncertain occurrence, Known occurrence",
+      identical(theme, "Species and ecosystems at risk (BC CDC)") && identical(legend, "continuous")   ~  "",
       identical(theme, "Regional focal species") && identical(u_values, 2) ~  "Absence, Presence",
       identical(theme, "Regional focal species") && identical(u_values, 3) ~  "Nan, Absence, Presence",
       identical(theme, "Regional focal species") && identical(legend, "continuous")  ~  "Presence",
@@ -386,13 +389,14 @@ for (i in seq_along(file_list)) {
       type == "include" ~ "km2",
       type == "exclude" ~ "km2",
       theme == "Federal species at risk critical habitat (ECCC)" ~ "km2",
-      theme == "Species at risk (BC Conservation Data Centre)" ~ "km2",
+      theme == "Species and ecosystems at risk (BC CDC)" ~ "km2",
       theme == "Regional focal species" ~ "km2",
       theme == "Freshwater features" ~ "km2",
       theme == "Old growth forests" ~ "km2",
       theme == "Climate resilience" ~ "km2",
       theme == "Enduring landscape features" ~ "km2",
-      theme == "Productivity" ~ "km2",
+      theme == "Productivity" ~ "g C m-2 year-1",
+      file_no_ext == "npp" ~ "g C m-2 year-1",
       file_no_ext == "iba" ~ "km2",
       file_no_ext %in%  c("ter_diversity_c","ter_rarity_c") ~ "index",
       file_no_ext %in%  c("TAP_intact_watershed", "TAP_bigtrees", "TAP_ancient_forest") ~ "km2",
@@ -400,13 +404,14 @@ for (i in seq_along(file_list)) {
       file_no_ext == "carbon_total" ~ "index", 
       file_no_ext == "gdd_w" ~ "index", 
       file_no_ext == "human_footprint_2022" ~ "index",
-      file_no_ext %in%  c("iba_cover","urban_cover","roads_cover") ~ "percentage",
-      file_no_ext == "mining_OG_cover" ~ "percentage",
+      file_no_ext == "iba_cover" ~ "percentage",
+      file_no_ext %in%  c("mining_OG_cover","urban_cover","roads_cover") ~ "km2",
       file_no_ext %in%  c("macrorefugia_w", "microrefugia_c") ~ "index",
       file_no_ext == "ndvi_w" ~ "index", 
-      file_no_ext == "npp_w" ~ "kgC/m2/yr", # check this!
+      file_no_ext == "npp_w" ~ "g C m-2 year-1", 
       file_no_ext =="resistance_w" ~ "index",
       file_no_ext == "rivers_rarity_mean_101c" ~ "index",
+      file_no_ext == "rivers_diversity_101_c" ~ "index",
       file_no_ext == "sk_lake_div_ens_101c" ~ "index",
       file_no_ext == "sk_lake_rarity_prop_2025" ~ "index",
       file_no_ext == "ter_diversity_c" ~ "km2",
@@ -469,14 +474,37 @@ for (i in seq_along(file_list)) {
   
 } 
 
+
+
+
+# reorder weights
+file_order_fw <-  c("ancientforest_1_cover.tif",
+                 "ancientforest_2_cover.tif",
+                 "bigtree_1_cover.tif",
+                 "bigtree_2_cover.tif",
+                 "intactwatershed_10_cover.tif",
+                 "intactwatershed_9_cover.tif",
+                 "intactwatershed_8_cover.tif")
+
+
+
+dft <- df |>  filter(Theme == "Old growth forests") %>% arrange(match(File, file_order_fw))
+
+dff <- df |> filter(Theme != "Old growth forests") %>% 
+  rbind(dft ) # re order weights
+
+
+df <- dff
+
+
+# reorder themes 
+
 my_order <- c('Climate resilience','Enduring landscape features','Freshwater features',"Old growth forests",
-"Productivity",'Federal species at risk critical habitat (ECCC)','Species at risk (BC Conservation Data Centre)','Regional focal species', "")
-
-
+"Productivity",'Federal species at risk critical habitat (ECCC)','Species and ecosystems at risk (BC CDC)','Regional focal species', "")
 
 dff <-  df  %>% arrange(match(Theme, my_order))
 
-
+# reorder weights
 file_order <-  c("microrefugia_c.tif" , "macrorefugia_w.tif" ,"resistance_w.tif", 
                  "carbon_total.tif", "npp_w.tif" ,   "ndvi_w.tif"   ,  "gdd_w.tif", 
                  "ter_diversity_c.tif",  "ter_rarity_continuous.tif" ,
@@ -490,11 +518,20 @@ dff_w <- dff |>  filter(Type == "weight") %>% arrange(match(File, file_order))
 dff <- dff |> filter(Type != "weight") %>% 
   rbind(dff_w) # re order weights
 
-#Seems to be missing river diversity. 
 
+# reorder includes 
 
+file_order_includes <-  c("protected_lands_0.2.tif",
+                          "cancelled_lands_0.2.tif",
+                          "not_cancelled_lands_0.2.tif",
+                          "crown_lands0.2.tif",
+                          "bulkley_morice_tsa.tif"
+)
 
+dff_i <- dff |>  filter(Type == "include") %>% arrange(match(File, file_order_includes))
 
+dff <- dff |> filter(Type != "include") %>% 
+  rbind(dff_i) 
 
 # Write to csv ----
 write.csv(
