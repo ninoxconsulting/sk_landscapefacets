@@ -758,6 +758,10 @@ crown_lands <- crown_lands |>
   dplyr::select( CROWN_LANDS_FILE,INTRID_SID) |> 
   dplyr::mutate(desc = "crown_lands")
 
+st_write(crown_lands, file.path("inputs", "crown_lands_filtered.gpkg"), append = FALSE)
+
+
+
 crown_lands <- rasterize(crown_lands , srast, "desc", touches = TRUE, cover = TRUE)
 names(crown_lands)<- "desc"
 cl <- mask(crown_lands ,srast)
